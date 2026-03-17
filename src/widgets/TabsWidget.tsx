@@ -1,7 +1,7 @@
-import "/src/assets/scss/index.scss";
+import "@/assets/scss/index.scss";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { NavLink } from "react-router-dom";
-import HomeIcon from "@/assets/svg/HomeIcon.svg?react";
+import HomeIcon from "@/assets/svg/Home.svg?react";
 
 export default function TabsWidget() {
     return (
@@ -11,7 +11,7 @@ export default function TabsWidget() {
                 Главная
             </NavLink>
             <NavLink to={ ROUTES.SETTINGS } className="tab">
-                Настройки
+                Вкладка 1
             </NavLink>
         </div>
     );

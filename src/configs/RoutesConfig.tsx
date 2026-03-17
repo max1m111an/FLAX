@@ -3,6 +3,7 @@ import { ROUTES } from "./RoutesConst";
 
 import MainLayout from "@/layouts/MainLayout";
 import MainScene from "@/scenes/MainScene.tsx";
+import SettingsScene from "@/scenes/SettingsScene.tsx";
 
 export const routesConfig = [
     {
@@ -14,7 +15,7 @@ export const routesConfig = [
             },
             {
                 path: ROUTES.SETTINGS,
-                element: <MainScene />,
+                element: <SettingsScene />,
             },
         ],
     },
