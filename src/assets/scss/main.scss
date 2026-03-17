@@ -1,0 +1,30 @@
+@use "consts" as *;
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+  background-color: $bg-grey;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background: $bg-grey;
+  overflow: hidden;
+}
+
+.container {
+  display: flex;
+}
+
+svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+}
+p{
+  margin: 0;
+  padding: 0;
+}
