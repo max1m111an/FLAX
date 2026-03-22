@@ -2,6 +2,10 @@
 
 .main-container{
   padding: 32px 64px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 .main-title{
   font-size: 36px;
@@ -19,9 +23,14 @@
 .cards-wrapper{
   display: flex;
   flex-direction: row;
-  gap: 16px;
+  gap: 28px;
   justify-content: space-between;
   margin-bottom: 32px;
+}
+@media (min-width: 1025px){
+  .cards-wrapper{
+    justify-content: flex-start;
+  }
 }
 .card-type{
   width: 280px;
@@ -31,6 +40,8 @@
   padding: 24px;
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     transform: translateY(-1px);
@@ -49,13 +60,13 @@
 }
 
 .icon-container {
-   width: 24px;
-   height: 24px;
-   color: $text-main;
-   border-radius: 12px;
-   display: flex;
-   margin-bottom: 20px;
-   transition: transform 0.2s;
+  width: 48px;
+  height: 48px;
+  color: $primary-orange;
+  background: $bg-orange;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  padding: 12px;
 }
 .control-wrapper{
   display: flex;
@@ -64,6 +75,7 @@
   margin-bottom: 32px;
 
 }
+
 .open-file-button {
   display: inline-flex;
   align-items: center;
@@ -82,6 +94,7 @@
     transform: translateY(-1px);
   }
 }
+
 .control-button {
   display: inline-flex;
   align-items: center;
@@ -100,6 +113,7 @@
     transform: translateY(-1px);
   }
 }
+
 .recent-title {
   display: inline-flex;
   flex-direction: row;
@@ -123,12 +137,22 @@
   margin-bottom: 16px;
 
 }
+
 .clean-text{
   color: $text-muted;
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
 }
+
+.recent-cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .recent-card{
   width: 100%;
   background: $card-bg;
@@ -145,19 +169,19 @@
     transform: translateY(-1px);
   }
 }
-.name-time-card-wrapper{
+
+.recent-name-time-card-wrapper{
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
+
 .recent-icon {
   width: 24px;
   height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   margin-right: 16px;
-  color: $text-main;
+  color: $primary-orange;
+  border-radius: 12px;
 }
 
 .recent-name {
@@ -178,15 +202,6 @@
   height: 20px;
   color: #666666;
   transition: all 0.2s;
-}
-
-.recent-cards-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
-  padding-right: 4px;
 }
 
 .recent-cards-wrapper::-webkit-scrollbar {
@@ -210,4 +225,9 @@
 .recent-cards-wrapper {
   scrollbar-width: thin;
   scrollbar-color: $border-color transparent;
+}
+
+.bottom-space {
+  height: 64px;
+  flex-shrink: 0;
 }

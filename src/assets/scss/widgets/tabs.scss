@@ -8,8 +8,15 @@
   padding-right: 16px;
   padding-top: 8px;
   flex-shrink: 0;
+  gap: 4px;
+  background: $card-bg;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 .tab{
+  user-select: none;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
@@ -23,9 +30,99 @@
   color: $text-muted;
   cursor: pointer;
   text-decoration: none;
+  flex-shrink: 0;
 
   &.active{
     border-bottom: $primary-orange solid 2px;
     color: $primary-orange;
+    background-color: $bg-grey;
+
+    .cancel-icon{
+      color: rgba(249, 115, 22, 0.45);
+    }
+  }
+
+  &:not(.active):hover{
+    background: #333333;
+    color: $text-main;
   }
 }
+
+.cancel-icon{
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+  cursor: default;
+  box-sizing: border-box;
+  padding: 2px;
+  color: $text-muted;
+
+  &:hover {
+    background:#333333;
+    border-radius: 4px;
+    color: $primary-orange;
+    background: $border-color;
+  }
+}
+
+.dropdown {
+  background: $card-bg;
+  border: 1px solid $border-color;
+  color: $text-muted;
+  border-radius: 10px;
+  padding: 6px 0;
+  min-width: 180px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  margin-top: 4px;
+}
+
+.item {
+  display: flex;
+  flex-direction: row;
+  font-size: 14px;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: $text-muted;
+
+  &:hover {
+    background: rgba(249, 115, 22, 0.1);
+    color: #fb923c;
+  }
+}
+
+.plus-button{
+  background: transparent;
+  border: none;
+  color: $text-muted;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem 0.5rem 0 0;
+  flex-shrink: 0;
+
+  &:hover{
+    background: #333333;
+  }
+}
+
+.tabs_wrapper::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tabs_wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs_wrapper::-webkit-scrollbar-thumb {
+  background: $border-color;
+  border-radius: 10px;
+}
+
+.tabs_wrapper::-webkit-scrollbar-thumb:hover {
+  background: $text-muted;
+}
+
+.tabs_wrapper {
+  scrollbar-width: thin;
+  scrollbar-color: $border-color transparent;
+}
+
