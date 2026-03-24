@@ -9,7 +9,7 @@ export default function MainLayout() {
         <TabsProvider>
             <div className="app-container">
                 <TabsWidget />
-                <main className="main-content">
+                <main className="container">
                     <Outlet />
                 </main>
             </div>

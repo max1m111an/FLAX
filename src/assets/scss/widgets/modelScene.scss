@@ -1,0 +1,94 @@
+@use "../consts" as *;
+
+.model-container {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+}
+
+.model-left-control-wrapper {
+  display: flex;
+  flex-direction: column;
+  width: 64px;
+  height: calc(100vh - 44px);
+  background: $card-bg;
+  align-items: center;
+  border-right: $border-color solid 1px;
+  border-top: $border-color solid 1px;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.top-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-top: 4px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.middle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-start;
+  padding: 8px 0;
+}
+
+.bottom-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.control-icon {
+  color: $text-muted;
+  margin: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 10px;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    color: $primary-orange;
+    background: $bg-orange;
+    border-radius: 12px;
+  }
+
+  &.trashcan {
+    &:hover{
+      color: $red_hover;
+      background: #333333;
+
+    }
+  }
+
+  &.play {
+    fill: $primary-orange;
+    color: $primary-orange;
+    background: $bg-orange;
+    border-radius: 12px;
+  }
+}
+
+.divider {
+  width: 32px;
+  height: 1px;
+  background: $border-color;
+  margin: 12px 0;
+  flex-shrink: 0;
+}
