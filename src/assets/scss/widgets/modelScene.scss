@@ -12,14 +12,21 @@
   flex-direction: column;
   width: 64px;
   height: calc(100vh - 44px);
-  background: $card-bg;
+  background: $header-bg;
   align-items: center;
   border-right: $border-color solid 1px;
-  border-top: $border-color solid 1px;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
 }
+.model-canvas-wrapper {
+  flex-grow: 1;
+  background-image: radial-gradient(#3a3a3a 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: var(--bg-grey);
+}
+
+
 
 .top-group {
   display: flex;
@@ -92,3 +99,4 @@
   margin: 12px 0;
   flex-shrink: 0;
 }
+
