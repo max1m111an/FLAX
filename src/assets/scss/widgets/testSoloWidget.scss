@@ -1,0 +1,164 @@
+@use "../consts" as *;
+
+.test-state-wrapper{
+  border: 1px solid $border-color;
+  background: $black;
+  padding: 16px;
+  border-radius: 10px;
+  gap: 8px;
+  display: flex;
+  flex-direction: column;
+
+  .title-step-wrapper{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+
+    .step-lbl{
+      color: $soft-orange;
+      font-size: 12px;
+    }
+  }
+  .line-state-wrapper{
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-wrap: wrap;
+
+    .states-wrapper{
+      width: 36px;
+      height: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 2px solid $border-color;
+      border-radius: 4px;
+
+      &.read{
+        background: $card-bg;
+      }
+      &.current{
+        border: 2px solid $primary-orange;
+        color: $primary-orange;
+        background: $bg-orange;
+      }
+      .state{
+        color: $text-muted;
+        font-size: 16px;
+        font-weight: 600;
+
+        &.read{
+          color: $text-read;
+        }
+
+        &.current{
+          color: $primary-orange;
+        }
+      }
+    }
+  }
+  .state-lbl{
+    color: $text-muted;
+    font-size: 12px;
+  }
+}
+.position-lbl{
+  color: $text-muted;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 12px;
+}
+.history-card{
+  display: flex;
+  flex-direction: row;
+  background: $card-bg;
+  padding: 6px;
+  border-radius: 6px;
+  align-items: center;
+  gap: 8px;
+
+}
+.history-active {
+  color: $text-muted;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.history-symbol {
+  color: $primary-orange;
+  font-weight: 400;
+  font-size: 14px;
+}
+
+.history-state {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  color: $text-main;
+  font-weight: 400;
+  gap: 4px;
+  font-size: 14px;
+}
+.state-status-wrapper{
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+// статус сверху
+.state-lbl.accepted {
+  color: #4ade80; // зеленый
+  font-weight: 600;
+}
+
+.state-lbl.rejected {
+  color: $red_hover;
+  font-weight: 600;
+}
+
+// история
+.history-card.success {
+  border: 1px solid #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.history-card.error {
+  border: 1px solid $red_hover;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+// можно еще подсветить символ
+.history-card.success .history-symbol {
+  color: #4ade80;
+}
+
+.history-card.error .history-symbol {
+  color: $red_hover;
+}
+
+// текущий (оранжевый — уже есть, просто оставим)
+.states-wrapper.current {
+  border: 2px solid $primary-orange;
+  background: $bg-orange;
+}
+
+// успешный шаг
+.states-wrapper.success {
+  border: 2px solid #4ade80;
+  background: rgba(74, 222, 128, 0.1);
+}
+
+.states-wrapper.success .state {
+  color: #4ade80;
+}
+
+// ошибка
+.states-wrapper.error {
+  border: 2px solid $red_hover;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.states-wrapper.error .state {
+  color: $red_hover;
+}

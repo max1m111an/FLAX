@@ -6,6 +6,9 @@
   box-sizing: border-box;
   font-family: $primary-font;
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 html, body {
@@ -40,4 +43,21 @@ svg {
 p {
   margin: 0;
   padding: 0;
+}
+
+::-webkit-scrollbar {
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: $border-color;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: $text-muted;
 }

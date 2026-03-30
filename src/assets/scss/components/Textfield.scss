@@ -1,0 +1,83 @@
+@use "@/assets/scss/consts" as *;
+
+.input {
+  padding: 10px 12px;
+  width: 100%;
+  background: #1a1a1a;
+  border: 1px solid $border-color;
+  border-radius: 10px;
+  font-size: 14px;
+  color: $text-main;
+  outline: none;
+  transition: all 0.2s ease;
+
+  &::placeholder {
+    color: $text-muted;
+    opacity: 0.6;
+  }
+
+  &:hover {
+    border-color: $border-color;
+  }
+
+  &:focus {
+    border-color: $soft-orange;
+    box-shadow: 0 0 0 1px rgba($soft-orange, 0.4);
+    background: $black;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  &.onEdge{
+    width: 128px;
+    font-size: 14px;
+    z-index: 950;
+  }
+}
+
+
+.multiline-input {
+  padding: 8px 12px;
+  width: 100%;
+  background-color: $black;
+  border: 1px solid $border-color;
+  border-radius: 12px;
+  color: $text-main;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+  min-height: 80px;
+  white-space: pre;
+
+  &:focus {
+    outline: none;
+    border-color: $soft-orange;
+    box-shadow: 0 0 0 2px rgba($soft-orange, 0.2);
+  }
+
+  &::placeholder {
+    color: $text-muted;
+    opacity: 0.6;
+  }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $bg-grey;
+    border-radius: 10px;
+    margin: 8px 8px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border-color;
+    border-radius: 10px;
+
+    &:hover {
+      background: $text-muted;
+    }
+  }
+}

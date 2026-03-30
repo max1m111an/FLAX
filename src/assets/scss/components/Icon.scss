@@ -1,0 +1,20 @@
+@use "../consts" as *;
+
+.model-cancel-icon{
+  color: $text-muted;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+
+  &:hover{
+    color: $red_hover;
+    background: $border-color;
+    border-radius: 8px;
+  }
+}
+.icon{
+  color: $text-muted;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+}

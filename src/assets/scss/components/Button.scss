@@ -1,0 +1,58 @@
+@use "@/assets/scss/consts" as *;
+
+
+.main-btn {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: $primary-orange;
+  background: transparent;
+  border: $primary-orange 1px solid;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: 4px;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+    filter: brightness(0.95);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    filter: none;
+  }
+  &.square{
+    width: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    padding: 6px;
+  }
+}
+
+.control-btn{
+  width: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $card-bg;
+  border: 1px solid $border-color;
+  color: $text-main;
+  padding: 12px 16px;
+  gap: 6px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}

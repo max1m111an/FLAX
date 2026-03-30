@@ -1,0 +1,59 @@
+@use "../consts" as *;
+
+$width_slider: 42px;
+$height_slider: 24px;
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: $width_slider;
+  height: $height_slider;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: $bg-orange;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: $height_slider - 8px;
+  width: $height_slider - 8px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: $soft-orange;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX($height_slider - 8px);
+  -ms-transform: translateX($height_slider - 8px);
+  transform: translateX($height_slider - 8px);
+}
+
+.slider.round {
+  border-radius: $height_slider;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}

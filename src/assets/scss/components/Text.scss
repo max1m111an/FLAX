@@ -1,2 +1,25 @@
 @use "@/assets/scss/consts" as *;
 
+
+.model-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: $primary-orange;
+  text-transform: uppercase;
+}
+
+.model-pretitle {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: $text-muted;
+  display: block;
+}
+
+.state-label {
+  font-size: 14px;
+  color: #8e8e8e;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+}
+

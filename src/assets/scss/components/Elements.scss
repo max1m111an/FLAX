@@ -1,0 +1,108 @@
+@use "../consts" as *;
+
+.state-node-wrapper {
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  z-index: auto;
+  transition: z-index 0.1s;
+
+  &.delete-mode:hover {
+    svg {
+      color: $red_hover;
+    }
+  }
+
+  .state-node {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid $primary-orange;
+    background-color: $bg-orange;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: $primary-orange;
+    white-space: nowrap;
+    position: relative;
+
+    &.delete-mode:hover {
+      border-color: $red_hover;
+      color: $red_hover;
+      cursor: pointer;
+    }
+  }
+
+  .state-final {
+    border: 4px double $primary-orange;
+    background-color: $bg-orange;
+  }
+
+  .state-initial {
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $primary-orange;
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+  }
+
+  .selected {
+    box-shadow: 0 0 4px $primary-orange, 0 0 8px $soft-orange;
+  }
+}
+
+.edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+
+  line {
+    stroke: $primary-orange;
+    stroke-width: 1.5;
+    pointer-events: stroke;
+
+    &.selected{
+      filter:
+              drop-shadow(0 0 3px rgba($primary-orange, 0.6))
+              drop-shadow(0 0 6px rgba($soft-orange, 0.5));
+    }
+  }
+
+  polygon {
+    fill: $primary-orange;
+  }
+
+  .delete {
+    stroke: transparent;
+    stroke-width: 20;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  .edge-label {
+    fill: $primary-orange;
+    font-size: 14px;
+    pointer-events: auto;
+    &.selected{
+      filter:
+              drop-shadow(0 0 3px rgba($primary-orange, 0.6))
+              drop-shadow(0 0 6px rgba($soft-orange, 0.5));
+    }
+  }
+
+  .delete-mode:hover {
+    line:not(.delete) {
+      stroke: $red_hover;
+    }
+    .edge-label {
+      fill: $red_hover;
+    }
+  }
+}
