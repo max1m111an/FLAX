@@ -7,28 +7,32 @@ import PenLine from "@/assets/svg/PenLine.svg?react";
 import Wrench from "@/assets/svg/Wrench.svg?react";
 import Image from "@/assets/svg/Image.svg?react";
 import Play from "@/assets/svg/Play.svg?react";
+import Settings from "@/assets/svg/Settings.svg?react";
+import { useControl } from "@/context/RightControlContext.tsx";
 
 
 export default function ModelControlWidget() {
+    const { activeControl, changeActiveControl } = useControl();
     return (
         <div className="model-left-control-wrapper">
-            <div className="top-group">
-                <Cursor className="control-icon" />
-                <Circle className="control-icon" />
-                <ArrowUpRight className="control-icon" />
-                <Trashcan className="control-icon trashcan" />
-                <div className="divider" />
+            <div className="model-top-group">
+                <Cursor className="model-control-icon" />
+                <Circle className="model-control-icon" />
+                <ArrowUpRight className="model-control-icon" />
+                <Trashcan className="model-control-icon trashcan" />
+                <div className="model-divider" />
             </div>
 
-            <div className="middle-group">
-                <Save className="control-icon" />
-                <PenLine className="control-icon" />
-                <Wrench className="control-icon" />
-                <Image className="control-icon" />
+            <div className="model-middle-group">
+                <Save className="model-control-icon" />
+                <PenLine className="model-control-icon" />
+                <Wrench className="model-control-icon" />
+                <Image className="model-control-icon" />
             </div>
 
-            <div className="bottom-group">
-                <Play className="control-icon play" />
+            <div className="model-bottom-group">
+                <Settings className={ `model-control-icon ${activeControl == "settings" && "active"}` } onClick={ () => changeActiveControl("settings") } />
+                <Play className={ `model-control-icon ${activeControl == "play" && "active"}` } onClick={ () => changeActiveControl("play") } />
             </div>
         </div>
     );

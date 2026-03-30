@@ -1,0 +1,71 @@
+@use "../consts" as *;
+
+.test-state-wrapper{
+  border: 1px solid $border-color;
+  background: $black;
+  padding: 16px;
+  margin-top: 8px;
+  border-radius: 10px;
+
+  .title-step-wrapper{
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+
+    .position-lbl{
+      color: $text-muted;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 12px;
+
+    }
+    .step-lbl{
+      color: $soft-orange;
+      font-size: 12px;
+    }
+  }
+  .line-state-wrapper{
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+
+    .states-wrapper{
+      width: 36px;
+      height: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 2px solid $border-color;
+      border-radius: 4px;
+
+      &.read{
+        background: $card-bg;
+      }
+      &.current{
+        border: 2px solid $primary-orange;
+        color: $primary-orange;
+        background: $bg-orange;
+      }
+      .state{
+        color: $text-muted;
+        font-size: 16px;
+        font-weight: 600;
+
+        &.read{
+          color: $text-read;
+        }
+
+        &.current{
+          color: $primary-orange;
+        }
+      }
+    }
+  }
+  .state-lbl{
+    margin-top: 8px;
+    color: $text-muted;
+    font-size: 12px;
+  }
+}
