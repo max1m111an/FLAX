@@ -1,0 +1,31 @@
+@use "../consts" as *;
+
+.state-node-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+
+  .state-node {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid $primary-orange;
+    background-color: $bg-orange;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: $primary-orange;
+    white-space: nowrap;
+  }
+  .state-final {
+    border: 4px double $primary-orange;
+    background-color: $bg-orange;
+  }
+  .state-initial {
+    color: $primary-orange;
+    width: 24px;
+    height: 24px;
+  }
+}
+
