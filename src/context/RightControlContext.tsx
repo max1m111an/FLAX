@@ -3,24 +3,35 @@ import { createContext, useContext, useState, ReactNode } from "react";
 
 interface ControlContextProps {
     activeControl: string | null;
-    changeActiveControl: (value: string) => void;
+    activePane: string | null;
+    changePane: (value: string) => void;
+    changeControl: (value: string) => void;
 }
 
 const RightControlContext = createContext<ControlContextProps | undefined>(undefined);
 
 export const RightControlProvider = ({ children }: { children: ReactNode }) => {
-    const [ activeControl, setActiveControl ] = useState<string | null>(null);
+    const [ activePane, setActivePane ] = useState<string | null>(null);
+    const [ activeControl, setActiveControl ] = useState<string | null>("cursor");
 
-    const changeActiveControl = (widget: string) => {
-        if (activeControl !== widget) {
-            setActiveControl(widget);
+    const changePane = (widget: string) => {
+        if (activePane !== widget) {
+            setActivePane(widget);
         } else {
-            setActiveControl(null);
+            setActivePane(null);
         }
+    };
+    const changeControl = (widget: string) => {
+        setActiveControl(widget);
     };
 
     return (
-        <RightControlContext.Provider value={ { activeControl, changeActiveControl } }>
+        <RightControlContext.Provider value={ {
+            activeControl: activeControl,
+            activePane: activePane,
+            changePane: changePane,
+            changeControl: changeControl
+        } }>
             {children}
         </RightControlContext.Provider>
     );

@@ -1,5 +1,6 @@
 import StateNode from "@/components/StateNode.tsx";
 import {useState} from "react";
+import {useControl} from "@/context/RightControlContext.tsx";
 
 interface Node {
     id: number;
@@ -10,6 +11,8 @@ interface Node {
     isInitial: boolean;
 }
 export default function ModelCanvasWidget() {
+    const { activeControl } = useControl();
+
     const [nodes, setNodes] = useState<Node[]>([
             { id:0, x: 100, y: 100, name: "q0", isFinal: false, isInitial: true },
             { id:1, x: 100, y: 200, name: "q1", isFinal: true, isInitial: false },
@@ -33,7 +36,7 @@ export default function ModelCanvasWidget() {
     return (
         <div
             className="model-canvas-wrapper"
-            onClick={addNode}
+            onClick={activeControl === "node" ? addNode : undefined}
         >
             {nodes.map(node => (
                 <StateNode

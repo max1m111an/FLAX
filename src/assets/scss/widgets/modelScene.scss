@@ -86,7 +86,13 @@
     &:hover{
       color: $red_hover;
       background: #333333;
+    }
 
+    &.active {
+      color: $red_hover;
+      background: $bg-orange;
+      border-radius: 12px;
+      border: $red_hover solid 1px;
     }
   }
 
@@ -94,6 +100,7 @@
     color: $primary-orange;
     background: $bg-orange;
     border-radius: 12px;
+    border: $primary-orange solid 1px;
   }
 }
 

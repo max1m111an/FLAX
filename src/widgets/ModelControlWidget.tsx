@@ -12,14 +12,15 @@ import { useControl } from "@/context/RightControlContext.tsx";
 
 
 export default function ModelControlWidget() {
-    const { activeControl, changeActiveControl } = useControl();
+    const { activePane, changePane } = useControl();
+    const { activeControl, changeControl } = useControl();
     return (
         <div className="model-left-control-wrapper">
             <div className="model-top-group">
-                <Cursor className="model-control-icon" />
-                <Circle className="model-control-icon" />
-                <ArrowUpRight className="model-control-icon" />
-                <Trashcan className="model-control-icon trashcan" />
+                <Cursor className={`model-control-icon ${activeControl == "cursor" && "active"}`} onClick={ () => changeControl("cursor") }/>
+                <Circle className={`model-control-icon ${activeControl == "node" && "active"}`} onClick={ () => changeControl("node") }/>
+                <ArrowUpRight className={`model-control-icon ${activeControl == "edge" && "active"}`} onClick={ () => changeControl("edge") }/>
+                <Trashcan className={`model-control-icon trashcan ${activeControl == "trashcan" && "active"}`} onClick={ () => changeControl("trashcan") }/>
                 <div className="model-divider" />
             </div>
 
@@ -31,8 +32,8 @@ export default function ModelControlWidget() {
             </div>
 
             <div className="model-bottom-group">
-                <Settings className={ `model-control-icon ${activeControl == "settings" && "active"}` } onClick={ () => changeActiveControl("settings") } />
-                <Play className={ `model-control-icon ${activeControl == "play" && "active"}` } onClick={ () => changeActiveControl("play") } />
+                <Settings className={ `model-control-icon ${activePane == "settings" && "active"}` } onClick={ () => changePane("settings") } />
+                <Play className={ `model-control-icon ${activePane == "play" && "active"}` } onClick={ () => changePane("play") } />
             </div>
         </div>
     );

@@ -6,16 +6,16 @@ import ModelPropertiesWidget from "@/widgets/ModelPropertiesWidget.tsx";
 
 
 export default function ModelScene() {
-    const { activeControl } = useControl();
+    const { activePane } = useControl();
     return (
         <div className="model-container">
             <ModelControlWidget />
             <ModelCanvasWidget />
-            {activeControl == "play" && (
+            {activePane == "play" && (
                 <ModelTestWidget />
             )
             }
-            {activeControl == "settings" && (
+            {activePane == "settings" && (
                 <ModelPropertiesWidget />
             )
             }

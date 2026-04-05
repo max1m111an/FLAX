@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
+import {useControl} from "@/context/RightControlContext.tsx";
 
 interface StateNodeProps {
     isFinal?: boolean;
@@ -14,6 +15,7 @@ export default function StateNode({
                                       label,
                                       initialPosition = { x: 0, y: 0 },
                                   }: StateNodeProps) {
+    const { activeControl } = useControl();
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
     const offset = useRef({ x: 0, y: 0 });
@@ -76,14 +78,16 @@ export default function StateNode({
                 position: 'fixed',
                 left: 0,
                 top: 0,
-                cursor: dragging.current ? 'grabbing' : 'grab',
-                zIndex: dragging.current ? 1000 : 'auto', // Поднимаем перетаскиваемый узел
+                cursor: activeControl === "cursor"
+                    ? (dragging.current ? 'grabbing' : 'grab')
+                    : 'default',
+                zIndex: dragging.current ? 900 : 'auto',
             }}
         >
             {isInitial && <ChevronsRight className="state-initial" />}
             <div
                 className={`state-node ${isFinal && "state-final"}`}
-                onMouseDown={onMouseDown}
+                onMouseDown={activeControl === "cursor" ? onMouseDown : undefined}
             >
                 {label}
             </div>
