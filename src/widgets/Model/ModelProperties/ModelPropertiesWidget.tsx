@@ -1,7 +1,7 @@
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import { useState } from "react";
-import ModelPropertiesNodeWidget from "@/widgets/ModelPropertiesNodeWidget.tsx";
-import ModelPropertiesEdgeWidget from "@/widgets/ModelPropertiesEdgeWidget.tsx";
+import NodeProperties from "./NodeProperties.tsx";
+import EdgeProperties from "./EdgeProperties.tsx";
 
 
 export default function ModelPropertiesWidget() {
@@ -16,7 +16,7 @@ export default function ModelPropertiesWidget() {
             <div className="model-switch-wrapper">
                 <div className={ `switch-indicator ${typeProp}` } />
                 <button onClick={ () => setTypeProp("nodeType") } className="model-switch-btn">
-                    Вершина
+                    Состояние
                 </button>
                 <button onClick={ () => setTypeProp("edgeType") } className="model-switch-btn">
                     Переходы
@@ -24,10 +24,10 @@ export default function ModelPropertiesWidget() {
             </div>
             <div className="prop-type-wrapper">
                 {typeProp === "nodeType" ? (
-                    <ModelPropertiesNodeWidget />
+                    <NodeProperties />
                 ) :
                     (
-                        <ModelPropertiesEdgeWidget />
+                        <EdgeProperties />
                     )}
             </div>
         </div>

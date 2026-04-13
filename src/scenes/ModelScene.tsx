@@ -1,8 +1,8 @@
-import ModelControlWidget from "@/widgets/ModelControlWidget.tsx";
-import ModelCanvasWidget from "@/widgets/ModelCanvasWidget.tsx";
-import ModelTestWidget from "@/widgets/ModelTestWidget.tsx";
+import ModelControlWidget from "@/widgets/Model/ModelControlWidget.tsx";
+import ModelCanvasWidget from "@/widgets/Model/ModelCanvasWidget.tsx";
+import ModelTestWidget from "@/widgets/Model/ModelTesting/ModelTestWidget.tsx";
 import { useControl } from "@/context/ControlContext.tsx";
-import ModelPropertiesWidget from "@/widgets/ModelPropertiesWidget.tsx";
+import ModelPropertiesWidget from "@/widgets/Model/ModelProperties/ModelPropertiesWidget.tsx";
 
 
 export default function ModelScene() {

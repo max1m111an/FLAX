@@ -1,6 +1,6 @@
 import { useControl } from "@/context/ControlContext.tsx";
 
-export default function ModelPropertiesNodeWidget() {
+export default function NodeProperties() {
     const { selectedNode, nodes, setNodes } = useControl();
 
     const handleNameChange = (name: string) => {

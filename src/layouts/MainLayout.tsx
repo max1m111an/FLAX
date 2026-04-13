@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import "@/assets/scss/index.scss";
-import TabsWidget from "@/widgets/TabsWidget.tsx";
+import TabsWidget from "@/widgets/Navigation/TabsWidget.tsx";
 import { TabsProvider } from "@/context/TabsContext.tsx";
 import { ControlProvider } from "@/context/ControlContext.tsx";
 

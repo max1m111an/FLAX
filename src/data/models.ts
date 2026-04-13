@@ -24,7 +24,7 @@ export const models: model[] = [
         description: "Работа с магазинными автоматами для КС-языков",
     },
     {
-        id: 0,
+        id: 2,
         type: "Машина Тьюринга",
         icon: Processor,
         description: "Создание полных вычислительных моделей",

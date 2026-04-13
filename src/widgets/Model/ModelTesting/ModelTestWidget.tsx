@@ -1,8 +1,8 @@
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import { useState } from "react";
-import ModelSoloTestingWidget from "@/widgets/ModelSoloTestingWidget.tsx";
-import ModelFileTestingWidget from "@/widgets/ModelFileTestingWidget.tsx";
-import ModelMultiTestingWidget from "@/widgets/ModelMultiTestingWidget.tsx";
+import SoloTesting from "./SoloTesting.tsx";
+import FileTesting from "./FileTesting.tsx";
+import MultiTesting from "./MultiTesting.tsx";
 
 
 export default function ModelTestWidget() {
@@ -24,12 +24,12 @@ export default function ModelTestWidget() {
             </div>
             <div className="test-type-wrapper">
                 {typeTest === "solo" && (
-                    <ModelSoloTestingWidget />
+                    <SoloTesting />
                 )}
                 {typeTest === "multi" && (
                     <>
-                        <ModelMultiTestingWidget />
-                        <ModelFileTestingWidget />
+                        <MultiTesting />
+                        <FileTesting />
                     </>
                 )}
             </div>

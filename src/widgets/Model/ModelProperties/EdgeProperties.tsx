@@ -9,7 +9,7 @@ import { EdgeState, useControl } from "@/context/ControlContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 
-export default function ModelPropertiesEdgeWidget() {
+export default function EdgeProperties() {
     const [ isOpenId, setIsOpenId ] = useState<number[]>([]);
     const { selectedNode, nodes, edges, setEdges } = useControl();
     const [ editingValues, setEditingValues ] = useState<Record<number, string>>({});

@@ -1,7 +1,7 @@
 import Play from "@/assets/svg/Play.svg?react";
 import FileDown from "@/assets/svg/FileDown.svg?react";
 
-export default function ModelMultiTestingWidget() {
+export default function MultiTesting() {
     return (
         <>
             <p className="model-pretitle">Входные строки</p>

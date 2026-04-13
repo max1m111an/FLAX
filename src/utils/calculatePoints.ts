@@ -1,7 +1,7 @@
-import { Edge, NodeState } from "@/widgets/ModelCanvasWidget.tsx";
+import { EdgeState, NodeState } from "@/context/ControlContext.tsx";
 
 export default function calculatePoints(
-    edge: Edge,
+    edge: EdgeState,
     nodes: NodeState[],
 ): {
     x1: number;

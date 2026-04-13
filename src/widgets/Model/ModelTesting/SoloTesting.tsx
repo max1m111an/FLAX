@@ -15,7 +15,7 @@ interface Step {
     status: string;
 }
 
-export default function ModelSoloTestingWidget() {
+export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");
     const [ isPlay, setIsPlay ] = useState(false);
 

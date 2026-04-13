@@ -1,7 +1,7 @@
 import Uploud from "@/assets/svg/Uploud.svg?react";
 
 
-export default function ModelFileTestingWidget() {
+export default function FileTesting() {
     return (
         <div className="model-import-wrapper">
             <Uploud className="model-import-icon" />
