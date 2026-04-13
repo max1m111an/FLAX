@@ -21,6 +21,11 @@
   &:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
+    background-color: $bg-orange;
+
+    svg{
+      fill: $bg-orange;
+    }
   }
 
   &:active {
@@ -55,4 +60,9 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+  }
+
 }

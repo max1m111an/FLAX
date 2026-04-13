@@ -16,7 +16,7 @@ export default function ModelPropertiesWidget() {
             <div className="model-switch-wrapper">
                 <div className={ `switch-indicator ${typeProp}` } />
                 <button onClick={ () => setTypeProp("nodeType") } className="model-switch-btn">
-                    Вершина
+                    Состояние
                 </button>
                 <button onClick={ () => setTypeProp("edgeType") } className="model-switch-btn">
                     Переходы
