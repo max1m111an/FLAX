@@ -39,12 +39,12 @@
         background: $card-bg;
       }
       &.current{
-        border: 2px solid $primary-orange;
-        color: $primary-orange;
-        background: $bg-orange;
+        border: 2px solid $text-main;
+        color: $bg-grey;
+        background: white;
       }
       .state{
-        color: $text-muted;
+        color: $text-main;
         font-size: 16px;
         font-weight: 600;
 
@@ -53,13 +53,13 @@
         }
 
         &.current{
-          color: $primary-orange;
+          color: $soft-orange;
         }
       }
     }
   }
   .state-lbl{
-    color: $text-muted;
+    color: white;
     font-size: 12px;
   }
 }
@@ -86,7 +86,7 @@
 }
 
 .history-symbol {
-  color: $primary-orange;
+  color: $text-main;
   font-weight: 400;
   font-size: 14px;
 }
