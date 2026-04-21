@@ -64,19 +64,19 @@
   height: 100%;
 
   line {
-    stroke: $primary-orange;
+    stroke: $bg-orange;
     stroke-width: 1.5;
     pointer-events: stroke;
 
     &.selected{
       filter:
-              drop-shadow(0 0 3px rgba($primary-orange, 0.6))
-              drop-shadow(0 0 6px rgba($soft-orange, 0.5));
+              drop-shadow(0 0 3px rgba($bg-orange, 0.6))
+              drop-shadow(0 0 6px rgba($bg-orange, 0.5));
     }
   }
 
   polygon {
-    fill: $primary-orange;
+    fill: $bg-orange;
   }
 
   .delete {
@@ -87,8 +87,10 @@
   }
 
   .edge-label {
-    fill: $primary-orange;
-    font-size: 14px;
+    fill: $bg-orange;
+    font-size: 16px;
+    font-weight: 600;
+
     pointer-events: auto;
     &.selected{
       filter:
@@ -99,10 +101,10 @@
 
   .delete-mode:hover {
     line:not(.delete) {
-      stroke: $red_hover;
+      stroke: $bg-orange;
     }
     .edge-label {
-      fill: $red_hover;
+      fill: $bg-orange;
     }
   }
 }

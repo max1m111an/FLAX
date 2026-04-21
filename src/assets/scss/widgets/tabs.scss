@@ -28,14 +28,14 @@
   gap: 0.5rem;
   border: none;
   background: transparent;
-  color: $text-muted;
+  color: $text-main;
   cursor: pointer;
   text-decoration: none;
   flex-shrink: 0;
 
   &.active{
     border-bottom: $primary-orange solid 2px;
-    color: $primary-orange;
+    color: $text-main;
     background-color: $bg-grey;
 
     .cancel-icon{
