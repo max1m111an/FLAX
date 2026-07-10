@@ -3,27 +3,27 @@
 .input {
   padding: 10px 12px;
   width: 100%;
-  background: #1a1a1a;
-  border: 1px solid $border-color;
+  background: var(--bg-input);
+  border: 1px solid var(--border-base);
   border-radius: 10px;
   font-size: 14px;
-  color: $text-main;
+  color: var(--text-primary);
   outline: none;
   transition: all 0.2s ease;
 
   &::placeholder {
-    color: $text-muted;
+    color: var(--text-secondary);
     opacity: 0.6;
   }
 
   &:hover {
-    border-color: $border-color;
+    border-color: var(--border-base);
   }
 
   &:focus {
-    border-color: $soft-orange;
-    box-shadow: 0 0 0 1px rgba($soft-orange, 0.4);
-    background: $black;
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 1px rgba(var(--accent-secondary), 0.4);
+    background: var(--bg-input);
   }
 
   &:disabled {
@@ -41,10 +41,10 @@
 .multiline-input {
   padding: 8px 12px;
   width: 100%;
-  background-color: $black;
-  border: 1px solid $border-color;
+  background-color: var(--bg-input);
+  border: 1px solid var(--border-base);
   border-radius: 12px;
-  color: $text-main;
+  color: var(--text-primary);
   font-size: 14px;
   line-height: 1.5;
   resize: vertical;
@@ -53,12 +53,12 @@
 
   &:focus {
     outline: none;
-    border-color: $soft-orange;
-    box-shadow: 0 0 0 2px rgba($soft-orange, 0.2);
+    border-color: var(--accent-secondary);
+    box-shadow: 0 0 0 2px rgba(var(--accent-secondary), 0.2);
   }
 
   &::placeholder {
-    color: $text-muted;
+    color: var(--text-secondary);
     opacity: 0.6;
   }
 
@@ -67,17 +67,17 @@
   }
 
   &::-webkit-scrollbar-track {
-    background: $bg-grey;
+    background: var(--bg-base);
     border-radius: 10px;
     margin: 8px 8px;
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $border-color;
+    background: var(--border-base);
     border-radius: 10px;
 
     &:hover {
-      background: $text-muted;
+      background: var(--text-secondary);
     }
   }
 }

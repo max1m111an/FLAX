@@ -23,7 +23,7 @@ $height_slider: 24px;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: $bg-orange;
+  background-color: var(--accent-bg);
   -webkit-transition: .4s;
   transition: .4s;
 }
@@ -41,7 +41,7 @@ $height_slider: 24px;
 }
 
 input:checked + .slider {
-  background-color: $soft-orange;
+  background-color: var(--accent-secondary);
 }
 
 input:checked + .slider:before {

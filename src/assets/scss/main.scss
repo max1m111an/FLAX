@@ -14,7 +14,7 @@
 html, body {
   width: 100%;
   height: 100%;
-  background: $bg-grey;
+  background: var(--bg-base);
   overflow: hidden;
 }
 
@@ -54,10 +54,10 @@ p {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: $border-color;
+  background: var(--border-base);
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: $text-muted;
+  background: var(--text-secondary);
 }

@@ -10,11 +10,11 @@
 .main-title{
   font-size: 36px;
   font-weight: 700;
-  color: $text-main;
+  color: var(--text-primary);
 }
 
 .main-subtitle{
-  color: $text-muted;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
@@ -34,8 +34,8 @@
 }
 .card-type{
   width: 280px;
-  background: $card-bg;
-  border: 1px solid $border-color;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
   border-radius: 16px;
   padding: 24px;
   cursor: pointer;
@@ -51,19 +51,19 @@
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
-  color: $text-main;
+  color: var(--text-primary);
 }
 .card-description-type{
   font-size: 14px;
-  color: $text-muted;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 .icon-container {
   width: 48px;
   height: 48px;
-  color: $primary-orange;
-  background: $bg-orange;
+  color: var(--accent-primary);
+  background: var(--accent-bg);
   border-radius: 12px;
   margin-bottom: 20px;
   padding: 12px;
@@ -84,9 +84,9 @@
   font-weight: 600;
   font-size: 16px;
   gap: 8px;
-  color: $primary-orange;
+  color: var(--accent-primary);
   background: transparent;
-  border: $primary-orange solid 1px;
+  border: var(--accent-primary) solid 1px;
   border-radius: 1rem;
   cursor: pointer;
 
@@ -103,9 +103,9 @@
   font-weight: 600;
   font-size: 14px;
   gap: 8px;
-  color: $text-main;
+  color: var(--text-primary);
   background: transparent;
-  border: $border-color solid 1px;
+  border: var(--border-base) solid 1px;
   border-radius: 1rem;
   cursor: pointer;
 
@@ -120,7 +120,7 @@
   align-items: center;
   font-size: 24px;
   font-weight: 700;
-  color: $text-main;
+  color: var(--text-primary);
   gap: 6px;
 
   svg{
@@ -139,7 +139,7 @@
 }
 
 .clean-text{
-  color: $text-muted;
+  color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
@@ -155,8 +155,8 @@
 
 .recent-card{
   width: 100%;
-  background: $card-bg;
-  border: 1px solid $border-color;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
   border-radius: 16px;
   padding: 16px 24px;
   cursor: pointer;
@@ -180,18 +180,18 @@
   width: 24px;
   height: 24px;
   margin-right: 16px;
-  color: $primary-orange;
+  color: var(--accent-primary);
   border-radius: 12px;
 }
 
 .recent-name {
   font-size: 14px;
   font-weight: 500;
-  color: #e0e0e0;
+  color: var(--text-primary);
 }
 
 .recent-time {
-  color: $text-muted;
+  color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
   font-weight: 400;
@@ -213,18 +213,18 @@
 }
 
 .recent-cards-wrapper::-webkit-scrollbar-thumb {
-  background: $border-color;
+  background: var(--border-base);
   border-radius: 10px;
   transition: background 0.2s;
 }
 
 .recent-cards-wrapper::-webkit-scrollbar-thumb:hover {
-  background: $text-muted;
+  background: var(--text-secondary);
 }
 
 .recent-cards-wrapper {
   scrollbar-width: thin;
-  scrollbar-color: $border-color transparent;
+  scrollbar-color: var(--border-base) transparent;
 }
 
 .bottom-space {

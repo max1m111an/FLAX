@@ -16,9 +16,9 @@
   flex-direction: column;
   width: 64px;
   height: calc(100vh - 44px);
-  background: $header-bg;
+  background: var(--bg-surface-alt);
   align-items: center;
-  border-right: $border-color solid 1px;
+  border-right: var(--border-base) solid 1px;
   position: relative;
   overflow-y: auto;
   overflow-x: hidden;
@@ -29,9 +29,9 @@
   flex-grow: 1;
   width: 100%;
   height: 100vh;
-  background-image: radial-gradient(#3a3a3a 1px, transparent 1px);
+  background-image: radial-gradient(var(--point-bg) 1px, transparent 1px);
   background-size: 24px 24px;
-  background-color: var(--bg-grey);
+  background-color: var(--bg-base);
 }
 
 .model-top-group {
@@ -66,7 +66,7 @@
 }
 
 .model-control-icon {
-  color: $text-muted;
+  color: var(--text-secondary);
   margin: 6px;
   width: 22px;
   height: 22px;
@@ -74,40 +74,39 @@
   flex-shrink: 0;
   box-sizing: content-box;
   cursor: pointer;
-  transition: all 0.2s ease;
 
   &:hover {
-    color: $primary-orange;
-    background: $bg-orange;
+    color: var(--accent-primary);
+    background: var(--accent-bg);
     border-radius: 12px;
   }
 
   &.trashcan {
     &:hover{
-      color: $red_hover;
-      background: #333333;
+      color: var(--red-main);
+      background: var(--bg-base);
     }
 
     &.active {
-      color: $red_hover;
-      background: $bg-orange;
+      color: var(--red-main);
+      background: var(--accent-bg);
       border-radius: 12px;
-      border: $red_hover solid 1px;
+      border: var(--red-main) solid 1px;
     }
   }
 
   &.active {
-    color: $primary-orange;
-    background: $bg-orange;
+    color: var(--accent-primary);
+    background: var(--accent-bg);
     border-radius: 12px;
-    border: $primary-orange solid 1px;
+    border: var(--accent-primary) solid 1px;
   }
 }
 
 .model-divider {
   width: 32px;
   height: 1px;
-  background: $border-color;
+  background: var(--border-base);
   margin: 12px 0;
   flex-shrink: 0;
 }
