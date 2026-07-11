@@ -20,22 +20,32 @@ export default function TabsWidget() {
                 Главная
             </NavLink>
             {tabs.map((tab) => {
-                return (
-                    <>
-                        <NavLink to={ `/models/${tab.id}` } className="tab">
-                            <tab.model.icon />
-                            {tab.title}
-                            <Cancel
-                                className="cancel-icon"
-                                onClick={ (e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    removeTab(tab);
-                                } }
-                            />
-                        </NavLink>
-                    </>
-                );
+                return tab.title === "Без названия*" ? (
+                    <NavLink key={ tab.id } to={ `/models/${tab.id}` } className="tab">
+                        <tab.model.icon />
+                        {tab.title}
+                        <Cancel
+                            className="cancel-icon"
+                            onClick={ (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeTab(tab);
+                            } }
+                        />
+                    </NavLink>
+                ) : (
+                    <NavLink key={ tab.id } to={ "/settings" } className="tab">
+                        <tab.model.icon />
+                        {tab.title}
+                        <Cancel
+                            className="cancel-icon"
+                            onClick={ (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                removeTab(tab);
+                            } }
+                        />
+                    </NavLink> );
             })}
 
             <DropdownMenu.Root>

@@ -5,25 +5,59 @@
   padding: 0;
   box-sizing: border-box;
   font-family: $primary-font;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 html, body {
   width: 100%;
-  min-height: 100vh;
-  background: $bg-grey;
+  height: 100%;
+  background: var(--bg-base);
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
   overflow: hidden;
 }
 
 .container {
   display: flex;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
 }
+
 
 svg {
   width: 1rem;
   height: 1rem;
   fill: none;
 }
-p{
+p {
   margin: 0;
   padding: 0;
+}
+
+::-webkit-scrollbar {
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-base);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }

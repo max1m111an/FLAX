@@ -1,7 +1,7 @@
 import "@/assets/scss/index.scss";
-import MainModelWidget from "@/widgets/MainModelWidget.tsx";
-import MainControlWidget from "@/widgets/MainControlWidget.tsx";
-import MainHistoryWidget from "@/widgets/MainHistoryWidget.tsx";
+import MainModelWidget from "@/widgets/Main/MainModelWidget.tsx";
+import MainControlWidget from "@/widgets/Main/MainControlWidget.tsx";
+import MainHistoryWidget from "@/widgets/Main/MainHistoryWidget.tsx";
 
 
 export default function MainScene() {

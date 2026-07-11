@@ -1,0 +1,113 @@
+@use "../consts" as *;
+
+.model-container {
+  display: flex;
+  flex-direction: row;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+}
+
+.model-left-control-wrapper {
+  display: flex;
+  min-width: 64px;
+  max-width: 64px;
+  z-index: 999;
+  flex-direction: column;
+  width: 64px;
+  height: calc(100vh - 44px);
+  background: var(--bg-surface-alt);
+  align-items: center;
+  border-right: var(--border-base) solid 1px;
+  position: relative;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.model-canvas-wrapper {
+  position: relative;
+  flex-grow: 1;
+  width: 100%;
+  height: 100vh;
+  background-image: radial-gradient(var(--point-bg) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-color: var(--bg-base);
+}
+
+.model-top-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding-top: 4px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.model-middle-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  flex: 1;
+  justify-content: flex-start;
+  padding: 8px 0;
+}
+
+.model-bottom-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-bottom: 16px;
+}
+
+.model-control-icon {
+  color: var(--text-secondary);
+  margin: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 10px;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--accent-primary);
+    background: var(--accent-bg);
+    border-radius: 12px;
+  }
+
+  &.trashcan {
+    &:hover{
+      color: var(--red-main);
+      background: var(--bg-base);
+    }
+
+    &.active {
+      color: var(--red-main);
+      background: var(--accent-bg);
+      border-radius: 12px;
+      border: var(--red-main) solid 1px;
+    }
+  }
+
+  &.active {
+    color: var(--accent-primary);
+    background: var(--accent-bg);
+    border-radius: 12px;
+    border: var(--accent-primary) solid 1px;
+  }
+}
+
+.model-divider {
+  width: 32px;
+  height: 1px;
+  background: var(--border-base);
+  margin: 12px 0;
+  flex-shrink: 0;
+}
+

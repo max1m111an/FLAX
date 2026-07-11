@@ -11,7 +11,7 @@ export interface tab{
 
 interface TabsContextProps {
     tabs: tab[];
-    addTab: (model: model) => void;
+    addTab: (model: model, type?: string) => void;
     removeTab: (tab: tab) => void;
 }
 
@@ -21,29 +21,43 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
 
-    const addTab = (model:model) : void => {
+    const addTab = (model:model, type : string = "Без названия*" ) : void => {
+        if (type === "Настройки") {
+            const existingSettingsTab = tabs.find((t) => t.title === "Настройки");
+            if (existingSettingsTab) {
+                navigate(ROUTES.SETTINGS);
+                return;
+            }
+        }
+
         const id: number = Date.now();
         const newTab: tab = {
             id: id,
-            title: "Без названия*",
+            title: type,
             model: model,
         };
         setTabs([ ...tabs, newTab ]);
-        navigate(`/models/${id}`);
+        if (type == "Без названия*") {
+            navigate(`/models/${id}`);
+        } else if (type == "Настройки") {
+            navigate(ROUTES.SETTINGS);
+        }
     };
     const location = useLocation();
 
     const removeTab = (self_tab: tab): void => {
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);
 
-        const isCurrent = location.pathname === `/models/${self_tab.id}`;
+        const tabPath = self_tab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${self_tab.id}`;
+        const isCurrent = location.pathname === tabPath;
 
         setTabs(newTabs);
 
         if (isCurrent) {
             if (newTabs.length > 0) {
                 const lastTab = newTabs[newTabs.length - 1];
-                navigate(`/models/${lastTab.id}`);
+                const navigatePath = lastTab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${lastTab.id}`;
+                navigate(navigatePath);
             } else {
                 navigate(ROUTES.MAIN);
             }

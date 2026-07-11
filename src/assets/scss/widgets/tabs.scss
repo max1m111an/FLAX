@@ -3,17 +3,18 @@
 .tabs_wrapper{
   display: flex;
   flex-direction: row;
-  border-bottom: $border-color solid 1px;
+  border-bottom: var(--border-base) solid 1px;
   padding-left: 16px;
   padding-right: 16px;
   padding-top: 8px;
   flex-shrink: 0;
   gap: 4px;
-  background: $card-bg;
+  background: var(--bg-surface-alt);
   white-space: nowrap;
   -webkit-overflow-scrolling: touch;
   overflow-x: auto;
   overflow-y: hidden;
+  z-index: 999;
 }
 .tab{
   user-select: none;
@@ -27,15 +28,15 @@
   gap: 0.5rem;
   border: none;
   background: transparent;
-  color: $text-muted;
+  color: var(--text-secondary);
   cursor: pointer;
   text-decoration: none;
   flex-shrink: 0;
 
   &.active{
-    border-bottom: $primary-orange solid 2px;
-    color: $primary-orange;
-    background-color: $bg-grey;
+    border-bottom: var(--accent-primary) solid 2px;
+    color: var(--accent-primary);
+    background-color: var(--bg-base);
 
     .cancel-icon{
       color: rgba(249, 115, 22, 0.45);
@@ -43,8 +44,8 @@
   }
 
   &:not(.active):hover{
-    background: #333333;
-    color: $text-main;
+    background: var(--bg-base);
+    color: var(--text-primary);
   }
 }
 
@@ -55,25 +56,25 @@
   cursor: default;
   box-sizing: border-box;
   padding: 2px;
-  color: $text-muted;
+  color: var(--text-secondary);
 
   &:hover {
     background:#333333;
     border-radius: 4px;
-    color: $primary-orange;
-    background: $border-color;
+    color: var(--accent-primary);
+    background: var(--border-base);
   }
 }
 
 .dropdown {
-  background: $card-bg;
-  border: 1px solid $border-color;
-  color: $text-muted;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  color: var(--text-secondary);
   border-radius: 10px;
   padding: 6px 0;
-  min-width: 180px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.4);
   margin-top: 4px;
+  z-index: 999;
 }
 
 .item {
@@ -83,7 +84,9 @@
   gap: 12px;
   padding: 12px 14px;
   cursor: pointer;
-  color: $text-muted;
+  color: var(--text-secondary);
+  z-index: 1;
+  align-items: center;
 
   &:hover {
     background: rgba(249, 115, 22, 0.1);
@@ -94,35 +97,18 @@
 .plus-button{
   background: transparent;
   border: none;
-  color: $text-muted;
+  color: var(--text-secondary);
   padding: 0.5rem 1rem;
   border-radius: 0.5rem 0.5rem 0 0;
   flex-shrink: 0;
 
   &:hover{
-    background: #333333;
+    background: var(--bg-base);
   }
-}
-
-.tabs_wrapper::-webkit-scrollbar {
-  height: 6px;
-}
-
-.tabs_wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.tabs_wrapper::-webkit-scrollbar-thumb {
-  background: $border-color;
-  border-radius: 10px;
-}
-
-.tabs_wrapper::-webkit-scrollbar-thumb:hover {
-  background: $text-muted;
 }
 
 .tabs_wrapper {
   scrollbar-width: thin;
-  scrollbar-color: $border-color transparent;
+  scrollbar-color: var(--border-base) transparent;
 }
 
