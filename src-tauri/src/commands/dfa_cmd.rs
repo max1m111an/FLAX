@@ -3,33 +3,33 @@ use tauri::State;
 use crate::structs::{
     automata::Automaton,
     data_models::{AutomatonKind, CheckResult, OperationResult, StateData, TransitionData},
-    nfa::{NFA, EPSILON, NFABuilder},
+    dfa::{DFA, DFABuilder},
     store::AutomatonStore,
 };
 
 #[tauri::command]
-pub fn create_new_nfa(
+pub fn create_new_dfa(
     state: State<'_, AutomatonStore>,
     name: Option<String>,
 ) -> OperationResult {
     let entry = state.create(
-        name.unwrap_or_else(|| "NFA".to_string()),
-        AutomatonKind::NFA,
+        name.unwrap_or_else(|| "DFA".to_string()),
+        AutomatonKind::DFA,
         "q0",
     );
     OperationResult {
         success: true,
-        message: "NFA успешно создан".to_string(),
+        message: "DFA успешно создан".to_string(),
         automaton: Some(entry),
     }
 }
 
 #[tauri::command]
-pub fn nfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
+pub fn dfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
     match state.get(automaton_id) {
         Some(entry) => OperationResult {
             success: true,
-            message: "NFA получен".to_string(),
+            message: "DFA получен".to_string(),
             automaton: Some(entry),
         },
         None => OperationResult {
@@ -41,7 +41,7 @@ pub fn nfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> Operation
 }
 
 #[tauri::command]
-pub fn nfa_add_state(
+pub fn dfa_add_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
@@ -88,7 +88,7 @@ pub fn nfa_add_state(
 }
 
 #[tauri::command]
-pub fn nfa_update_state(
+pub fn dfa_update_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
@@ -150,7 +150,7 @@ pub fn nfa_update_state(
 }
 
 #[tauri::command]
-pub fn nfa_remove_state(
+pub fn dfa_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
@@ -186,7 +186,7 @@ pub fn nfa_remove_state(
 }
 
 #[tauri::command]
-pub fn nfa_add_transition(
+pub fn dfa_add_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     from: i32,
@@ -223,20 +223,22 @@ pub fn nfa_add_transition(
     let mut count = 0u32;
     for &symbol in &symbols {
         let sym_str = symbol.to_string();
-        let already_exists = entry
+        if let Some(existing) = entry
             .transitions
             .iter()
-            .any(|t| t.from == from && t.to == to && t.symbol == sym_str);
-
-        if already_exists {
+            .find(|t| t.from == from && t.symbol == sym_str)
+        {
             return OperationResult {
                 success: false,
-                message: format!("Переход {} -> {} по '{}' уже существует", from, to, symbol),
+                message: format!(
+                    "Переход {} -> {} по '{}' уже существует (в {})",
+                    from, symbol, symbol, existing.to
+                ),
                 automaton: Some(entry),
             };
         }
 
-        if symbol != EPSILON && !entry.alphabet.contains(&symbol) {
+        if !entry.alphabet.contains(&symbol) {
             entry.alphabet.push(symbol);
         }
 
@@ -258,11 +260,10 @@ pub fn nfa_add_transition(
 }
 
 #[tauri::command]
-pub fn nfa_update_transition(
+pub fn dfa_update_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     old_from: i32,
-    old_to: i32,
     old_symbol: char,
     new_from: Option<i32>,
     new_to: Option<i32>,
@@ -283,13 +284,13 @@ pub fn nfa_update_transition(
     let idx = match entry
         .transitions
         .iter()
-        .position(|t| t.from == old_from && t.to == old_to && t.symbol == old_symbol.to_string())
+        .position(|t| t.from == old_from && t.symbol == old_symbol.to_string())
     {
         Some(i) => i,
         None => {
             return OperationResult {
                 success: false,
-                message: format!("Переход {} -> {} по '{}' не найден", old_from, old_to, old_symbol),
+                message: format!("Переход {} -> '{}' не найден", old_from, old_symbol),
                 automaton: Some(entry),
             };
         }
@@ -317,11 +318,10 @@ pub fn nfa_update_transition(
 }
 
 #[tauri::command]
-pub fn nfa_remove_transition(
+pub fn dfa_remove_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     from: i32,
-    to: i32,
     symbol: char,
 ) -> OperationResult {
     let mut entry = match state.get(automaton_id) {
@@ -338,14 +338,14 @@ pub fn nfa_remove_transition(
     let original_count = entry.transitions.len();
     entry
         .transitions
-        .retain(|t| !(t.from == from && t.to == to && t.symbol == symbol.to_string()));
+        .retain(|t| !(t.from == from && t.symbol == symbol.to_string()));
     let removed = original_count - entry.transitions.len();
 
     state.update(entry.clone());
     OperationResult {
         success: removed > 0,
         message: if removed > 0 {
-            format!("Удалено {} переход(ов)", removed)
+            format!("Переход {} -> '{}' удалён", from, symbol)
         } else {
             "Переход не найден".to_string()
         },
@@ -354,7 +354,7 @@ pub fn nfa_remove_transition(
 }
 
 #[tauri::command]
-pub fn nfa_check_string(
+pub fn dfa_check_string(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     input: String,
@@ -370,14 +370,14 @@ pub fn nfa_check_string(
         }
     };
 
-    match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
-        Ok(nfa) => {
+    match data_to_dfa(&entry.states, &entry.transitions, &entry.alphabet) {
+        Ok(dfa) => {
             let chars: Vec<char> = input.chars().collect();
-            let accepted = nfa.accepts(&chars);
+            let accepted = dfa.accepts(&chars);
             CheckResult {
                 success: true,
                 message: format!(
-                    "Строка '{}' {} принята NFA",
+                    "Строка '{}' {} принята DFA",
                     input,
                     if accepted { "" } else { "не " }
                 ),
@@ -392,12 +392,12 @@ pub fn nfa_check_string(
     }
 }
 
-fn data_to_nfa(
+fn data_to_dfa(
     states: &[StateData],
     transitions: &[TransitionData],
     alphabet: &[char],
-) -> Result<NFA, String> {
-    let mut builder = NFABuilder::new();
+) -> Result<DFA, String> {
+    let mut builder = DFABuilder::new();
 
     for state in states {
         builder = builder.state(state.id);
@@ -414,9 +414,7 @@ fn data_to_nfa(
     }
 
     for trans in transitions {
-        if trans.symbol == EPSILON.to_string() {
-            builder = builder.epsilon(trans.from, trans.to);
-        } else if let Some(symbol) = trans.symbol.chars().next() {
+        if let Some(symbol) = trans.symbol.chars().next() {
             builder = builder.transition(trans.from, symbol, trans.to);
         }
     }

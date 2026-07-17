@@ -1,23 +1,35 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum AutomatonKind {
+    NFA,
+    DFA,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateData {
-    pub id: String,
+    pub id: i32,
     pub label: String,
+    pub x: f32,
+    pub y: f32,
     pub is_initial: bool,
     pub is_final: bool,
-    pub position: Option<(f32, f32)>, // координаты для визуализации
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitionData {
-    pub from: String,
-    pub to: String,
-    pub symbol: Option<char>, // None для eps-перехода
+    pub from: i32,
+    pub to: i32,
+    pub symbol: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct NFAData {
+pub struct AutomatonData {
+    pub id: i32,
+    pub name: String,
+    pub kind: AutomatonKind,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
     pub alphabet: Vec<char>,
@@ -27,5 +39,12 @@ pub struct NFAData {
 pub struct OperationResult {
     pub success: bool,
     pub message: String,
-    pub automaton: Option<NFAData>,
+    pub automaton: Option<AutomatonData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CheckResult {
+    pub success: bool,
+    pub message: String,
+    pub accepted: bool,
 }
