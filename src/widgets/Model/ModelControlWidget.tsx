@@ -10,32 +10,34 @@ import Play from "@/assets/svg/Play.svg?react";
 import Settings from "@/assets/svg/Settings.svg?react";
 import Move from "@/assets/svg/Move.svg?react";
 import { useControl } from "@/context/ControlContext.tsx";
+import clsx from "clsx";
+import styles from "../../scenes/ModelScene.module.scss";
 
 
 export default function ModelControlWidget() {
     const { activePane, changePane } = useControl();
     const { activeControl, changeControl } = useControl();
     return (
-        <div className="model-left-control-wrapper">
-            <div className="model-top-group">
-                <Cursor className={ `model-control-icon ${activeControl == "cursor" && "active"}` } onClick={ () => changeControl("cursor") } />
-                <Move className={ `model-control-icon ${activeControl == "Move" && "active"}` } onClick={ () => changeControl("Move") } />
-                <Circle className={ `model-control-icon ${activeControl == "node" && "active"}` } onClick={ () => changeControl("node") } />
-                <ArrowUpRight className={ `model-control-icon ${activeControl == "edge" && "active"}` } onClick={ () => changeControl("edge") } />
-                <Trashcan className={ `model-control-icon trashcan ${activeControl == "trashcan" && "active"}` } onClick={ () => changeControl("trashcan") } />
-                <div className="model-divider" />
+        <div className={ styles.modelLeftControlWrapper }>
+            <div className={ styles.modelTopGroup }>
+                <Cursor className={ clsx(styles.modelControlIcon, activeControl == "cursor" && styles.active) } onClick={ () => changeControl("cursor") } />
+                <Move className={ clsx(styles.modelControlIcon, activeControl == "Move" && styles.active) } onClick={ () => changeControl("Move") } />
+                <Circle className={ clsx(styles.modelControlIcon, activeControl == "node" && styles.active) } onClick={ () => changeControl("node") } />
+                <ArrowUpRight className={ clsx(styles.modelControlIcon, activeControl == "edge" && styles.active) } onClick={ () => changeControl("edge") } />
+                <Trashcan className={ clsx(styles.modelControlIcon, styles.trashcan, activeControl == "trashcan" && styles.active) } onClick={ () => changeControl("trashcan") } />
+                <div className={ styles.modelDivider } />
             </div>
 
-            <div className="model-middle-group">
-                <Save className="model-control-icon" />
-                <PenLine className="model-control-icon" />
-                <Wrench className="model-control-icon" />
-                <Image className="model-control-icon" />
+            <div className={ styles.modelMiddleGroup }>
+                <Save className={ styles.modelControlIcon } />
+                <PenLine className={ styles.modelControlIcon } />
+                <Wrench className={ styles.modelControlIcon } />
+                <Image className={ styles.modelControlIcon } />
             </div>
 
-            <div className="model-bottom-group">
-                <Settings className={ `model-control-icon ${activePane == "settings" && "active"}` } onClick={ () => changePane("settings") } />
-                <Play className={ `model-control-icon ${activePane == "play" && "active"}` } onClick={ () => changePane("play") } />
+            <div className={ styles.modelBottomGroup }>
+                <Settings className={ clsx(styles.modelControlIcon, activePane == "settings" && styles.active) } onClick={ () => changePane("settings") } />
+                <Play className={ clsx(styles.modelControlIcon, activePane == "play" && styles.active) } onClick={ () => changePane("play") } />
             </div>
         </div>
     );

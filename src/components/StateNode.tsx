@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
 import { useControl } from "@/context/ControlContext.tsx";
+import clsx from "clsx";
+import styles from "./StateNode.module.scss";
 
 interface StateNodeProps {
     isFinal?: boolean;
@@ -163,7 +165,7 @@ export function StateNode(
     return (
         <div
             ref={ nodeRef }
-            className={ `state-node-wrapper ${activeControl === "trashcan" && "delete-mode"}` }
+            className={ clsx(styles.stateNodeWrapper, activeControl === "trashcan" && styles.deleteMode) }
             style={ {
                 cursor: getCursorStyle(),
                 zIndex: getZIndex(),
@@ -171,10 +173,15 @@ export function StateNode(
             data-node-id={ id }
             onClick={ activeControl === "cursor" ? () => (setSelectedNode(id)) : undefined }
         >
-            {isInitial && <ChevronsRight className={ "state-initial" }
+            {isInitial && <ChevronsRight className={ styles.stateInitial }
             />}
             <div
-                className={ `state-node ${isFinal && "state-final"} ${activeControl === "trashcan" && "delete-mode"} ${selectedNode == id && "selected"}` }
+                className={ clsx(
+                    styles.stateNode,
+                    isFinal && styles.stateFinal,
+                    activeControl === "trashcan" && styles.deleteMode,
+                    selectedNode === id && styles.selected,
+                ) }
                 onMouseDown={ onMouseDown }
             >
                 {label}

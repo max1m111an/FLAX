@@ -1,38 +1,36 @@
-@use "@/assets/scss/consts" as *;
-
-.main-container{
+.mainContainer {
   padding: 32px 64px;
   height: 100vh;
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
 }
-.main-title{
+.mainTitle {
   font-size: 36px;
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.main-subtitle{
+.mainSubtitle {
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
   margin-bottom: 32px;
 }
-.cards-wrapper{
+.cardsWrapper {
   display: flex;
   flex-direction: row;
   gap: 28px;
   justify-content: space-between;
   margin-bottom: 32px;
 }
-@media (min-width: 1025px){
-  .cards-wrapper{
+@media (min-width: 1025px) {
+  .cardsWrapper {
     justify-content: flex-start;
   }
 }
-.card-type{
+.cardType {
   width: 280px;
   background: var(--bg-surface);
   border: 1px solid var(--border-base);
@@ -47,19 +45,19 @@
     transform: translateY(-1px);
   }
 }
-.card-title-type{
+.cardTitleType {
   font-size: 18px;
   font-weight: 600;
   margin-bottom: 8px;
   color: var(--text-primary);
 }
-.card-description-type{
+.cardDescriptionType {
   font-size: 14px;
   color: var(--text-secondary);
   line-height: 1.6;
 }
 
-.icon-container {
+.iconContainer {
   width: 48px;
   height: 48px;
   color: var(--accent-primary);
@@ -68,15 +66,14 @@
   margin-bottom: 20px;
   padding: 12px;
 }
-.control-wrapper{
+.controlWrapper {
   display: flex;
   flex-direction: row;
   gap: 16px;
   margin-bottom: 32px;
-
 }
 
-.open-file-button {
+.openFileButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +92,7 @@
   }
 }
 
-.control-button {
+.controlButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -114,7 +111,7 @@
   }
 }
 
-.recent-title {
+.recentTitle {
   display: inline-flex;
   flex-direction: row;
   align-items: center;
@@ -123,37 +120,56 @@
   color: var(--text-primary);
   gap: 6px;
 
-  svg{
+  svg {
     width: 24px;
     height: 24px;
   }
 }
 
-.recent-clean-wrapper{
+.recentCleanWrapper {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 16px;
-
 }
 
-.clean-text{
+.cleanText {
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1.5;
   font-weight: 400;
 }
 
-.recent-cards-wrapper {
+.recentCardsWrapper {
   display: flex;
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
   padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-base) transparent;
+  
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--border-base);
+    border-radius: 10px;
+    transition: background 0.2s;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+  }
 }
 
-.recent-card{
+.recentCard {
   width: 100%;
   background: var(--bg-surface);
   border: 1px solid var(--border-base);
@@ -170,13 +186,13 @@
   }
 }
 
-.recent-name-time-card-wrapper{
+.recentNameTimeCardWrapper {
   display: flex;
   flex-direction: column;
   flex-grow: 1;
 }
 
-.recent-icon {
+.recentIcon {
   width: 24px;
   height: 24px;
   margin-right: 16px;
@@ -184,50 +200,27 @@
   border-radius: 12px;
 }
 
-.recent-name {
+.recentName {
   font-size: 14px;
   font-weight: 500;
   color: var(--text-primary);
 }
 
-.recent-time {
+.recentTime {
   color: var(--text-secondary);
   font-size: 12px;
   line-height: 1.5;
   font-weight: 400;
 }
 
-.recent-arrow {
+.recentArrow {
   width: 20px;
   height: 20px;
   color: #666666;
   transition: all 0.2s;
 }
 
-.recent-cards-wrapper::-webkit-scrollbar {
-  width: 6px;
-}
-
-.recent-cards-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.recent-cards-wrapper::-webkit-scrollbar-thumb {
-  background: var(--border-base);
-  border-radius: 10px;
-  transition: background 0.2s;
-}
-
-.recent-cards-wrapper::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
-}
-
-.recent-cards-wrapper {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-base) transparent;
-}
-
-.bottom-space {
+.bottomSpace {
   height: 64px;
   flex-shrink: 0;
 }

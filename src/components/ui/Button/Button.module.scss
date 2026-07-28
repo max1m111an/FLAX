@@ -1,7 +1,4 @@
-@use "@/assets/scss/consts" as *;
-
-
-.main-btn {
+.mainBtn {
   display: flex;
   flex-direction: row;
   justify-content: center;
@@ -23,7 +20,7 @@
     transform: translateY(-1px);
     background-color: var(--accent-bg);
 
-    svg{
+    svg {
       fill: var(--accent-bg);
     }
   }
@@ -39,7 +36,8 @@
     transform: none;
     filter: none;
   }
-  &.square{
+
+  &.square {
     width: auto;
     aspect-ratio: 1 / 1;
     border-radius: 8px;
@@ -47,7 +45,7 @@
   }
 }
 
-.control-btn{
+.controlBtn {
   width: 50%;
   display: inline-flex;
   align-items: center;
@@ -60,9 +58,14 @@
   border-radius: 10px;
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
+
   &:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
   }
+}
 
+.fullWidth {
+  width: 100%;
 }

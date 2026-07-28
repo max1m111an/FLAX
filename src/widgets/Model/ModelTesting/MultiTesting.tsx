@@ -1,20 +1,23 @@
 import Play from "@/assets/svg/Play.svg?react";
 import FileDown from "@/assets/svg/FileDown.svg?react";
+import { Button } from "@/components/ui/Button/Button.tsx";
+import { TextArea } from "@/components/ui/Textfield/Textfield.tsx";
+import { Typography } from "@/components/ui/Typography/Typography.tsx";
+import styles from "./ModelTestWidget.module.scss";
 
 export default function MultiTesting() {
     return (
         <>
-            <p className="model-pretitle">Входные строки</p>
-            <textarea
+            <Typography variant="pretitle">Входные строки</Typography>
+            <TextArea
                 rows={ 5 }
-                className="multiline-input"
             />
-            <div className="model-play-export-wrapper">
-                <button className="main-btn">
+            <div className={ styles.playExportWrapper }>
+                <Button variant="main">
                     <Play />
                     Запустить все
-                </button>
-                <button className="model-export-multi-test-btn">
+                </Button>
+                <button className={ styles.exportMultiTestBtn }>
                     <FileDown />
                     Экспорт
                 </button>
