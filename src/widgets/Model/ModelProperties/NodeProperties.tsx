@@ -1,4 +1,8 @@
 import { useControl } from "@/context/ControlContext.tsx";
+import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
+import { Switch } from "@/components/ui/Switch/Switch.tsx";
+import { Typography } from "@/components/ui/Typography/Typography.tsx";
+import styles from "./ModelProperties.module.scss";
 
 export default function NodeProperties() {
     const { selectedNode, nodes, setNodes } = useControl();
@@ -48,59 +52,48 @@ export default function NodeProperties() {
     };
     if (selectedNode === null) {
         return (
-            <p className="state-label">Выберите вершину...</p>
+            <Typography variant="label">Выберите вершину...</Typography>
         );
     }
     return (
         <>
-            <p className="model-pretitle">Имя состояния</p>
-            <input
-                className="input"
+            <Typography variant="pretitle">Имя состояния</Typography>
+            <Textfield
                 value={ nodes.find((node) => node.id === selectedNode)?.name || "" }
                 onChange={ (e) => handleNameChange(e.currentTarget.value) }
             />
 
-            <div className="state-wrapper">
-                <p className="state-label">Начальное состояние</p>
-                <label className="switch">
-                    <input
-                        type="checkbox"
-                        checked={ nodes.find((node) => node.id === selectedNode)?.isInitial }
-                        disabled={ nodes.find((node) => node.id === selectedNode)?.isFinal }
-                        onChange={ handleInitialChange }
-                    />
-                    <span className="slider round"></span>
-                </label>
+            <div className={ styles.stateWrapper }>
+                <Typography variant="label">Начальное состояние</Typography>
+                <Switch
+                    checked={ nodes.find((node) => node.id === selectedNode)?.isInitial }
+                    disabled={ nodes.find((node) => node.id === selectedNode)?.isFinal }
+                    onChange={ handleInitialChange }
+                />
             </div>
-            <div className="state-wrapper">
-                <p className="state-label">Финальное состояние</p>
-                <label className="switch">
-                    <input
-                        type="checkbox"
-                        checked={ nodes.find((node) => node.id === selectedNode)?.isFinal }
-                        disabled={ nodes.find((node) => node.id === selectedNode)?.isInitial }
-                        onChange={ handleFinalChange }
-                    />
-                    <span className="slider round"></span>
-                </label>
+            <div className={ styles.stateWrapper }>
+                <Typography variant="label">Финальное состояние</Typography>
+                <Switch
+                    checked={ nodes.find((node) => node.id === selectedNode)?.isFinal }
+                    disabled={ nodes.find((node) => node.id === selectedNode)?.isInitial }
+                    onChange={ handleFinalChange }
+                />
             </div>
-            <div className="spacer"></div>
-            <p className="model-pretitle">Позиция</p>
-            <div className="coordinates-wrapper">
-                <div className="coordinates-label-wrapper">
-                    <p className="state-label">X</p>
-                    <input
+            <div className={ styles.spacer }></div>
+            <Typography variant="pretitle">Позиция</Typography>
+            <div className={ styles.coordinatesWrapper }>
+                <div className={ styles.coordinatesLabelWrapper }>
+                    <Typography variant="label">X</Typography>
+                    <Textfield
                         type="number"
-                        className="input"
                         value={ nodes.find((node) => node.id === selectedNode)?.x }
                         onChange={ (e) => handleXChange(e.currentTarget.value) }
                     />
                 </div>
-                <div className="coordinates-label-wrapper">
-                    <p className="state-label">Y</p>
-                    <input
+                <div className={ styles.coordinatesLabelWrapper }>
+                    <Typography variant="label">Y</Typography>
+                    <Textfield
                         type="number"
-                        className="input"
                         value={ nodes.find((node) => node.id === selectedNode)?.y }
                         onChange={ (e) => handleYChange(e.currentTarget.value) }
                     />

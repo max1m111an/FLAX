@@ -1,4 +1,6 @@
 import { useControl } from "@/context/ControlContext.tsx";
+import clsx from "clsx";
+import styles from "./Edge.module.scss";
 
 interface EdgeProps {
     x1: number;
@@ -44,7 +46,7 @@ export default function Edge(
     return (
         <g
             onMouseDown={ handleDelete }
-            className={ activeControl === "trashcan" ? "delete-mode" : "" }
+            className={ clsx(styles.edge, activeControl === "trashcan" && styles.deleteMode) }
         >
             <defs>
                 <marker id={ `arrowhead-${id}` } markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
@@ -57,7 +59,7 @@ export default function Edge(
                 y1={ y1 }
                 x2={ x2 }
                 y2={ y2 }
-                className={ activeControl === "trashcan" ? "delete" : "" }
+                className={ styles.delete }
             />
             <line
                 x1={ x1 }
@@ -65,7 +67,7 @@ export default function Edge(
                 x2={ x2 }
                 y2={ y2 }
                 markerEnd={ `url(#arrowhead-${id})` }
-                className={ `${selectedEdge == id && "selected"}` }
+                className={ clsx(selectedEdge === id && styles.selected) }
                 style={ { cursor: activeControl === "trashcan" ? "pointer" : "default" } }
             />
             {!isEditing &&
@@ -77,7 +79,7 @@ export default function Edge(
                     x={ textX }
                     y={ textY }
                     textAnchor="middle"
-                    className={ `edge-label ${selectedEdge == id && "selected"}` }
+                    className={ clsx(styles.edgeLabel, selectedEdge === id && styles.selected) }
                     transform={ `rotate(${angle}, ${textX}, ${textY})` }
                     style={ { cursor: activeControl === "trashcan" ? "pointer" : "default" } }
                 >

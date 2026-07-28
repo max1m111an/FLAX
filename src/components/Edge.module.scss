@@ -1,0 +1,47 @@
+.edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+
+  line {
+    stroke: var(--accent-primary);
+    stroke-width: 1.5;
+    pointer-events: stroke;
+
+    &.selected {
+      filter: drop-shadow(0 0 3px rgba(var(--accent-primary), 0.6))
+              drop-shadow(0 0 6px rgba(var(--accent-secondary), 0.5));
+    }
+    &.delete {
+      stroke: transparent;
+      stroke-width: 30;
+      cursor: pointer;
+    }
+  }
+
+  polygon {
+    fill: var(--accent-primary);
+  }
+}
+
+.edgeLabel {
+  fill: var(--accent-primary);
+  font-size: 14px;
+  pointer-events: auto;
+  
+  &.selected {
+    filter: drop-shadow(0 0 3px rgba(var(--accent-primary), 0.6))
+            drop-shadow(0 0 6px rgba(var(--accent-secondary), 0.5));
+  }
+}
+
+.deleteMode:hover {
+  line:not(.delete) {
+    stroke: var(--red-main);
+  }
+  .edgeLabel {
+    fill: var(--red-main);
+  }
+}

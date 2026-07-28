@@ -3,26 +3,37 @@ import { useState } from "react";
 import SoloTesting from "./SoloTesting.tsx";
 import FileTesting from "./FileTesting.tsx";
 import MultiTesting from "./MultiTesting.tsx";
-
+import { Typography } from "@/components/ui/Typography/Typography.tsx";
+import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
+import clsx from "clsx";
+import styles from "./ModelTestWidget.module.scss";
 
 export default function ModelTestWidget() {
     const [ typeTest, setTypeTest ] = useState<string>("solo");
     return (
-        <div className="model-test-wrapper">
-            <div className="model-title-cancel-wrapper">
-                <p className="model-title">Тестирование</p>
-                <Cancel className="model-cancel-icon" />
+        <div className={ styles.wrapper }>
+            <div className={ styles.titleCancelWrapper }>
+                <Typography variant="title">Тестирование</Typography>
+                <IconButton variant="cancel" onClick={ () => {} }>
+                    <Cancel />
+                </IconButton>
             </div>
-            <div className="model-switch-wrapper">
-                <div className={ `switch-indicator ${typeTest}` } />
-                <button onClick={ () => setTypeTest("solo") } className="model-switch-btn">
+            <div className={ styles.switchWrapper }>
+                <div className={ clsx(styles.switchIndicator, styles[typeTest]) } />
+                <button
+                    onClick={ () => setTypeTest("solo") }
+                    className={ clsx(styles.switchBtn, typeTest === "solo" && styles.active) }
+                >
                     Единичный
                 </button>
-                <button onClick={ () => setTypeTest("multi") } className="model-switch-btn">
+                <button
+                    onClick={ () => setTypeTest("multi") }
+                    className={ clsx(styles.switchBtn, typeTest === "multi" && styles.active) }
+                >
                     Мульти
                 </button>
             </div>
-            <div className="test-type-wrapper">
+            <div className={ styles.testTypeWrapper }>
                 {typeTest === "solo" && (
                     <SoloTesting />
                 )}

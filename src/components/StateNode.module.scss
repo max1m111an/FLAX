@@ -1,0 +1,55 @@
+.stateNodeWrapper {
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  z-index: auto;
+  transition: z-index 0.1s;
+
+  &.deleteMode:hover {
+    svg {
+      color: var(--red-main);
+    }
+  }
+}
+
+.stateNode {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-primary);
+  background-color: var(--accent-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: var(--accent-primary);
+  white-space: nowrap;
+  position: relative;
+
+  &.deleteMode:hover {
+    border-color: var(--red-main);
+    color: var(--red-main);
+    cursor: pointer;
+  }
+}
+
+.stateFinal {
+  border: 4px double var(--accent-primary);
+  background-color: var(--accent-bg);
+}
+
+.stateInitial {
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--accent-primary);
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.selected {
+  box-shadow: 0 0 32px var(--accent-primary), 0 0 16px var(--accent-secondary);
+}

@@ -3,6 +3,7 @@ import Settings from "@/assets/svg/Settings.svg?react";
 import Documentation from "@/assets/svg/Documentation.svg?react";
 import { model } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
+import styles from "../../scenes/MainScene.module.scss";
 
 export default function MainControlWidget() {
     const { addTab } = useTabs();
@@ -14,16 +15,16 @@ export default function MainControlWidget() {
         description: "",
     };
     return (
-        <div className="control-wrapper">
-            <button className="open-file-button">
+        <div className={ styles.controlWrapper }>
+            <button className={ styles.openFileButton }>
                 <FolderOpen />
                 Открыть файл (.jff)
             </button>
-            <button className="control-button">
+            <button className={ styles.controlButton }>
                 <Documentation />
                 Документация
             </button>
-            <button className="control-button" onClick={ (_e) => addTab(settingsModel, "Настройки") }>
+            <button className={ styles.controlButton } onClick={ (_e) => addTab(settingsModel, "Настройки") }>
                 <Settings />
                 Настройки
             </button>

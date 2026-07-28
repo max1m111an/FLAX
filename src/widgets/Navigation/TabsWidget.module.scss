@@ -1,6 +1,4 @@
-@use "@/assets/scss/consts" as *;
-
-.tabs_wrapper{
+.tabsWrapper {
   display: flex;
   flex-direction: row;
   border-bottom: var(--border-base) solid 1px;
@@ -15,8 +13,11 @@
   overflow-x: auto;
   overflow-y: hidden;
   z-index: 999;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-base) transparent;
 }
-.tab{
+
+.tab {
   user-select: none;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
@@ -33,23 +34,23 @@
   text-decoration: none;
   flex-shrink: 0;
 
-  &.active{
+  &.active {
     border-bottom: var(--accent-primary) solid 2px;
     color: var(--accent-primary);
     background-color: var(--bg-base);
 
-    .cancel-icon{
+    .cancelIcon {
       color: rgba(249, 115, 22, 0.45);
     }
   }
 
-  &:not(.active):hover{
+  &:not(.active):hover {
     background: var(--bg-base);
     color: var(--text-primary);
   }
 }
 
-.cancel-icon{
+.cancelIcon {
   display: inline-flex;
   width: 16px;
   height: 16px;
@@ -59,7 +60,6 @@
   color: var(--text-secondary);
 
   &:hover {
-    background:#333333;
     border-radius: 4px;
     color: var(--accent-primary);
     background: var(--border-base);
@@ -94,21 +94,16 @@
   }
 }
 
-.plus-button{
+.plusButton {
   background: transparent;
   border: none;
   color: var(--text-secondary);
   padding: 0.5rem 1rem;
   border-radius: 0.5rem 0.5rem 0 0;
   flex-shrink: 0;
+  cursor: pointer;
 
-  &:hover{
+  &:hover {
     background: var(--bg-base);
   }
 }
-
-.tabs_wrapper {
-  scrollbar-width: thin;
-  scrollbar-color: var(--border-base) transparent;
-}
-
