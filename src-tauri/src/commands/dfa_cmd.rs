@@ -50,23 +50,23 @@ pub fn dfa_add_state(
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> OperationResult {
+) -> StateResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                state: None,
             };
         }
     };
 
     if entry.states.iter().any(|s| s.id == state_id) {
-        return OperationResult {
+        return StateResult {
             status: 400,
             message: format!("Состояние {} уже существует", state_id),
-            automaton: Some(entry),
+            state: None,
         };
     }
 
@@ -79,11 +79,12 @@ pub fn dfa_add_state(
         is_final: is_final.unwrap_or(false),
     });
 
+    let created = entry.states.last().unwrap().clone();
     state.update(entry.clone());
-    OperationResult {
+    StateResult {
         status: 200,
         message: format!("Состояние {} добавлено", state_id),
-        automaton: Some(entry),
+        state: Some(created),
     }
 }
 
@@ -190,30 +191,30 @@ pub fn dfa_add_transition(
     to: i32,
     symbols: Vec<char>,
     label: Option<String>,
-) -> OperationResult {
+) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                transition: None,
             };
         }
     };
 
     if !entry.states.iter().any(|s| s.id == from) {
-        return OperationResult {
+        return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", from),
-            automaton: Some(entry),
+            transition: None,
         };
     }
     if !entry.states.iter().any(|s| s.id == to) {
-        return OperationResult {
+        return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", to),
-            automaton: Some(entry),
+            transition: None,
         };
     }
 
@@ -225,13 +226,13 @@ pub fn dfa_add_transition(
             .iter()
             .find(|t| t.from == from && t.symbol == sym_str)
         {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!(
                     "Переход {} -> {} по '{}' уже существует (в {})",
                     from, symbol, symbol, existing.to
                 ),
-                automaton: Some(entry),
+                transition: None,
             };
         }
 
@@ -248,11 +249,12 @@ pub fn dfa_add_transition(
         count += 1;
     }
 
+    let created = entry.transitions.last().unwrap().clone();
     state.update(entry.clone());
-    OperationResult {
+    TransitionResult {
         status: 200,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
-        automaton: Some(entry),
+        transition: Some(created),
     }
 }
 
