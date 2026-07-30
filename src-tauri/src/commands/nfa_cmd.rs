@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::structs::{
     automata::Automaton,
-    data_models::{AutomatonKind, CheckResult, OperationResult, StateData, TransitionData},
+    data_models::{AutomatonKind, OperationResult, StateData, TransitionData},
     nfa::{NFA, EPSILON, NFABuilder},
     store::AutomatonStore,
 };
@@ -352,45 +352,6 @@ pub fn nfa_remove_transition(
         status: _status,
         message: _message,
         automaton: Some(entry),
-    }
-}
-
-#[tauri::command]
-pub fn nfa_check_string(
-    state: State<'_, AutomatonStore>,
-    automaton_id: i32,
-    input: String,
-) -> CheckResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return CheckResult {
-                status: 400,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                accepted: false,
-            };
-        }
-    };
-
-    match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
-        Ok(nfa) => {
-            let chars: Vec<char> = input.chars().collect();
-            let accepted = nfa.accepts(&chars);
-            CheckResult {
-                status: 200,
-                message: format!(
-                    "Строка '{}' {} принята NFA",
-                    input,
-                    if accepted { "" } else { "не " }
-                ),
-                accepted,
-            }
-        }
-        Err(e) => CheckResult {
-            status: 400,
-            message: format!("Ошибка проверки строки: {}", e),
-            accepted: false,
-        },
     }
 }
 
