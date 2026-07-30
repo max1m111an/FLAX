@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::structs::{
     automata::Automaton,
-    data_models::{AutomatonKind, OperationResult, StateData, StatusResult, TransitionData},
+    data_models::{AutomatonKind, OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
     dfa::{DFA, DFABuilder},
     store::AutomatonStore,
 };
@@ -97,14 +97,14 @@ pub fn dfa_update_state(
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> OperationResult {
+) -> StateResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                state: None,
             };
         }
     };
@@ -112,10 +112,10 @@ pub fn dfa_update_state(
     let idx = match entry.states.iter().position(|s| s.id == state_id) {
         Some(i) => i,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Состояние {} не существует", state_id),
-                automaton: Some(entry),
+                state: None,
             };
         }
     };
@@ -142,10 +142,10 @@ pub fn dfa_update_state(
     }
 
     state.update(entry.clone());
-    OperationResult {
+    StateResult {
         status: 200,
         message: format!("Состояние {} обновлено", state_id),
-        automaton: Some(entry),
+        state: Some(entry.states[idx].clone()),
     }
 }
 
@@ -266,14 +266,14 @@ pub fn dfa_update_transition(
     new_to: Option<i32>,
     new_symbol: Option<char>,
     new_label: Option<Option<String>>,
-) -> OperationResult {
+) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                transition: None,
             };
         }
     };
@@ -285,10 +285,10 @@ pub fn dfa_update_transition(
     {
         Some(i) => i,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Переход {} -> '{}' не найден", old_from, old_symbol),
-                automaton: Some(entry),
+                transition: None,
             };
         }
     };
@@ -307,10 +307,10 @@ pub fn dfa_update_transition(
     }
 
     state.update(entry.clone());
-    OperationResult {
+    TransitionResult {
         status: 200,
         message: "Переход обновлён".to_string(),
-        automaton: Some(entry),
+        transition: Some(entry.transitions[idx].clone()),
     }
 }
 

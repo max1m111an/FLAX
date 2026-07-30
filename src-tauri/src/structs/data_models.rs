@@ -47,3 +47,17 @@ pub struct StatusResult {
     pub status: u16,
     pub message: String,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateResult {
+    pub status: u16,
+    pub message: String,
+    pub state: Option<StateData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransitionResult {
+    pub status: u16,
+    pub message: String,
+    pub transition: Option<TransitionData>,
+}
