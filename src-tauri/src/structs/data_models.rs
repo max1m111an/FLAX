@@ -37,14 +37,14 @@ pub struct AutomatonData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationResult {
-    pub success: bool,
+    pub status: u16,
     pub message: String,
     pub automaton: Option<AutomatonData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CheckResult {
-    pub success: bool,
+    pub status: u16,
     pub message: String,
     pub accepted: bool,
 }

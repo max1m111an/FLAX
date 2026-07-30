@@ -18,7 +18,7 @@ pub fn create_new_dfa(
         "q0",
     );
     OperationResult {
-        success: true,
+        status: 200,
         message: "DFA успешно создан".to_string(),
         automaton: Some(entry),
     }
@@ -28,12 +28,12 @@ pub fn create_new_dfa(
 pub fn dfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
     match state.get(automaton_id) {
         Some(entry) => OperationResult {
-            success: true,
+            status: 200,
             message: "DFA получен".to_string(),
             automaton: Some(entry),
         },
         None => OperationResult {
-            success: false,
+            status: 400,
             message: format!("Автомат с id {} не найден", automaton_id),
             automaton: None,
         },
@@ -55,7 +55,7 @@ pub fn dfa_add_state(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -64,7 +64,7 @@ pub fn dfa_add_state(
 
     if entry.states.iter().any(|s| s.id == state_id) {
         return OperationResult {
-            success: false,
+            status: 400,
             message: format!("Состояние {} уже существует", state_id),
             automaton: Some(entry),
         };
@@ -81,7 +81,7 @@ pub fn dfa_add_state(
 
     state.update(entry.clone());
     OperationResult {
-        success: true,
+        status: 200,
         message: format!("Состояние {} добавлено", state_id),
         automaton: Some(entry),
     }
@@ -102,7 +102,7 @@ pub fn dfa_update_state(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -113,7 +113,7 @@ pub fn dfa_update_state(
         Some(i) => i,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Состояние {} не существует", state_id),
                 automaton: Some(entry),
             };
@@ -143,7 +143,7 @@ pub fn dfa_update_state(
 
     state.update(entry.clone());
     OperationResult {
-        success: true,
+        status: 200,
         message: format!("Состояние {} обновлено", state_id),
         automaton: Some(entry),
     }
@@ -159,7 +159,7 @@ pub fn dfa_remove_state(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -168,7 +168,7 @@ pub fn dfa_remove_state(
 
     if !entry.states.iter().any(|s| s.id == state_id) {
         return OperationResult {
-            success: false,
+            status: 400,
             message: format!("Состояние {} не существует", state_id),
             automaton: Some(entry),
         };
@@ -179,7 +179,7 @@ pub fn dfa_remove_state(
 
     state.update(entry.clone());
     OperationResult {
-        success: true,
+        status: 200,
         message: format!("Состояние {} удалено", state_id),
         automaton: Some(entry),
     }
@@ -198,7 +198,7 @@ pub fn dfa_add_transition(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -207,14 +207,14 @@ pub fn dfa_add_transition(
 
     if !entry.states.iter().any(|s| s.id == from) {
         return OperationResult {
-            success: false,
+            status: 400,
             message: format!("Состояние {} не существует", from),
             automaton: Some(entry),
         };
     }
     if !entry.states.iter().any(|s| s.id == to) {
         return OperationResult {
-            success: false,
+            status: 400,
             message: format!("Состояние {} не существует", to),
             automaton: Some(entry),
         };
@@ -229,7 +229,7 @@ pub fn dfa_add_transition(
             .find(|t| t.from == from && t.symbol == sym_str)
         {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!(
                     "Переход {} -> {} по '{}' уже существует (в {})",
                     from, symbol, symbol, existing.to
@@ -253,7 +253,7 @@ pub fn dfa_add_transition(
 
     state.update(entry.clone());
     OperationResult {
-        success: true,
+        status: 200,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
         automaton: Some(entry),
     }
@@ -274,7 +274,7 @@ pub fn dfa_update_transition(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -289,7 +289,7 @@ pub fn dfa_update_transition(
         Some(i) => i,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Переход {} -> '{}' не найден", old_from, old_symbol),
                 automaton: Some(entry),
             };
@@ -311,7 +311,7 @@ pub fn dfa_update_transition(
 
     state.update(entry.clone());
     OperationResult {
-        success: true,
+        status: 200,
         message: "Переход обновлён".to_string(),
         automaton: Some(entry),
     }
@@ -328,7 +328,7 @@ pub fn dfa_remove_transition(
         Some(e) => e,
         None => {
             return OperationResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 automaton: None,
             };
@@ -341,14 +341,16 @@ pub fn dfa_remove_transition(
         .retain(|t| !(t.from == from && t.symbol == symbol.to_string()));
     let removed = original_count - entry.transitions.len();
 
+    let (_status, _message) = if removed > 0 {
+        (200, format!("Удалено {} переход(ов)", removed))
+    } else {
+        (400, "Переход не найден".to_string())
+    };
+
     state.update(entry.clone());
     OperationResult {
-        success: removed > 0,
-        message: if removed > 0 {
-            format!("Переход {} -> '{}' удалён", from, symbol)
-        } else {
-            "Переход не найден".to_string()
-        },
+        status: _status,
+        message: _message,
         automaton: Some(entry),
     }
 }
@@ -363,7 +365,7 @@ pub fn dfa_check_string(
         Some(e) => e,
         None => {
             return CheckResult {
-                success: false,
+                status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 accepted: false,
             };
@@ -375,7 +377,7 @@ pub fn dfa_check_string(
             let chars: Vec<char> = input.chars().collect();
             let accepted = dfa.accepts(&chars);
             CheckResult {
-                success: true,
+                status: 200,
                 message: format!(
                     "Строка '{}' {} принята DFA",
                     input,
@@ -385,7 +387,7 @@ pub fn dfa_check_string(
             }
         }
         Err(e) => CheckResult {
-            success: false,
+            status: 400,
             message: format!("Ошибка проверки строки: {}", e),
             accepted: false,
         },
