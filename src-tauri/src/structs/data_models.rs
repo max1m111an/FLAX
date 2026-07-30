@@ -41,3 +41,9 @@ pub struct OperationResult {
     pub message: String,
     pub automaton: Option<AutomatonData>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StatusResult {
+    pub status: u16,
+    pub message: String,
+}

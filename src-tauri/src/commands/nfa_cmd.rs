@@ -1,8 +1,7 @@
 use tauri::State;
 
 use crate::structs::{
-    automata::Automaton,
-    data_models::{AutomatonKind, OperationResult, StateData, TransitionData},
+    data_models::{AutomatonKind, OperationResult, StateData, StatusResult, TransitionData},
     nfa::{NFA, EPSILON, NFABuilder},
     store::AutomatonStore,
 };
@@ -154,23 +153,21 @@ pub fn nfa_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
-) -> OperationResult {
+) -> StatusResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StatusResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
             };
         }
     };
 
     if !entry.states.iter().any(|s| s.id == state_id) {
-        return OperationResult {
+        return StatusResult {
             status: 400,
             message: format!("Состояние {} не существует", state_id),
-            automaton: Some(entry),
         };
     }
 
@@ -178,10 +175,9 @@ pub fn nfa_remove_state(
     entry.transitions.retain(|t| t.from != state_id && t.to != state_id);
 
     state.update(entry.clone());
-    OperationResult {
+    StatusResult {
         status: 200,
         message: format!("Состояние {} удалено", state_id),
-        automaton: Some(entry),
     }
 }
 
@@ -323,14 +319,13 @@ pub fn nfa_remove_transition(
     from: i32,
     to: i32,
     symbol: char,
-) -> OperationResult {
+) -> StatusResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StatusResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
             };
         }
     };
@@ -341,17 +336,16 @@ pub fn nfa_remove_transition(
         .retain(|t| !(t.from == from && t.to == to && t.symbol == symbol.to_string()));
     let removed = original_count - entry.transitions.len();
 
-    let (_status, _message) = if removed > 0 {
+    let (code, msg) = if removed > 0 {
         (200, format!("Удалено {} переход(ов)", removed))
     } else {
         (400, "Переход не найден".to_string())
     };
 
     state.update(entry.clone());
-    OperationResult {
-        status: _status,
-        message: _message,
-        automaton: Some(entry),
+    StatusResult {
+        status: code,
+        message: msg,
     }
 }
 
