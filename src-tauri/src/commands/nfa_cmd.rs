@@ -237,7 +237,10 @@ pub fn nfa_add_transition(
             entry.alphabet.push(symbol);
         }
 
+        let tid = entry.next_transition_id;
+        entry.next_transition_id += 1;
         entry.transitions.push(TransitionData {
+            id: tid,
             from,
             to,
             symbol: sym_str,
