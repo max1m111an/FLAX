@@ -43,7 +43,6 @@ impl AutomatonStore {
             }],
             transitions: Vec::new(),
             alphabet: Vec::new(),
-            next_transition_id: 1,
         };
 
         self.automata.lock().unwrap().insert(id, entry.clone());

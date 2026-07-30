@@ -2,6 +2,7 @@ use tauri::State;
 
 use crate::structs::{
     data_models::{AutomatonKind, OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+    id_gen,
     nfa::{NFA, EPSILON, NFABuilder},
     store::AutomatonStore,
 };
@@ -43,7 +44,6 @@ pub fn nfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> Operation
 pub fn nfa_add_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-    state_id: i32,
     label: Option<String>,
     x: Option<f32>,
     y: Option<f32>,
@@ -61,17 +61,12 @@ pub fn nfa_add_state(
         }
     };
 
-    if entry.states.iter().any(|s| s.id == state_id) {
-        return StateResult {
-            status: 400,
-            message: format!("Состояние {} уже существует", state_id),
-            state: None,
-        };
-    }
+    let used: std::collections::HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
+    let new_id = id_gen::generate_id(&used);
 
     entry.states.push(StateData {
-        id: state_id,
-        label: label.unwrap_or_else(|| format!("q{}", state_id)),
+        id: new_id,
+        label: label.unwrap_or_else(|| format!("q{}", new_id)),
         x: x.unwrap_or(100.0),
         y: y.unwrap_or(200.0),
         is_initial: is_initial.unwrap_or(false),
@@ -82,7 +77,7 @@ pub fn nfa_add_state(
     state.update(entry.clone());
     StateResult {
         status: 200,
-        message: format!("Состояние {} добавлено", state_id),
+        message: format!("Состояние {} добавлено", new_id),
         state: Some(created),
     }
 }
@@ -237,8 +232,8 @@ pub fn nfa_add_transition(
             entry.alphabet.push(symbol);
         }
 
-        let tid = entry.next_transition_id;
-        entry.next_transition_id += 1;
+        let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
+        let tid = id_gen::generate_id(&used);
         entry.transitions.push(TransitionData {
             id: tid,
             from,

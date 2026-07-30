@@ -34,7 +34,6 @@ pub struct AutomatonData {
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
     pub alphabet: Vec<char>,
-    pub next_transition_id: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
