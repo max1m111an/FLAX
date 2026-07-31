@@ -4,12 +4,10 @@ import Documentation from "@/assets/svg/Documentation.svg?react";
 import { model } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
-import { NavLink } from "react-router-dom";
-import { ROUTES } from "@/configs/RoutesConst.ts";
 
 export default function MainControlWidget() {
     const { addTab } = useTabs();
-    const isDebugEnabled = import.meta.env.VITE_ENABLE_DEBUG === "true";
+
     const settingsModel: model = {
         id: 4,
         type: "Настройки",
@@ -30,11 +28,6 @@ export default function MainControlWidget() {
                 <Settings />
                 Настройки
             </button>
-            {isDebugEnabled && (
-                <NavLink className={ styles.controlButton } to={ ROUTES.DEBUG }>
-                    Дебаг
-                </NavLink>
-            )}
         </div>
     );
 }

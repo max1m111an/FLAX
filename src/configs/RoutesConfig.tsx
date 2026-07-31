@@ -5,7 +5,6 @@ import MainLayout from "@/layouts/MainLayout";
 import MainScene from "@/scenes/MainScene.tsx";
 import SettingsScene from "@/scenes/SettingsScene.tsx";
 import ModelScene from "@/scenes/ModelScene.tsx";
-import { DebugScene } from "@/scenes/DebugScene.tsx";
 
 export const routesConfig = [
     {
@@ -22,10 +21,6 @@ export const routesConfig = [
             {
                 path: ROUTES.MODELS,
                 element: <ModelScene />,
-            },
-            {
-                path: ROUTES.DEBUG,
-                element: <DebugScene />,
             },
         ],
     },
