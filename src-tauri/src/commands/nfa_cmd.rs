@@ -257,9 +257,7 @@ pub fn nfa_add_transition(
 pub fn nfa_update_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-    old_from: i32,
-    old_to: i32,
-    old_symbol: char,
+    transition_id: i32,
     new_from: Option<i32>,
     new_to: Option<i32>,
     new_symbol: Option<char>,
@@ -276,16 +274,12 @@ pub fn nfa_update_transition(
         }
     };
 
-    let idx = match entry
-        .transitions
-        .iter()
-        .position(|t| t.from == old_from && t.to == old_to && t.symbol == old_symbol.to_string())
-    {
+    let idx = match entry.transitions.iter().position(|t| t.id == transition_id) {
         Some(i) => i,
         None => {
             return TransitionResult {
                 status: 400,
-                message: format!("Переход {} -> {} по '{}' не найден", old_from, old_to, old_symbol),
+                message: format!("Переход {} не найден", transition_id),
                 transition: None,
             };
         }
