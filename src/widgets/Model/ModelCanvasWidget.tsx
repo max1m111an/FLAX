@@ -5,11 +5,16 @@ import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
-import { StateNodeModel } from "@/interface/Automaton.ts";
+import { tab, useTabs } from "@/context/TabsContext.tsx";
+import { addStateNFA } from "@/api/nfaAPI.ts";
 
-export default function ModelCanvasWidget() {
+interface ModelCanvasWidgetProps {
+    tab: tab;
+}
+export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
     const { activeControl, nodes, setNodes, edges, setEdges } = useControl();
-
+    const [ currentTab, setCurrentTab ] = useState<tab>(tab);
+    const { updateTab } = useTabs();
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
         to: { x: number; y: number };
@@ -18,19 +23,31 @@ export default function ModelCanvasWidget() {
 
     const generateId = useCallback(() => Date.now(), []);
 
-    const addNode = (e: React.MouseEvent<HTMLDivElement>) => {
+    const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
         const x1 = e.clientX - 32;
         const y1 = e.clientY - 32;
-        const nextIndex = nodes.length;
-        const newNode: StateNodeModel = {
-            id: generateId(),
+        const nextIndex = tab.automaton.states.length;
+        const newNode = {
+            automatonId: tab.id,
+            label: `q${nextIndex}`,
             x: x1,
             y: y1,
-            label: `q${nextIndex}`,
-            is_initial: false,
-            is_final: false,
+            isInitial: false,
+            isFinal: false,
         };
-        setNodes([ ...nodes, newNode ]);
+        const response = await addStateNFA(newNode);
+        if (response.status == 200) {
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: [ ...currentTab.automaton.states, response.state ],
+                },
+            };
+
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
+        }
     };
 
     const addEdge = (startNode: number, endNode?: number) => {
@@ -83,7 +100,7 @@ export default function ModelCanvasWidget() {
             className={ styles.modelCanvasWrapper }
             onClick={ activeControl === "node" ? addNode : undefined }
         >
-            {nodes.map((node) => (
+            {currentTab.automaton.states.map((node) => (
                 <StateNode
                     label={ node.label }
                     initialPosition={ { x: node.x, y: node.y } }
@@ -97,11 +114,21 @@ export default function ModelCanvasWidget() {
                     key={ node.id }
                     id={ node.id }
                     onMoveNode={ (id, pos) => {
-                        setNodes((prev) =>
-                            prev.map((n) =>
-                                n.id === id ? { ...n, x: pos.x, y: pos.y } : n,
-                            ),
-                        );
+                        setCurrentTab((prev) => {
+                            if (!prev) return prev; // Защита, если вкладка не загружена
+
+                            return {
+                                ...prev,
+                                automaton: {
+                                    ...prev.automaton,
+                                    states: prev.automaton.states.map((n) =>
+                                        n.id === id
+                                            ? { ...n, x: pos.x, y: pos.y }
+                                            : n,
+                                    ),
+                                },
+                            };
+                        });
                     } }
                     onDeleteNode={ deleteNode }
                 />

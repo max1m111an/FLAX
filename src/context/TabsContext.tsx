@@ -16,6 +16,7 @@ interface TabsContextProps {
     tabs: tab[];
     addTab: (model: model, type?: string) => void;
     removeTab: (tab: tab) => void;
+    updateTab: (updatedTab: tab) => void;
 }
 
 const TabsContext = createContext<TabsContextProps | undefined>(undefined);
@@ -51,7 +52,9 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     const location = useLocation();
-
+    const updateTab = (updatedTab: tab) => {
+        setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
+    };
     const removeTab = (self_tab: tab): void => {
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);
 
@@ -72,7 +75,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <TabsContext.Provider value={ { tabs, addTab, removeTab } }>
+        <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab } }>
             {children}
         </TabsContext.Provider>
     );
