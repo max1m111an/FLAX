@@ -1,0 +1,108 @@
+@use "../consts" as *;
+
+.state-node-wrapper {
+  position: fixed;
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+  z-index: auto;
+  transition: z-index 0.1s;
+
+  &.delete-mode:hover {
+    svg {
+      color: var(--red-main);
+    }
+  }
+
+  .state-node {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-primary);
+    background-color: var(--accent-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: var(--accent-primary);
+    white-space: nowrap;
+    position: relative;
+
+    &.delete-mode:hover {
+      border-color: var(--red-main);
+      color: var(--red-main);
+      cursor: pointer;
+    }
+  }
+
+  .state-final {
+    border: 4px double var(--accent-primary);
+    background-color: var(--accent-bg);
+  }
+
+  .state-initial {
+    position: absolute;
+    left: -24px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent-primary);
+    width: 24px;
+    height: 24px;
+    pointer-events: none;
+  }
+
+  .selected {
+    box-shadow: 0 0 32px var(--accent-primary), 0 0 16px var(--accent-secondary);
+  }
+}
+
+.edge {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+
+  line {
+    stroke: var(--accent-primary);
+    stroke-width: 1.5;
+    pointer-events: stroke;
+
+    &.selected{
+      filter:
+              drop-shadow(0 0 3px rgba(var(--accent-primary), 0.6))
+              drop-shadow(0 0 6px rgba(var(--accent-secondary), 0.5));
+    }
+  }
+
+  polygon {
+    fill: var(--accent-primary);
+  }
+
+  .delete {
+    stroke: transparent;
+    stroke-width: 20;
+    pointer-events: stroke;
+    cursor: pointer;
+  }
+
+  .edge-label {
+    fill: var(--accent-primary);
+    font-size: 14px;
+    pointer-events: auto;
+    &.selected{
+      filter:
+              drop-shadow(0 0 3px rgba(var(--accent-primary), 0.6))
+              drop-shadow(0 0 6px rgba(var(--accent-secondary), 0.5));
+    }
+  }
+
+  .delete-mode:hover {
+    line:not(.delete) {
+      stroke: var(--red-main);
+    }
+    .edge-label {
+      fill: var(--red-main);
+    }
+  }
+}

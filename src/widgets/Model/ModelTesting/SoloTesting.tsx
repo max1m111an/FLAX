@@ -6,11 +6,6 @@ import Reset from "@/assets/svg/Reset.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
 import { useState } from "react";
 import { useControl } from "@/context/ControlContext.tsx";
-import { Button } from "@/components/ui/Button/Button.tsx";
-import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
-import { Typography } from "@/components/ui/Typography/Typography.tsx";
-import clsx from "clsx";
-import styles from "./SoloTesting.module.scss";
 
 interface Step {
     id: number;
@@ -120,9 +115,10 @@ export default function SoloTesting() {
 
     return (
         <>
-            <Typography variant="pretitle">Входная строка</Typography>
+            <p className="model-pretitle">Входная строка</p>
 
-            <Textfield
+            <input
+                className="input"
                 value={ testLine }
                 onChange={ (e: React.ChangeEvent<HTMLInputElement>) => {
                     setTestLine(e.target.value);
@@ -130,78 +126,73 @@ export default function SoloTesting() {
             />
 
             {!isPlay && (
-                <Button variant="main" onClick={ handlePlay }>
+                <button className="main-btn" onClick={ handlePlay }>
                     <Play />
                     Запустить
-                </Button>
+                </button>
             )}
 
             {isPlay && (
                 <>
-                    <div style={ { display: "flex", flexDirection: "row", gap: "8px" } }>
-                        <Button variant="control" onClick={ handleStep }>
+                    <div className="model-step-fast-wrapper">
+                        <button className="control-btn" onClick={ handleStep }>
                             <Forward />
                             Шаг
-                        </Button>
+                        </button>
 
-                        <Button variant="control" onClick={ handleFastForward }>
+                        <button className="control-btn" onClick={ handleFastForward }>
                             <FastForward />
                             До конца
-                        </Button>
+                        </button>
                     </div>
 
-                    <div style={ { display: "flex", flexDirection: "row" } }>
-                        <Button variant="control" fullWidth onClick={ handleReset }>
+                    <div className="model-reset-btn-wrapper">
+                        <button className="control-btn w-100" onClick={ handleReset }>
                             <Reset />
                             Сброс
-                        </Button>
+                        </button>
                     </div>
 
-                    <div className={ styles.wrapper }>
-                        <div className={ styles.titleStepWrapper }>
-                            <p className={ styles.positionLbl }>Позиция</p>
-                            <p className={ styles.stepLbl }>
+                    <div className="test-state-wrapper">
+                        <div className="title-step-wrapper">
+                            <p className="position-lbl">Позиция</p>
+                            <p className="step-lbl">
                                 {currentIndex}/{testLine.length}
                             </p>
                         </div>
 
-                        <div className={ styles.lineStateWrapper }>
-                            {symbols.map((char, index) => {
-                                const isOk = history[index]?.status === "ok";
-                                const isCurrent = !history[index] && index === currentIndex;
-
-                                return (
-                                    <div
-                                        key={ index }
-                                        className={ clsx(
-                                            styles.statesWrapper,
-                                            history[index]
-                                                ? (isOk ? styles.statesWrapperSuccess : styles.statesWrapperError)
-                                                : (isCurrent ? styles.statesWrapperCurrent : ""),
-                                        ) }
-                                    >
-                                        <p className={ clsx(
-                                            styles.state,
-                                            history[index]
-                                                ? (isOk ? styles.stateSuccess : styles.stateError)
-                                                : (isCurrent ? styles.stateCurrent : ""),
-                                        ) }>{char}</p>
-                                    </div>
-                                );
-                            })}
+                        <div className="line-state-wrapper">
+                            {symbols.map((char, index) => (
+                                <div
+                                    key={ index }
+                                    className={ `states-wrapper ${
+                                        history[index]
+                                            ? history[index].status === "ok"
+                                                ? "success"
+                                                : "error"
+                                            : index === currentIndex
+                                                ? "current"
+                                                : ""
+                                    }` }
+                                >
+                                    <p className="state">{char}</p>
+                                </div>
+                            ))}
                         </div>
 
-                        <div className={ styles.stateStatusWrapper }>
-                            <p className={ styles.stateLbl }>
+                        <div className="state-status-wrapper">
+                            <p className="state-lbl">
                                 Состояние: {nodes.find((n) => n.id === currentNode)?.name}
                             </p>
 
                             <p
-                                className={ clsx(
-                                    styles.stateLbl,
-                                    finalStatus === "accepted" && styles.stateLblAccepted,
-                                    finalStatus === "reject" && styles.stateLblRejected,
-                                ) }
+                                className={ `state-lbl ${
+                                    finalStatus === "accepted"
+                                        ? "accepted"
+                                        : finalStatus === "reject"
+                                            ? "rejected"
+                                            : ""
+                                }` }
                             >
                                 {finalStatus === "accepted" && "Принято"}
                                 {finalStatus === "reject" && "Отклонено"}
@@ -209,38 +200,36 @@ export default function SoloTesting() {
                         </div>
                     </div>
 
-                    <div className={ styles.wrapper }>
-                        <p className={ styles.positionLbl }>История</p>
+                    <div className="test-state-wrapper">
+                        <p className="position-lbl">История</p>
 
-                        {history.map((step, index) => {
-                            const isLast = index === history.length - 1;
-                            const isSuccess = step.status === "ok";
+                        {history.map((step, index) => (
+                            <div
+                                key={ index }
+                                className={ `history-card ${
+                                    index === history.length - 1
+                                        ? step.status === "ok"
+                                            ? "success"
+                                            : "error"
+                                        : ""
+                                }` }
+                            >
+                                <span className="history-active">{index + 1}.</span>
 
-                            return (
-                                <div
-                                    key={ index }
-                                    className={ clsx(
-                                        styles.historyCard,
-                                        isLast && (isSuccess ? styles.historyCardSuccess : styles.historyCardError),
-                                    ) }
-                                >
-                                    <span className={ styles.historyActive }>{index + 1}.</span>
+                                <span className="history-state">
+                                    {nodes.find((n) => n.id === step.fromState)?.name}
+                                    <ArrowRight />
+                                    {step.toState !== undefined
+                                        ? nodes.find((n) => n.id === step.toState)?.name
+                                        : "—"}
+                                    <ArrowRightToLine />
+                                </span>
 
-                                    <span className={ styles.historyState }>
-                                        {nodes.find((n) => n.id === step.fromState)?.name}
-                                        <ArrowRight />
-                                        {step.toState !== undefined
-                                            ? nodes.find((n) => n.id === step.toState)?.name
-                                            : "—"}
-                                        <ArrowRightToLine />
-                                    </span>
-
-                                    <span className={ styles.historySymbol }>
-                                        {step.symbol}
-                                    </span>
-                                </div>
-                            );
-                        })}
+                                <span className="history-symbol">
+                                    {step.symbol}
+                                </span>
+                            </div>
+                        ))}
                     </div>
                 </>
             )}

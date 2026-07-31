@@ -1,4 +1,6 @@
-.wrapper {
+@use "../consts" as *;
+
+.model-test-wrapper{
   display: flex;
   flex-direction: column;
   width: 304px;
@@ -13,14 +15,14 @@
   box-sizing: border-box;
 }
 
-.testTypeWrapper {
+.test-type-wrapper{
   padding: 16px;
   gap: 8px;
   display: flex;
   flex-direction: column;
 }
 
-.titleCancelWrapper {
+.model-title-cancel-wrapper{
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -32,7 +34,7 @@
   box-sizing: border-box;
 }
 
-.switchWrapper {
+.model-switch-wrapper {
   position: relative;
   display: flex;
   width: 100%;
@@ -40,7 +42,7 @@
   background: var(--bg-base);
 }
 
-.switchBtn {
+.model-switch-btn {
   flex: 1;
   padding: 8px 2px;
   background: transparent;
@@ -50,12 +52,12 @@
   cursor: pointer;
   transition: color 0.25s ease-in;
 
-  &.leftBtn {
+  &.left-btn {
     border-top-left-radius: 8px;
     border-bottom-left-radius: 8px;
   }
 
-  &.rightBtn {
+  &.right-btn {
     border-top-right-radius: 8px;
     border-bottom-right-radius: 8px;
   }
@@ -65,7 +67,7 @@
   }
 }
 
-.switchIndicator {
+.switch-indicator {
   position: absolute;
   top: 12px;
   left: 16px;
@@ -90,13 +92,13 @@
   }
 }
 
-.playExportWrapper {
+.model-play-export-wrapper{
   display: flex;
   flex-direction: row;
   gap: 8px;
 }
 
-.exportMultiTestBtn {
+.model-export-multi-test-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -109,6 +111,10 @@
   border: var(--border-base) solid 1px;
   border-radius: 12px;
   cursor: pointer;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 
   &:hover {
     filter: brightness(1.1);
@@ -128,7 +134,7 @@
   }
 }
 
-.importWrapper {
+.model-import-wrapper{
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -138,32 +144,28 @@
   border-radius: 12px;
   border: 2px dashed var(--border-base);
 
-  &:hover {
+  &:hover{
     filter: brightness(1.1);
     border-color: var(--accent-secondary);
   }
 }
-
-.importIcon {
+.model-import-icon{
   width: 40px;
   height: 40px;
   color: var(--text-secondary);
 }
-
-.importTitle {
+.model-import-title{
   color: var(--text-primary);
   font-size: 14px;
   font-weight: 500;
   margin-bottom: 4px;
 }
-
-.importPretitle {
+.model-import-pretitle{
   color: var(--text-secondary);
   font-size: 12px;
   margin-bottom: 8px;
 }
-
-.importBtn {
+.model-import-btn{
   padding: 8px 12px;
   font-weight: 600;
   font-size: 14px;
@@ -174,19 +176,25 @@
   border-radius: 12px;
   cursor: pointer;
 
-  &:hover {
+  &:hover{
     filter: brightness(1.1);
     transform: translateY(-1px);
   }
 }
 
-.stepFastWrapper {
+.model-step-fast-wrapper{
   display: flex;
   flex-direction: row;
   gap: 8px;
+
 }
 
-.resetBtnWrapper {
+.model-reset-btn-wrapper{
   display: flex;
   flex-direction: row;
 }
+
+
+
+
+
