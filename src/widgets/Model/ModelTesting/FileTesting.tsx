@@ -1,13 +1,13 @@
 import Uploud from "@/assets/svg/Uploud.svg?react";
-
+import styles from "./ModelTestWidget.module.scss";
 
 export default function FileTesting() {
     return (
-        <div className="model-import-wrapper">
-            <Uploud className="model-import-icon" />
-            <p className="model-import-title">Выберите файл</p>
-            <p className="model-import-pretitle">.txt, .cvs</p>
-            <button className="model-import-btn">Обзор</button>
+        <div className={ styles.importWrapper }>
+            <Uploud className={ styles.importIcon } />
+            <p className={ styles.importTitle }>Выберите файл</p>
+            <p className={ styles.importPretitle }>.txt, .cvs</p>
+            <button className={ styles.importBtn }>Обзор</button>
         </div>
     );
 }

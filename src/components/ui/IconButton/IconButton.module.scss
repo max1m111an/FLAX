@@ -1,0 +1,28 @@
+.iconButton {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  color: var(--text-secondary);
+
+  svg {
+    width: 24px;
+    height: 24px;
+    fill: currentColor;
+  }
+
+  &:hover {
+    color: var(--text-primary);
+  }
+}
+
+.cancel {
+  &:hover {
+    color: var(--red-main);
+    background: var(--border-base);
+    border-radius: 8px;
+  }
+}

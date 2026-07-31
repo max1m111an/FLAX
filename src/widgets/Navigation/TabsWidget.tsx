@@ -1,4 +1,3 @@
-import "@/assets/scss/index.scss";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { NavLink } from "react-router-dom";
 import HomeIcon from "@/assets/svg/Home.svg?react";
@@ -7,6 +6,8 @@ import Plus from "@/assets/svg/Plus.svg?react";
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import { models } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
+import clsx from "clsx";
+import styles from "./TabsWidget.module.scss";
 
 
 export default function TabsWidget() {
@@ -14,18 +15,18 @@ export default function TabsWidget() {
 
 
     return (
-        <div className="tabs_wrapper">
-            <NavLink to={ ROUTES.MAIN } className="tab">
+        <div className={ styles.tabsWrapper }>
+            <NavLink to={ ROUTES.MAIN } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
                 <HomeIcon />
                 Главная
             </NavLink>
             {tabs.map((tab) => {
                 return tab.title === "Без названия*" ? (
-                    <NavLink key={ tab.id } to={ `/models/${tab.id}` } className="tab">
+                    <NavLink key={ tab.id } to={ `/models/${tab.id}` } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
                         <tab.model.icon />
                         {tab.title}
                         <Cancel
-                            className="cancel-icon"
+                            className={ styles.cancelIcon }
                             onClick={ (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -34,11 +35,11 @@ export default function TabsWidget() {
                         />
                     </NavLink>
                 ) : (
-                    <NavLink key={ tab.id } to={ "/settings" } className="tab">
+                    <NavLink key={ tab.id } to={ "/settings" } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
                         <tab.model.icon />
                         {tab.title}
                         <Cancel
-                            className="cancel-icon"
+                            className={ styles.cancelIcon }
                             onClick={ (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -49,20 +50,18 @@ export default function TabsWidget() {
             })}
 
             <DropdownMenu.Root>
-                <DropdownMenu.Trigger className="plus-button">
+                <DropdownMenu.Trigger className={ styles.plusButton }>
                     <Plus />
                 </DropdownMenu.Trigger>
 
-                <DropdownMenu.Content className="dropdown">
+                <DropdownMenu.Content className={ styles.dropdown }>
                     <DropdownMenu.Group>
                         {models.map((model) => {
                             return (
-                                <>
-                                    <DropdownMenu.Item className="item" onClick={ () => addTab(model) }>
-                                        <model.icon />
-                                        {model.type}
-                                    </DropdownMenu.Item>
-                                </>
+                                <DropdownMenu.Item key={ model.type } className={ styles.item } onClick={ () => addTab(model) }>
+                                    <model.icon />
+                                    {model.type}
+                                </DropdownMenu.Item>
                             );
                         })}
                     </DropdownMenu.Group>

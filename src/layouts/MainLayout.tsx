@@ -3,15 +3,15 @@ import "@/assets/scss/index.scss";
 import TabsWidget from "@/widgets/Navigation/TabsWidget.tsx";
 import { TabsProvider } from "@/context/TabsContext.tsx";
 import { ControlProvider } from "@/context/ControlContext.tsx";
-
+import styles from "./MainLayout.module.scss";
 
 export default function MainLayout() {
     return (
         <ControlProvider>
             <TabsProvider>
-                <div className="app-container">
+                <div className={ styles.appContainer }>
                     <TabsWidget />
-                    <main className="container">
+                    <main className={ styles.container }>
                         <Outlet />
                     </main>
                 </div>

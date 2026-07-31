@@ -3,7 +3,8 @@ import { useCallback, useState } from "react";
 import { EdgeState, NodeState, useControl } from "@/context/ControlContext.tsx";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
-
+import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
+import styles from "../../scenes/ModelScene.module.scss";
 
 export default function ModelCanvasWidget() {
     const { activeControl, nodes, setNodes, edges, setEdges } = useControl();
@@ -78,7 +79,7 @@ export default function ModelCanvasWidget() {
 
     return (
         <div
-            className="model-canvas-wrapper"
+            className={ styles.modelCanvasWrapper }
             onClick={ activeControl === "node" ? addNode : undefined }
         >
             {nodes.map((node) => (
@@ -104,7 +105,7 @@ export default function ModelCanvasWidget() {
                     onDeleteNode={ deleteNode }
                 />
             ))}
-            <svg className={ "edge" }>
+            <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
                 {edges.map((edge) => {
                     const points = calculatePoints(edge, nodes);
                     if (!points) return null;
@@ -137,10 +138,10 @@ export default function ModelCanvasWidget() {
                 const midY = (points.y1 + points.y2) / 2;
 
                 return (
-                    <input
+                    <Textfield
                         key={ `input-${edge.id}` }
                         autoFocus
-                        className="input onEdge"
+                        onEdge
                         style={ {
                             position: "fixed",
                             left: midX,
@@ -157,7 +158,7 @@ export default function ModelCanvasWidget() {
                 );
             })}
             {tempEdge && (
-                <svg className="edge">
+                <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
                     <Edge
                         x1={ tempEdge.from.x }
                         y1={ tempEdge.from.y }
