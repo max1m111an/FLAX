@@ -6,13 +6,13 @@ import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useTabs } from "@/context/TabsContext.tsx";
-import { addStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, removeStateNFA } from "@/api/nfaAPI.ts";
 
 interface ModelCanvasWidgetProps {
     tab: tab;
 }
 export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
-    const { activeControl, nodes, setNodes, edges, setEdges } = useControl();
+    const { activeControl, nodes, edges, setEdges } = useControl();
     const [ currentTab, setCurrentTab ] = useState<tab>(tab);
     const { updateTab } = useTabs();
     const [ tempEdge, setTempEdge ] = useState<{
@@ -83,13 +83,26 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
         );
     };
 
-    const deleteNode = useCallback((id: number) => {
-        setNodes((prev) => prev.filter((node) => node.id !== id));
+    const removeState = useCallback(async (id: number) => {
+        const request = {
+            automatonId: currentTab.id,
+            stateId: id,
+        };
+        const response = await removeStateNFA(request);
+        if (response.status == 200) {
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: currentTab.automaton.states.filter((state) => state.id !== id),
+                },
+            };
 
-        setEdges((prev) => prev.filter(
-            (edge) => edge.idStartNode !== id && edge.idEndNode !== id,
-        ));
-    }, [ setNodes, setEdges ]);
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
+        }
+
+    }, [ currentTab, updateTab ]);
 
     const deleteEdge = useCallback((id: number) => {
         setEdges((prev) => prev.filter((edge) => edge.id !== id));
@@ -100,37 +113,20 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
             className={ styles.modelCanvasWrapper }
             onClick={ activeControl === "node" ? addNode : undefined }
         >
-            {currentTab.automaton.states.map((node) => (
+            {currentTab.automaton.states.map((state) => (
                 <StateNode
-                    label={ node.label }
-                    initialPosition={ { x: node.x, y: node.y } }
-                    isInitial={ node.is_initial }
-                    isFinal={ node.is_final }
+                    label={ state.label }
+                    initialPosition={ { x: state.x, y: state.y } }
+                    isInitial={ state.is_initial }
+                    isFinal={ state.is_final }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
                     }
-                    onEndEdge={ (hoveredNodeId) => addEdge(node.id, hoveredNodeId) }
-                    key={ node.id }
-                    id={ node.id }
-                    onMoveNode={ (id, pos) => {
-                        setCurrentTab((prev) => {
-                            if (!prev) return prev; // Защита, если вкладка не загружена
-
-                            return {
-                                ...prev,
-                                automaton: {
-                                    ...prev.automaton,
-                                    states: prev.automaton.states.map((n) =>
-                                        n.id === id
-                                            ? { ...n, x: pos.x, y: pos.y }
-                                            : n,
-                                    ),
-                                },
-                            };
-                        });
-                    } }
-                    onDeleteNode={ deleteNode }
+                    onEndEdge={ (hoveredNodeId) => addEdge(state.id, hoveredNodeId) }
+                    key={ state.id }
+                    id={ state.id }
+                    onDeleteNode={ removeState }
                 />
             ))}
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>

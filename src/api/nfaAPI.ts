@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AutomatonModel, StateNodeModel } from "@/interface/Automaton.ts";
+import { AutomatonModel, StateModel } from "@/interface/Automaton.ts";
 
-interface createNewNFAResponse {
+type createNewNFAResponse = {
     status: number;
     message: string;
     automaton: AutomatonModel
@@ -28,7 +28,7 @@ type addStateNFARequest = {
 type addStateNFAResponse = {
     status: number;
     message: string;
-    state: StateNodeModel;
+    state: StateModel;
 }
 
 export const addStateNFA = async (params: addStateNFARequest): Promise<addStateNFAResponse> => {
@@ -37,6 +37,25 @@ export const addStateNFA = async (params: addStateNFARequest): Promise<addStateN
         return response;
     } catch (error) {
         console.error("Ошибка при вызове nfa_add_state:", error);
+        throw error;
+    }
+};
+
+type deleteStateNFARequest = {
+    automatonId: number;
+    stateId: number;
+}
+type deleteStateNFAResponse = {
+    status: number;
+    message: string;
+}
+
+export const removeStateNFA = async (params: deleteStateNFARequest): Promise<deleteStateNFAResponse> => {
+    try {
+        const response = await invoke<deleteStateNFAResponse>("nfa_remove_state", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_remove_state:", error);
         throw error;
     }
 };

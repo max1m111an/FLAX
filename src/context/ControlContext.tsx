@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { StateNodeModel } from "@/interface/Automaton.ts";
+import { StateModel } from "@/interface/Automaton.ts";
 
 
 export interface EdgeState {
@@ -15,8 +15,8 @@ interface ControlContextProps {
     activePane: string | null;
     changePane: (value: string) => void;
     changeControl: (value: string) => void;
-    nodes: StateNodeModel[];
-    setNodes: (nodes: StateNodeModel[] | ((prev: StateNodeModel[]) => StateNodeModel[])) => void;
+    nodes: StateModel[];
+    setNodes: (nodes: StateModel[] | ((prev: StateModel[]) => StateModel[])) => void;
     edges: EdgeState[];
     setEdges: (edges: EdgeState[] | ((prev: EdgeState[]) => EdgeState[])) => void;
     selectedNode: number | null;
@@ -31,7 +31,7 @@ const ControlContext = createContext<ControlContextProps | undefined>(undefined)
 export const ControlProvider = ({ children }: { children: ReactNode }) => {
     const [ activePane, setActivePane ] = useState<string | null>(null);
     const [ activeControl, setActiveControl ] = useState<string | null>("cursor");
-    const [ nodes, setNodes ] = useState<StateNodeModel[]>([]);
+    const [ nodes, setNodes ] = useState<StateModel[]>([]);
     const [ edges, setEdges ] = useState<EdgeState[]>([]);
     const [ selectedNode, setSelectedNode ] = useState<number | null>(null);
     const [ selectedEdge, setSelectedEdge ] = useState<number | null>(null);

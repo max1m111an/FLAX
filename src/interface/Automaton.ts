@@ -2,11 +2,11 @@ export interface AutomatonModel {
     id: number;
     name: string;
     kind: string;
-    states: StateNodeModel[]
+    states: StateModel[]
     transitions: TransitionModel[];
     alphabet: string[];
 }
-export interface StateNodeModel {
+export interface StateModel {
     id: number;
     label: string;
     x: number;
