@@ -1,11 +1,10 @@
 import { StateNode } from "@/components/StateNode.tsx";
 import { useCallback, useState } from "react";
-import { EdgeState, useControl } from "@/context/ControlContext.tsx";
+import { EdgeState, NodeState, useControl } from "@/context/ControlContext.tsx";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
-import styles from "@/scenes/ModelScene.module.scss";
-import { StateNodeModel } from "@/interface/Automaton.ts";
+import styles from "../../scenes/ModelScene.module.scss";
 
 export default function ModelCanvasWidget() {
     const { activeControl, nodes, setNodes, edges, setEdges } = useControl();
@@ -22,13 +21,13 @@ export default function ModelCanvasWidget() {
         const x1 = e.clientX - 32;
         const y1 = e.clientY - 32;
         const nextIndex = nodes.length;
-        const newNode: StateNodeModel = {
+        const newNode: NodeState = {
             id: generateId(),
             x: x1,
             y: y1,
-            label: `q${nextIndex}`,
-            is_initial: false,
-            is_final: false,
+            name: `q${nextIndex}`,
+            isInitial: false,
+            isFinal: false,
         };
         setNodes([ ...nodes, newNode ]);
     };
@@ -85,10 +84,10 @@ export default function ModelCanvasWidget() {
         >
             {nodes.map((node) => (
                 <StateNode
-                    label={ node.label }
+                    label={ node.name }
                     initialPosition={ { x: node.x, y: node.y } }
-                    isInitial={ node.is_initial }
-                    isFinal={ node.is_final }
+                    isInitial={ node.isInitial }
+                    isFinal={ node.isFinal }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
