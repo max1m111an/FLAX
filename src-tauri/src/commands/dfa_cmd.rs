@@ -2,8 +2,9 @@ use tauri::State;
 
 use crate::structs::{
     automata::Automaton,
-    data_models::{AutomatonKind, CheckResult, OperationResult, StateData, TransitionData},
+    data_models::{AutomatonKind, OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
     dfa::{DFA, DFABuilder},
+    id_gen,
     store::AutomatonStore,
 };
 
@@ -44,46 +45,41 @@ pub fn dfa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> Operation
 pub fn dfa_add_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-    state_id: i32,
     label: Option<String>,
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> OperationResult {
+) -> StateResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                state: None,
             };
         }
     };
 
-    if entry.states.iter().any(|s| s.id == state_id) {
-        return OperationResult {
-            status: 400,
-            message: format!("Состояние {} уже существует", state_id),
-            automaton: Some(entry),
-        };
-    }
+    let used: std::collections::HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
+    let new_id = id_gen::generate_id(&used);
 
     entry.states.push(StateData {
-        id: state_id,
-        label: label.unwrap_or_else(|| format!("q{}", state_id)),
+        id: new_id,
+        label: label.unwrap_or_else(|| format!("q{}", new_id)),
         x: x.unwrap_or(100.0),
         y: y.unwrap_or(200.0),
         is_initial: is_initial.unwrap_or(false),
         is_final: is_final.unwrap_or(false),
     });
 
+    let created = entry.states.last().unwrap().clone();
     state.update(entry.clone());
-    OperationResult {
+    StateResult {
         status: 200,
-        message: format!("Состояние {} добавлено", state_id),
-        automaton: Some(entry),
+        message: format!("Состояние {} добавлено", new_id),
+        state: Some(created),
     }
 }
 
@@ -97,14 +93,14 @@ pub fn dfa_update_state(
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> OperationResult {
+) -> StateResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                state: None,
             };
         }
     };
@@ -112,10 +108,10 @@ pub fn dfa_update_state(
     let idx = match entry.states.iter().position(|s| s.id == state_id) {
         Some(i) => i,
         None => {
-            return OperationResult {
+            return StateResult {
                 status: 400,
                 message: format!("Состояние {} не существует", state_id),
-                automaton: Some(entry),
+                state: None,
             };
         }
     };
@@ -142,10 +138,10 @@ pub fn dfa_update_state(
     }
 
     state.update(entry.clone());
-    OperationResult {
+    StateResult {
         status: 200,
         message: format!("Состояние {} обновлено", state_id),
-        automaton: Some(entry),
+        state: Some(entry.states[idx].clone()),
     }
 }
 
@@ -154,23 +150,21 @@ pub fn dfa_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
-) -> OperationResult {
+) -> StatusResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StatusResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
             };
         }
     };
 
     if !entry.states.iter().any(|s| s.id == state_id) {
-        return OperationResult {
+        return StatusResult {
             status: 400,
             message: format!("Состояние {} не существует", state_id),
-            automaton: Some(entry),
         };
     }
 
@@ -178,10 +172,9 @@ pub fn dfa_remove_state(
     entry.transitions.retain(|t| t.from != state_id && t.to != state_id);
 
     state.update(entry.clone());
-    OperationResult {
+    StatusResult {
         status: 200,
         message: format!("Состояние {} удалено", state_id),
-        automaton: Some(entry),
     }
 }
 
@@ -193,30 +186,30 @@ pub fn dfa_add_transition(
     to: i32,
     symbols: Vec<char>,
     label: Option<String>,
-) -> OperationResult {
+) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                transition: None,
             };
         }
     };
 
     if !entry.states.iter().any(|s| s.id == from) {
-        return OperationResult {
+        return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", from),
-            automaton: Some(entry),
+            transition: None,
         };
     }
     if !entry.states.iter().any(|s| s.id == to) {
-        return OperationResult {
+        return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", to),
-            automaton: Some(entry),
+            transition: None,
         };
     }
 
@@ -228,13 +221,13 @@ pub fn dfa_add_transition(
             .iter()
             .find(|t| t.from == from && t.symbol == sym_str)
         {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!(
                     "Переход {} -> {} по '{}' уже существует (в {})",
                     from, symbol, symbol, existing.to
                 ),
-                automaton: Some(entry),
+                transition: None,
             };
         }
 
@@ -242,7 +235,10 @@ pub fn dfa_add_transition(
             entry.alphabet.push(symbol);
         }
 
+        let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
+        let tid = id_gen::generate_id(&used);
         entry.transitions.push(TransitionData {
+            id: tid,
             from,
             to,
             symbol: sym_str,
@@ -251,11 +247,12 @@ pub fn dfa_add_transition(
         count += 1;
     }
 
+    let created = entry.transitions.last().unwrap().clone();
     state.update(entry.clone());
-    OperationResult {
+    TransitionResult {
         status: 200,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
-        automaton: Some(entry),
+        transition: Some(created),
     }
 }
 
@@ -269,14 +266,14 @@ pub fn dfa_update_transition(
     new_to: Option<i32>,
     new_symbol: Option<char>,
     new_label: Option<Option<String>>,
-) -> OperationResult {
+) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
+                transition: None,
             };
         }
     };
@@ -288,10 +285,10 @@ pub fn dfa_update_transition(
     {
         Some(i) => i,
         None => {
-            return OperationResult {
+            return TransitionResult {
                 status: 400,
                 message: format!("Переход {} -> '{}' не найден", old_from, old_symbol),
-                automaton: Some(entry),
+                transition: None,
             };
         }
     };
@@ -310,10 +307,10 @@ pub fn dfa_update_transition(
     }
 
     state.update(entry.clone());
-    OperationResult {
+    TransitionResult {
         status: 200,
         message: "Переход обновлён".to_string(),
-        automaton: Some(entry),
+        transition: Some(entry.transitions[idx].clone()),
     }
 }
 
@@ -323,14 +320,13 @@ pub fn dfa_remove_transition(
     automaton_id: i32,
     from: i32,
     symbol: char,
-) -> OperationResult {
+) -> StatusResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return OperationResult {
+            return StatusResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                automaton: None,
             };
         }
     };
@@ -341,56 +337,16 @@ pub fn dfa_remove_transition(
         .retain(|t| !(t.from == from && t.symbol == symbol.to_string()));
     let removed = original_count - entry.transitions.len();
 
-    let (_status, _message) = if removed > 0 {
+    let (code, msg) = if removed > 0 {
         (200, format!("Удалено {} переход(ов)", removed))
     } else {
         (400, "Переход не найден".to_string())
     };
 
     state.update(entry.clone());
-    OperationResult {
-        status: _status,
-        message: _message,
-        automaton: Some(entry),
-    }
-}
-
-#[tauri::command]
-pub fn dfa_check_string(
-    state: State<'_, AutomatonStore>,
-    automaton_id: i32,
-    input: String,
-) -> CheckResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return CheckResult {
-                status: 400,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                accepted: false,
-            };
-        }
-    };
-
-    match data_to_dfa(&entry.states, &entry.transitions, &entry.alphabet) {
-        Ok(dfa) => {
-            let chars: Vec<char> = input.chars().collect();
-            let accepted = dfa.accepts(&chars);
-            CheckResult {
-                status: 200,
-                message: format!(
-                    "Строка '{}' {} принята DFA",
-                    input,
-                    if accepted { "" } else { "не " }
-                ),
-                accepted,
-            }
-        }
-        Err(e) => CheckResult {
-            status: 400,
-            message: format!("Ошибка проверки строки: {}", e),
-            accepted: false,
-        },
+    StatusResult {
+        status: code,
+        message: msg,
     }
 }
 

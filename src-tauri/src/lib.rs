@@ -25,7 +25,6 @@ pub fn run() {
             nfa_add_transition,
             nfa_update_transition,
             nfa_remove_transition,
-            nfa_check_string,
             create_new_dfa,
             dfa_get,
             dfa_add_state,
@@ -34,7 +33,6 @@ pub fn run() {
             dfa_add_transition,
             dfa_update_transition,
             dfa_remove_transition,
-            dfa_check_string,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

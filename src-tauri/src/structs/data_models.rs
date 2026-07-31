@@ -18,6 +18,7 @@ pub struct StateData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitionData {
+    pub id: i32,
     pub from: i32,
     pub to: i32,
     pub symbol: String,
@@ -43,8 +44,21 @@ pub struct OperationResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CheckResult {
+pub struct StatusResult {
     pub status: u16,
     pub message: String,
-    pub accepted: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StateResult {
+    pub status: u16,
+    pub message: String,
+    pub state: Option<StateData>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TransitionResult {
+    pub status: u16,
+    pub message: String,
+    pub transition: Option<TransitionData>,
 }
