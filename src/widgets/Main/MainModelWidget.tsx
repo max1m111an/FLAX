@@ -1,18 +1,17 @@
 import { models } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
-import styles from "../../scenes/MainScene.module.scss";
 
 export default function MainModelWidget() {
     const { addTab } = useTabs();
 
     return (
-        <div className={ styles.cardsWrapper }>
+        <div className="cards-wrapper">
             {models.map((model) => (
-                <div key={ model.type } className={ styles.cardType } onClick={ (_e) => addTab(model) }>
-                    <model.icon className={ styles.iconContainer } />
+                <div className="card-type" onClick={ (_e) => addTab(model) }>
+                    <model.icon className="icon-container" />
 
-                    <p className={ styles.cardTitleType }>{model.type}</p>
-                    <p className={ styles.cardDescriptionType }>{model.description}</p>
+                    <p className="card-title-type">{model.type}</p>
+                    <p className="card-description-type">{model.description}</p>
                 </div>
             ))}
         </div>

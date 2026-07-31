@@ -7,11 +7,6 @@ import Save from "@/assets/svg/Save.svg?react";
 import { useState } from "react";
 import { EdgeState, useControl } from "@/context/ControlContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { Button } from "@/components/ui/Button/Button.tsx";
-import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
-import { Typography } from "@/components/ui/Typography/Typography.tsx";
-import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
-import styles from "./ModelProperties.module.scss";
 
 
 export default function EdgeProperties() {
@@ -24,7 +19,7 @@ export default function EdgeProperties() {
 
     if (selectedNode === null) {
         return (
-            <Typography variant="label">Выберите вершину...</Typography>
+            <p className="state-label">Выберите вершину...</p>
         );
     }
     const handleEndStateChange = (idEdge: number, idNode: number) => {
@@ -76,13 +71,13 @@ export default function EdgeProperties() {
     };
     return (
         <>
-            <Typography variant="pretitle">Переходы из {nodes.find((node) => node.id === selectedNode)?.name}:</Typography>
+            <p className="model-pretitle">Переходы из {nodes.find((node) => node.id === selectedNode)?.name}:</p>
             {currentEdges.length > 0 && (
                 currentEdges.map((edge: EdgeState) =>
                     (
-                        <div key={ edge.id } className={ styles.propFullCardEdgeWrapper }>
+                        <div className="prop-full-card-edge-wrapper">
                             <div
-                                className={ styles.propCardEdgeWrapper }
+                                className="prop-card-edge-wrapper"
                                 onClick={ () => {
                                     if (isOpenId.includes(edge.id)) {
                                         setIsOpenId(isOpenId.filter((id) => id !== edge.id));
@@ -92,38 +87,40 @@ export default function EdgeProperties() {
                                 } }
                             >
                                 {!isOpenId.includes(edge.id) ? (
-                                    <ChevronRight />
+                                    <ChevronRight
+                                        className="icon"
+                                    />
                                 ) : (
-                                    <ChevronDown />
+                                    <ChevronDown
+                                        className="icon"
+                                    />
                                 )}
-                                <div className={ styles.nodeEdgeWrapper }>
-                                    <p className={ styles.nodeToNodeTitle }>
+                                <div className="node-edge-wrapper">
+                                    <p className="node-to-node-title">
                                         {nodes.find((node) => node.id === selectedNode)?.name}
                                         <ArrowRight />
                                         {nodes.find((node) => node.id === edge.idEndNode)?.name}
                                     </p>
-                                    <p className={ styles.stateDescription }>
+                                    <p className="state-description">
                                         {edge.state?.join(", ")}
                                     </p>
                                 </div>
-                                <IconButton variant="cancel" onClick={ (e) => { e.stopPropagation(); } }>
-                                    <Cancel />
-                                </IconButton>
+                                <Cancel className="model-cancel-icon" />
                             </div>
                             {!isOpenId.includes(edge.id) && (
-                                <div className={ styles.propOpenCardWrapper }>
-                                    <p className={ styles.pretitle2 }>В состояние</p>
+                                <div className="prop-open-card-wrapper">
+                                    <p className="pretitle_2">В состояние</p>
                                     <DropdownMenu.Root>
-                                        <DropdownMenu.Trigger className={ styles.dropdownInput }>
+                                        <DropdownMenu.Trigger className="dropdown-input">
                                             {nodes.find((node) => node.id === edge.idEndNode)?.name}
                                         </DropdownMenu.Trigger>
 
-                                        <DropdownMenu.Content className={ styles.nodesDropdown }
+                                        <DropdownMenu.Content className="nodes-dropdown"
                                             style={ { width: "var(--radix-dropdown-menu-trigger-width)" } }>
                                             <DropdownMenu.Group>
                                                 {nodes.map((node) => {
                                                     return (
-                                                        <DropdownMenu.Item key={ node.id } className={ styles.nodeItem } onClick={ () => handleEndStateChange(edge.id, node.id) }>
+                                                        <DropdownMenu.Item className="node-item" onClick={ () => handleEndStateChange(edge.id, node.id) }>
                                                             {node.name}
                                                         </DropdownMenu.Item>
                                                     );
@@ -131,9 +128,10 @@ export default function EdgeProperties() {
                                             </DropdownMenu.Group>
                                         </DropdownMenu.Content>
                                     </DropdownMenu.Root>
-                                    <p className={ styles.pretitle2 }>Символы перехода</p>
-                                    <div className={ styles.edgeSaveWrapper }>
-                                        <Textfield
+                                    <p className="pretitle_2">Символы перехода</p>
+                                    <div className="edge-save-wrapper">
+                                        <input
+                                            className="input"
                                             value={
                                                 editingValues[edge.id] ??
                                                 edge.state?.join(", ") ??
@@ -146,16 +144,15 @@ export default function EdgeProperties() {
                                                 }
                                             } }
                                         />
-                                        <Button
-                                            variant="main"
-                                            square
+                                        <button
+                                            className="main-btn square"
                                             onClick={ () => handleSave(edge.id) }
                                             disabled={
                                                 (editingValues[edge.id] ?? edge.state?.join(", ")) === edge.state?.join(", ")
                                             }
                                         >
                                             <Save />
-                                        </Button>
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -163,9 +160,9 @@ export default function EdgeProperties() {
                     ),
                 )
             )}
-            <Button variant="main">
+            <button className="main-btn">
                 <Plus />
-            </Button>
+            </button>
         </>
     );
 }

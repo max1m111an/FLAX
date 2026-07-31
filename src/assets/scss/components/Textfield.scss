@@ -1,3 +1,5 @@
+@use "@/assets/scss/consts" as *;
+
 .input {
   padding: 10px 12px;
   width: 100%;
@@ -28,15 +30,15 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-
-  &.onEdge {
+  &.onEdge{
     width: 128px;
     font-size: 14px;
     z-index: 950;
   }
 }
 
-.multilineInput {
+
+.multiline-input {
   padding: 8px 12px;
   width: 100%;
   background-color: var(--bg-input);

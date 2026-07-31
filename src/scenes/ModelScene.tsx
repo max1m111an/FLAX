@@ -3,12 +3,12 @@ import ModelCanvasWidget from "@/widgets/Model/ModelCanvasWidget.tsx";
 import ModelTestWidget from "@/widgets/Model/ModelTesting/ModelTestWidget.tsx";
 import { useControl } from "@/context/ControlContext.tsx";
 import ModelPropertiesWidget from "@/widgets/Model/ModelProperties/ModelPropertiesWidget.tsx";
-import styles from "./ModelScene.module.scss";
+
 
 export default function ModelScene() {
     const { activePane } = useControl();
     return (
-        <div className={ styles.modelContainer }>
+        <div className="model-container">
             <ModelControlWidget />
             <ModelCanvasWidget />
             {activePane == "play" && (
