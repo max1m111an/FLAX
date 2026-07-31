@@ -1,14 +1,20 @@
-import { StateNode } from "@/components/StateNode.tsx";
+import { State } from "@/components/State.tsx";
 import { useCallback, useState } from "react";
-import { EdgeState, NodeState, useControl } from "@/context/ControlContext.tsx";
+import { EdgeState, useControl } from "@/context/ControlContext.tsx";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
-import styles from "../../scenes/ModelScene.module.scss";
+import styles from "@/scenes/ModelScene.module.scss";
+import { tab, useTabs } from "@/context/TabsContext.tsx";
+import { addStateNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 
-export default function ModelCanvasWidget() {
-    const { activeControl, nodes, setNodes, edges, setEdges } = useControl();
-
+interface ModelCanvasWidgetProps {
+    tab: tab;
+}
+export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
+    const { activeControl, nodes, edges, setEdges } = useControl();
+    const [ currentTab, setCurrentTab ] = useState<tab>(tab);
+    const { updateTab } = useTabs();
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
         to: { x: number; y: number };
@@ -17,19 +23,31 @@ export default function ModelCanvasWidget() {
 
     const generateId = useCallback(() => Date.now(), []);
 
-    const addNode = (e: React.MouseEvent<HTMLDivElement>) => {
+    const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
         const x1 = e.clientX - 32;
         const y1 = e.clientY - 32;
-        const nextIndex = nodes.length;
-        const newNode: NodeState = {
-            id: generateId(),
+        const nextIndex = tab.automaton.states.length;
+        const newNode = {
+            automatonId: tab.id,
+            label: `q${nextIndex}`,
             x: x1,
             y: y1,
-            name: `q${nextIndex}`,
             isInitial: false,
             isFinal: false,
         };
-        setNodes([ ...nodes, newNode ]);
+        const response = await addStateNFA(newNode);
+        if (response.status == 200) {
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: [ ...currentTab.automaton.states, response.state ],
+                },
+            };
+
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
+        }
     };
 
     const addEdge = (startNode: number, endNode?: number) => {
@@ -64,14 +82,70 @@ export default function ModelCanvasWidget() {
             ),
         );
     };
+    const moveStateLocal = useCallback((id: number, pos: { x: number; y: number }) => {
+        setCurrentTab((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                automaton: {
+                    ...prev.automaton,
+                    states: prev.automaton.states.map((state) =>
+                        state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
+                    ),
+                },
+            };
+        });
+    }, []);
+    const saveStatePosition = useCallback(async (id: number, pos: { x: number; y: number }) => {
+        const request = {
+            automatonId: tab.id,
+            stateId: id,
+            x: pos.x,
+            y: pos.y,
+        };
 
-    const deleteNode = useCallback((id: number) => {
-        setNodes((prev) => prev.filter((node) => node.id !== id));
+        try {
+            const response = await updateStateNFA(request);
+            if (response.status === 200) {
+                setCurrentTab((prev) => {
+                    const newTabData = {
+                        ...prev,
+                        automaton: {
+                            ...prev.automaton,
+                            states: prev.automaton.states.map((state) =>
+                                state.id === id ? response.state : state,
+                            ),
+                        },
+                    };
+                    updateTab(newTabData);
+                    return newTabData;
+                });
+            }
+        } catch (error) {
+            console.error("Ошибка при сохранении позиции вершины:", error);
+        }
+    }, [ tab.id, updateTab ]);
 
-        setEdges((prev) => prev.filter(
-            (edge) => edge.idStartNode !== id && edge.idEndNode !== id,
-        ));
-    }, [ setNodes, setEdges ]);
+    const removeState = useCallback(async (id: number) => {
+        const request = {
+            automatonId: currentTab.id,
+            stateId: id,
+        };
+        const response = await removeStateNFA(request);
+        if (response.status == 200) {
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: currentTab.automaton.states.filter((state) => state.id !== id),
+                },
+            };
+
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
+        }
+
+    }, [ currentTab, updateTab ]);
 
     const deleteEdge = useCallback((id: number) => {
         setEdges((prev) => prev.filter((edge) => edge.id !== id));
@@ -82,27 +156,22 @@ export default function ModelCanvasWidget() {
             className={ styles.modelCanvasWrapper }
             onClick={ activeControl === "node" ? addNode : undefined }
         >
-            {nodes.map((node) => (
-                <StateNode
-                    label={ node.name }
-                    initialPosition={ { x: node.x, y: node.y } }
-                    isInitial={ node.isInitial }
-                    isFinal={ node.isFinal }
+            {currentTab.automaton.states.map((state) => (
+                <State
+                    label={ state.label }
+                    initialPosition={ { x: state.x, y: state.y } }
+                    isInitial={ state.is_initial }
+                    isFinal={ state.is_final }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
                     }
-                    onEndEdge={ (hoveredNodeId) => addEdge(node.id, hoveredNodeId) }
-                    key={ node.id }
-                    id={ node.id }
-                    onMoveNode={ (id, pos) => {
-                        setNodes((prev) =>
-                            prev.map((n) =>
-                                n.id === id ? { ...n, x: pos.x, y: pos.y } : n,
-                            ),
-                        );
-                    } }
-                    onDeleteNode={ deleteNode }
+                    onEndEdge={ (hoveredNodeId) => addEdge(state.id, hoveredNodeId) }
+                    key={ state.id }
+                    id={ state.id }
+                    onDeleteNode={ removeState }
+                    onMoveNode={ moveStateLocal }
+                    onEndMoveNode={ saveStatePosition }
                 />
             ))}
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>

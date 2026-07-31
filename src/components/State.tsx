@@ -4,7 +4,7 @@ import { useControl } from "@/context/ControlContext.tsx";
 import clsx from "clsx";
 import styles from "./StateNode.module.scss";
 
-interface StateNodeProps {
+interface StateProps {
     isFinal?: boolean;
     isInitial?: boolean;
     label: string;
@@ -14,10 +14,11 @@ interface StateNodeProps {
     onEndEdge?: (hoveredNodeId: number | undefined) => void;
     id: number;
     onMoveNode?: (id: number, pos: { x: number; y: number }) => void;
+    onEndMoveNode?: (id: number, pos: { x: number; y: number }) => void;
     onDeleteNode?: (id: number) => void;
 }
 
-export function StateNode(
+export function State(
     {
         isFinal = true,
         isInitial = true,
@@ -29,7 +30,8 @@ export function StateNode(
         id,
         onMoveNode,
         onDeleteNode,
-    }: StateNodeProps) {
+        onEndMoveNode,
+    }: StateProps) {
     const { activeControl, setSelectedNode, selectedNode } = useControl();
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
@@ -157,6 +159,7 @@ export function StateNode(
         }
         if (activeControl === "Move") {
             dragging.current = false;
+            onEndMoveNode?.(id, position.current);
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         }
