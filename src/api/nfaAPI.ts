@@ -59,3 +59,28 @@ export const removeStateNFA = async (params: deleteStateNFARequest): Promise<del
         throw error;
     }
 };
+
+type updateStateNFARequest = {
+    automatonId: number;
+    stateId: number;
+    label?: string;
+    x?: number;
+    y?: number;
+    isInitial?: boolean;
+    isFinal?: boolean;
+}
+type updateStateNFAResponse = {
+    status: number;
+    message: string;
+    state: StateModel;
+}
+
+export const updateStateNFA = async (params: updateStateNFARequest): Promise<updateStateNFAResponse> => {
+    try {
+        const response = await invoke<updateStateNFAResponse>("nfa_update_state", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_update_state:", error);
+        throw error;
+    }
+};

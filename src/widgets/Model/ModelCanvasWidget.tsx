@@ -1,4 +1,4 @@
-import { StateNode } from "@/components/StateNode.tsx";
+import { State } from "@/components/State.tsx";
 import { useCallback, useState } from "react";
 import { EdgeState, useControl } from "@/context/ControlContext.tsx";
 import Edge from "@/components/Edge";
@@ -6,7 +6,7 @@ import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useTabs } from "@/context/TabsContext.tsx";
-import { addStateNFA, removeStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 
 interface ModelCanvasWidgetProps {
     tab: tab;
@@ -82,6 +82,49 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
             ),
         );
     };
+    const moveStateLocal = useCallback((id: number, pos: { x: number; y: number }) => {
+        setCurrentTab((prev) => {
+            if (!prev) return prev;
+            return {
+                ...prev,
+                automaton: {
+                    ...prev.automaton,
+                    states: prev.automaton.states.map((state) =>
+                        state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
+                    ),
+                },
+            };
+        });
+    }, []);
+    const saveStatePosition = useCallback(async (id: number, pos: { x: number; y: number }) => {
+        const request = {
+            automatonId: tab.id,
+            stateId: id,
+            x: pos.x,
+            y: pos.y,
+        };
+
+        try {
+            const response = await updateStateNFA(request);
+            if (response.status === 200) {
+                setCurrentTab((prev) => {
+                    const newTabData = {
+                        ...prev,
+                        automaton: {
+                            ...prev.automaton,
+                            states: prev.automaton.states.map((state) =>
+                                state.id === id ? response.state : state,
+                            ),
+                        },
+                    };
+                    updateTab(newTabData);
+                    return newTabData;
+                });
+            }
+        } catch (error) {
+            console.error("Ошибка при сохранении позиции вершины:", error);
+        }
+    }, [ tab.id, updateTab ]);
 
     const removeState = useCallback(async (id: number) => {
         const request = {
@@ -114,7 +157,7 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
             onClick={ activeControl === "node" ? addNode : undefined }
         >
             {currentTab.automaton.states.map((state) => (
-                <StateNode
+                <State
                     label={ state.label }
                     initialPosition={ { x: state.x, y: state.y } }
                     isInitial={ state.is_initial }
@@ -127,6 +170,8 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     key={ state.id }
                     id={ state.id }
                     onDeleteNode={ removeState }
+                    onMoveNode={ moveStateLocal }
+                    onEndMoveNode={ saveStatePosition }
                 />
             ))}
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>

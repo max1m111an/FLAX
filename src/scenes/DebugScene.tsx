@@ -1,4 +1,4 @@
-import { addStateNFA, createNewNFA, removeStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, createNewNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 import styles from "@/scenes/MainScene.module.scss";
 import { useState } from "react";
 
@@ -17,7 +17,7 @@ export const DebugScene = () => {
             <button className={ styles.controlButton } onClick={ async () => {
                 try {
                     const res = await addStateNFA({
-                        automatonId: 1,
+                        automatonId: 2,
                         label: "q0",
                         x: 100,
                         y: 100,
@@ -32,7 +32,7 @@ export const DebugScene = () => {
             <button className={ styles.controlButton } onClick={ async () => {
                 try {
                     const res = await removeStateNFA({
-                        automatonId: 1,
+                        automatonId: 2,
                         stateId: 8335576,
                     });
                     setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
@@ -40,6 +40,20 @@ export const DebugScene = () => {
                     setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
                 }
             } }>nfa_delete_state</button>
+            <button className={ styles.controlButton } onClick={ async () => {
+                try {
+                    const res = await updateStateNFA({
+                        automatonId: 2,
+                        stateId: 3159668,
+                        label: "q4",
+                        isFinal: true,
+                    });
+                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
+                } catch (e) {
+                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
+                }
+            } }>nfa_update_state</button>
+
             <pre
                 className={ styles.cardDescriptionType }
                 style={ {
