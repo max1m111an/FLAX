@@ -2,11 +2,14 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
+import { createNewNFA } from "@/api/nfaAPI.ts";
+import { AutomatonModel } from "@/interface/Automaton.ts";
 
 export interface tab{
     id: number;
     title: string;
     model: model;
+    automaton: AutomatonModel;
 }
 
 interface TabsContextProps {
@@ -21,7 +24,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
 
-    const addTab = (model:model, type : string = "Без названия*" ) : void => {
+    const addTab = async (model: model, type: string = "Без названия*"): Promise<void> => {
         if (type === "Настройки") {
             const existingSettingsTab = tabs.find((t) => t.title === "Настройки");
             if (existingSettingsTab) {
@@ -29,18 +32,22 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
         }
+        const response = await createNewNFA("Без названия*");
+        if (response.status == 200) {
+            const newTab: tab = {
+                id: response.automaton.id,
+                title: response.automaton.name,
+                model,
+                automaton: response.automaton,
+            };
+            setTabs([ ...tabs, newTab ]);
 
-        const id: number = Date.now();
-        const newTab: tab = {
-            id: id,
-            title: type,
-            model: model,
-        };
-        setTabs([ ...tabs, newTab ]);
-        if (type == "Без названия*") {
-            navigate(`/models/${id}`);
-        } else if (type == "Настройки") {
-            navigate(ROUTES.SETTINGS);
+            if (type == "Настройки") {
+                navigate(ROUTES.SETTINGS);
+            } else if (type == "Без названия*") {
+                navigate(`/models/${newTab.id}`);
+            }
+
         }
     };
     const location = useLocation();

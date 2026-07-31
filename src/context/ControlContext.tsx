@@ -1,14 +1,7 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { StateNodeModel } from "@/interface/Automaton.ts";
 
 
-export interface NodeState {
-    id: number;
-    x: number;
-    y: number;
-    name: string;
-    isFinal: boolean;
-    isInitial: boolean;
-}
 export interface EdgeState {
     id: number;
     idStartNode: number;
@@ -22,8 +15,8 @@ interface ControlContextProps {
     activePane: string | null;
     changePane: (value: string) => void;
     changeControl: (value: string) => void;
-    nodes: NodeState[];
-    setNodes: (nodes: NodeState[] | ((prev: NodeState[]) => NodeState[])) => void;
+    nodes: StateNodeModel[];
+    setNodes: (nodes: StateNodeModel[] | ((prev: StateNodeModel[]) => StateNodeModel[])) => void;
     edges: EdgeState[];
     setEdges: (edges: EdgeState[] | ((prev: EdgeState[]) => EdgeState[])) => void;
     selectedNode: number | null;
@@ -38,16 +31,8 @@ const ControlContext = createContext<ControlContextProps | undefined>(undefined)
 export const ControlProvider = ({ children }: { children: ReactNode }) => {
     const [ activePane, setActivePane ] = useState<string | null>(null);
     const [ activeControl, setActiveControl ] = useState<string | null>("cursor");
-    const [ nodes, setNodes ] = useState<NodeState[]>([
-        { id: 0, x: 100, y: 100, name: "q0", isFinal: false, isInitial: true },
-        { id: 1, x: 500, y: 100, name: "q1", isFinal: true, isInitial: false },
-        { id: 2, x: 100, y: 500, name: "q2", isFinal: false, isInitial: false },
-        { id: 3, x: 500, y: 500, name: "q3", isFinal: false, isInitial: false },
-    ]);
-    const [ edges, setEdges ] = useState<EdgeState[]>([
-        { id: 0, idStartNode: 2, idEndNode: 3, state: [ "1", "2", "3" ] },
-        { id: 1, idStartNode: 1, idEndNode: 0, state: [ "λ" ] },
-    ]);
+    const [ nodes, setNodes ] = useState<StateNodeModel[]>([]);
+    const [ edges, setEdges ] = useState<EdgeState[]>([]);
     const [ selectedNode, setSelectedNode ] = useState<number | null>(null);
     const [ selectedEdge, setSelectedEdge ] = useState<number | null>(null);
 
