@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, DeterministicAutomaton};
+use crate::structs::data_models::RunStep;
 
 #[derive(Debug, Clone)]
 pub struct DFA {
@@ -106,6 +107,34 @@ impl DFA {
             }
         }
         Ok(())
+    }
+
+    pub fn run(&self, input: &[char]) -> Option<Vec<RunStep>> {
+        if input.iter().any(|s| !self.alphabet.contains(s)) {
+            return None;
+        }
+
+        let mut current = self.initial_state;
+        let mut steps: Vec<RunStep> = Vec::new();
+        for &symbol in input {
+            match self.transitions.get(&(current, symbol)) {
+                Some(&next) => {
+                    steps.push(RunStep {
+                        from: current,
+                        symbol: symbol.to_string(),
+                        to: next,
+                    });
+                    current = next;
+                }
+                None => return None,
+            }
+        }
+
+        if self.accepting_states.contains(&current) {
+            Some(steps)
+        } else {
+            None
+        }
     }
 }
 
@@ -475,5 +504,38 @@ mod tests {
         assert_eq!(t[&(0, 'b')], 0);
         assert_eq!(t[&(1, 'a')], 0);
         assert_eq!(t[&(1, 'b')], 1);
+    }
+
+    #[test]
+    fn run_returns_trace_for_accepted_string() {
+        let dfa = make_even_a_dfa();
+
+        let trace = dfa.run(&['a', 'a']).unwrap();
+        assert_eq!(trace.len(), 2);
+        assert_eq!(
+            trace[0],
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        );
+        assert_eq!(
+            trace[1],
+            RunStep { from: 1, symbol: "a".to_string(), to: 0 }
+        );
+    }
+
+    #[test]
+    fn run_rejects_string_without_path() {
+        let dfa = make_even_a_dfa();
+
+        assert!(dfa.run(&['a']).is_none());
+        assert!(dfa.run(&['a', 'a', 'a']).is_none());
+        assert!(dfa.run(&['c']).is_none());
+    }
+
+    #[test]
+    fn run_accepts_empty_when_initial_final() {
+        let dfa = make_even_a_dfa();
+
+        let trace = dfa.run(&[]).unwrap();
+        assert!(trace.is_empty());
     }
 }

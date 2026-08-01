@@ -62,3 +62,17 @@ pub struct TransitionResult {
     pub message: String,
     pub transition: Option<TransitionData>,
 }
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct RunStep {
+    pub from: i32,
+    pub symbol: String,
+    pub to: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RunResult {
+    pub status: u16,
+    pub message: String,
+    pub trace: Vec<RunStep>,
+}

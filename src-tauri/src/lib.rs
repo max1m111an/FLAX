@@ -33,6 +33,8 @@ pub fn run() {
             dfa_add_transition,
             dfa_update_transition,
             dfa_remove_transition,
+            nfa_run_str,
+            dfa_run_str,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

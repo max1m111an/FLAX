@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
+use crate::structs::data_models::RunStep;
 
 pub const EPSILON: char = '$';
 
@@ -99,6 +100,85 @@ impl NFA {
         }
         let reachable = self.reachable_states();
         !reachable.iter().any(|s| self.accepting_states.contains(s))
+    }
+
+    pub fn run(&self, input: &[char]) -> Option<Vec<RunStep>> {
+        if input.iter().any(|s| !self.alphabet.contains(s)) {
+            return None;
+        }
+
+        let mut steps: Vec<RunStep> = Vec::new();
+        let mut visited: HashSet<(i32, usize)> = HashSet::new();
+
+        fn explore(
+            nfa: &NFA,
+            state: i32,
+            pos: usize,
+            input: &[char],
+            steps: &mut Vec<RunStep>,
+            visited: &mut HashSet<(i32, usize)>,
+        ) -> bool {
+            if !visited.insert((state, pos)) {
+                return false;
+            }
+
+            if pos == input.len() {
+                if nfa.accepting_states.contains(&state) {
+                    return true;
+                }
+                if let Some(next_states) = nfa.transitions.get(&(state, EPSILON)) {
+                    for &next in next_states {
+                        steps.push(RunStep {
+                            from: state,
+                            symbol: EPSILON.to_string(),
+                            to: next,
+                        });
+                        if explore(nfa, next, pos, input, steps, visited) {
+                            return true;
+                        }
+                        steps.pop();
+                    }
+                }
+                return false;
+            }
+
+            if let Some(next_states) = nfa.transitions.get(&(state, EPSILON)) {
+                for &next in next_states {
+                    steps.push(RunStep {
+                        from: state,
+                        symbol: EPSILON.to_string(),
+                        to: next,
+                    });
+                    if explore(nfa, next, pos, input, steps, visited) {
+                        return true;
+                    }
+                    steps.pop();
+                }
+            }
+
+            let symbol = input[pos];
+            if let Some(next_states) = nfa.transitions.get(&(state, symbol)) {
+                for &next in next_states {
+                    steps.push(RunStep {
+                        from: state,
+                        symbol: symbol.to_string(),
+                        to: next,
+                    });
+                    if explore(nfa, next, pos + 1, input, steps, visited) {
+                        return true;
+                    }
+                    steps.pop();
+                }
+            }
+
+            false
+        }
+
+        if explore(self, self.initial_state, 0, input, &mut steps, &mut visited) {
+            Some(steps)
+        } else {
+            None
+        }
     }
 
     fn epsilon_closure_owned(&self, state: i32) -> HashSet<i32> {
@@ -584,5 +664,112 @@ mod tests {
         assert!(nfa.accepts(&['a', 'b', 'a', 'b', 'b']));
         assert!(!nfa.accepts(&['a', 'b']));
         assert!(!nfa.accepts(&['a', 'b', 'b', 'a']));
+    }
+
+    #[test]
+    fn run_returns_trace_for_simple_nfa() {
+        let nfa = NFA::builder()
+            .state(0).state(1).state(2)
+            .initial(0)
+            .accepting(2)
+            .symbol('a').symbol('b')
+            .transition(0, 'a', 1)
+            .transition(1, 'b', 2)
+            .build()
+            .unwrap();
+
+        let trace = nfa.run(&['a', 'b']).unwrap();
+        assert_eq!(trace.len(), 2);
+        assert_eq!(
+            trace[0],
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        );
+        assert_eq!(
+            trace[1],
+            RunStep { from: 1, symbol: "b".to_string(), to: 2 }
+        );
+    }
+
+    #[test]
+    fn run_tracks_epsilon_steps() {
+        let nfa = NFA::builder()
+            .state(0).state(1).state(2)
+            .initial(0)
+            .accepting(2)
+            .symbol('a')
+            .epsilon(0, 1)
+            .transition(1, 'a', 2)
+            .build()
+            .unwrap();
+
+        let trace = nfa.run(&['a']).unwrap();
+        assert_eq!(trace.len(), 2);
+        assert_eq!(
+            trace[0],
+            RunStep { from: 0, symbol: "$".to_string(), to: 1 }
+        );
+        assert_eq!(
+            trace[1],
+            RunStep { from: 1, symbol: "a".to_string(), to: 2 }
+        );
+    }
+
+    #[test]
+    fn run_finds_accepting_branch() {
+        // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting); q0 --a--> q0
+        let nfa = NFA::builder()
+            .state(0).state(1).state(2)
+            .initial(0)
+            .accepting(2)
+            .symbol('a').symbol('b')
+            .transition(0, 'a', 0)
+            .transition(0, 'a', 1)
+            .transition(1, 'b', 2)
+            .build()
+            .unwrap();
+
+        let trace = nfa.run(&['a', 'a', 'b']).unwrap();
+        assert_eq!(trace.len(), 3);
+        assert_eq!(
+            trace[0],
+            RunStep { from: 0, symbol: "a".to_string(), to: 0 }
+        );
+        assert_eq!(
+            trace[1],
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        );
+        assert_eq!(
+            trace[2],
+            RunStep { from: 1, symbol: "b".to_string(), to: 2 }
+        );
+    }
+
+    #[test]
+    fn run_rejects_when_no_path() {
+        let nfa = NFA::builder()
+            .state(0).state(1)
+            .initial(0)
+            .accepting(1)
+            .symbol('a')
+            .transition(0, 'a', 1)
+            .build()
+            .unwrap();
+
+        assert!(nfa.run(&['a', 'a']).is_none());
+        assert!(nfa.run(&['b']).is_none());
+        assert!(nfa.run(&[]).is_none());
+    }
+
+    #[test]
+    fn run_accepts_empty_when_initial_is_final() {
+        let nfa = NFA::builder()
+            .state(0)
+            .initial(0)
+            .accepting(0)
+            .build()
+            .unwrap();
+
+        let trace = nfa.run(&[]).unwrap();
+        assert!(trace.is_empty());
     }
 }

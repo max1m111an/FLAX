@@ -2,7 +2,7 @@ use tauri::State;
 
 use crate::structs::{
     automata::Automaton,
-    data_models::{AutomatonKind, OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+    data_models::{AutomatonKind, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
     dfa::{DFA, DFABuilder},
     id_gen,
     store::AutomatonStore,
@@ -342,6 +342,45 @@ pub fn dfa_remove_transition(
     StatusResult {
         status: code,
         message: msg,
+    }
+}
+
+#[tauri::command]
+pub fn dfa_run_str(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    input: String,
+) -> RunResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return RunResult {
+                status: 400,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                trace: Vec::new(),
+            };
+        }
+    };
+
+    let chars: Vec<char> = input.chars().collect();
+    match data_to_dfa(&entry.states, &entry.transitions, &entry.alphabet) {
+        Ok(dfa) => match dfa.run(&chars) {
+            Some(trace) => RunResult {
+                status: 200,
+                message: format!("Цепочка '{}' принята", input),
+                trace,
+            },
+            None => RunResult {
+                status: 401,
+                message: format!("Цепочка '{}' отклонена", input),
+                trace: Vec::new(),
+            },
+        },
+        Err(err) => RunResult {
+            status: 400,
+            message: format!("Некорректный автомат: {}", err),
+            trace: Vec::new(),
+        },
     }
 }
 
