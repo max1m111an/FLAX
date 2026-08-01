@@ -8,11 +8,11 @@ pub trait Automaton {
     fn accepts(&self, input: &[Self::Symbol]) -> bool;
     fn states(&self) -> &HashSet<Self::State>;
     fn initial_state(&self) -> &Self::State;
-    fn accepting_states(&self) -> &HashSet<Self::State>;
+    fn final_states(&self) -> &HashSet<Self::State>;
     fn alphabet(&self) -> &HashSet<Self::Symbol>;
 
     fn is_accepting(&self, state: &Self::State) -> bool {
-        self.accepting_states().contains(state)
+        self.final_states().contains(state)
     }
 }
 

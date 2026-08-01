@@ -410,10 +410,10 @@ fn data_to_dfa(
     for state in states {
         builder = builder.state(state.id);
         if state.is_initial {
-            builder = builder.initial(state.id);
+            builder = builder.set_initial(state.id);
         }
         if state.is_final {
-            builder = builder.accepting(state.id);
+            builder = builder.set_final(state.id);
         }
     }
 

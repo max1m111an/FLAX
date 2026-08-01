@@ -7,8 +7,8 @@ fn make_even_a_dfa() -> DFA {
     // q1 --a--> q0, q1 --b--> q1
     DFABuilder::new()
         .state(0).state(1)
-        .initial(0)
-        .accepting(0)
+        .set_initial(0)
+        .set_final(0)
         .symbols(&['a', 'b'])
         .transition(0, 'a', 1)
         .transition(0, 'b', 0)
@@ -23,14 +23,14 @@ fn builder_creates_valid_dfa() {
     let dfa = make_even_a_dfa();
     assert_eq!(dfa.states().len(), 2);
     assert_eq!(dfa.initial_state(), &0);
-    assert!(dfa.accepting_states().contains(&0));
+    assert!(dfa.final_states().contains(&0));
 }
 
 #[test]
 fn builder_fails_without_initial() {
     let result = DFABuilder::new()
         .state(0).state(1)
-        .accepting(1)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .build();
@@ -96,8 +96,8 @@ fn is_valid_incomplete_dfa() {
     // q0 has transition on 'a' but not 'b'
     let dfa = DFABuilder::new()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbols(&['a', 'b'])
         .transition(0, 'a', 1)
         .build()
@@ -110,7 +110,7 @@ fn is_valid_incomplete_dfa() {
 fn is_empty_when_no_accepting() {
     let dfa = DFABuilder::new()
         .state(0).state(1)
-        .initial(0)
+        .set_initial(0)
         .symbols(&['a'])
         .transition(0, 'a', 1)
         .transition(1, 'a', 0)
@@ -130,8 +130,8 @@ fn is_not_empty_normal() {
 fn empty_string_accepted_when_initial_final() {
     let dfa = DFABuilder::new()
         .state(0)
-        .initial(0)
-        .accepting(0)
+        .set_initial(0)
+        .set_final(0)
         .symbol('a')
         .transition(0, 'a', 0)
         .build()
@@ -144,8 +144,8 @@ fn empty_string_accepted_when_initial_final() {
 fn empty_string_rejected_when_initial_not_final() {
     let dfa = DFABuilder::new()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .transition(1, 'a', 0)
@@ -160,8 +160,8 @@ fn single_state_loop() {
     // q0 --a--> q0, accepting: accepts a*
     let dfa = DFABuilder::new()
         .state(0)
-        .initial(0)
-        .accepting(0)
+        .set_initial(0)
+        .set_final(0)
         .symbol('a')
         .transition(0, 'a', 0)
         .build()
@@ -181,8 +181,8 @@ fn accepts_only_specific_string() {
     // q0 --b--> dead, q1 --a--> dead
     let dfa = DFABuilder::new()
         .state(0).state(1).state(2).state(3)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbols(&['a', 'b'])
         .transition(0, 'a', 1)
         .transition(0, 'b', 3)
@@ -217,8 +217,8 @@ fn reachable_states_partial() {
     // q0 --a--> q1 (final), q2 unreachable
     let dfa = DFABuilder::new()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .transition(1, 'a', 1)

@@ -10,7 +10,7 @@ pub struct DFA {
     alphabet: HashSet<char>,
     transitions: HashMap<(i32, char), i32>,
     initial_state: i32,
-    accepting_states: HashSet<i32>,
+    final_states: HashSet<i32>,
 }
 
 #[allow(dead_code)]
@@ -20,7 +20,7 @@ impl DFA {
         alphabet: HashSet<char>,
         transitions: HashMap<(i32, char), i32>,
         initial_state: i32,
-        accepting_states: HashSet<i32>,
+        final_states: HashSet<i32>,
     ) -> Result<Self, String> {
         if !states.contains(&initial_state) {
             return Err(format!(
@@ -28,7 +28,7 @@ impl DFA {
                 initial_state
             ));
         }
-        for state in &accepting_states {
+        for state in &final_states {
             if !states.contains(state) {
                 return Err(format!(
                     "Допускающее состояние '{}' не найдено в множестве состояний",
@@ -58,7 +58,7 @@ impl DFA {
             alphabet,
             transitions,
             initial_state,
-            accepting_states,
+            final_states,
         })
     }
 
@@ -90,11 +90,11 @@ impl DFA {
     }
 
     pub fn is_empty(&self) -> bool {
-        if self.accepting_states.is_empty() {
+        if self.final_states.is_empty() {
             return true;
         }
         let reachable = self.reachable_states();
-        !reachable.iter().any(|s| self.accepting_states.contains(s))
+        !reachable.iter().any(|s| self.final_states.contains(s))
     }
 
     pub fn is_valid(&self) -> Result<(), String> {
@@ -132,7 +132,7 @@ impl DFA {
             }
         }
 
-        if self.accepting_states.contains(&current) {
+        if self.final_states.contains(&current) {
             Some(steps)
         } else {
             None
@@ -155,7 +155,7 @@ impl Automaton for DFA {
                 None => return false,
             }
         }
-        self.accepting_states.contains(&current)
+        self.final_states.contains(&current)
     }
 
     fn states(&self) -> &HashSet<i32> {
@@ -166,8 +166,8 @@ impl Automaton for DFA {
         &self.initial_state
     }
 
-    fn accepting_states(&self) -> &HashSet<i32> {
-        &self.accepting_states
+    fn final_states(&self) -> &HashSet<i32> {
+        &self.final_states
     }
 
     fn alphabet(&self) -> &HashSet<char> {
@@ -187,7 +187,7 @@ pub struct DFABuilder {
     alphabet: HashSet<char>,
     transitions: HashMap<(i32, char), i32>,
     initial_state: Option<i32>,
-    accepting_states: HashSet<i32>,
+    final_states: HashSet<i32>,
 }
 
 #[allow(dead_code)]
@@ -228,22 +228,22 @@ impl DFABuilder {
         self
     }
 
-    pub fn initial(mut self, state: i32) -> Self {
+    pub fn set_initial(mut self, state: i32) -> Self {
         self.states.insert(state);
         self.initial_state = Some(state);
         self
     }
 
-    pub fn accepting(mut self, state: i32) -> Self {
+    pub fn set_final(mut self, state: i32) -> Self {
         self.states.insert(state);
-        self.accepting_states.insert(state);
+        self.final_states.insert(state);
         self
     }
 
-    pub fn accepting_states(mut self, states: &[i32]) -> Self {
+    pub fn final_states(mut self, states: &[i32]) -> Self {
         for &state in states {
             self.states.insert(state);
-            self.accepting_states.insert(state);
+            self.final_states.insert(state);
         }
         self
     }
@@ -257,7 +257,7 @@ impl DFABuilder {
             self.alphabet,
             self.transitions,
             initial_state,
-            self.accepting_states,
+            self.final_states,
         )
     }
 }

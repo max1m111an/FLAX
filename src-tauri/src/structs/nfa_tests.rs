@@ -5,8 +5,8 @@ use crate::structs::automata::{Automaton, NondeterministicAutomaton};
 fn builder_creates_valid_nfa() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 1)
         .transition(1, 'b', 2)
@@ -15,14 +15,14 @@ fn builder_creates_valid_nfa() {
     let nfa = nfa.unwrap();
     assert_eq!(nfa.states().len(), 3);
     assert_eq!(nfa.initial_state(), &0);
-    assert!(nfa.accepting_states().contains(&2));
+    assert!(nfa.final_states().contains(&2));
 }
 
 #[test]
 fn builder_fails_without_initial() {
     let result = NFA::builder()
         .state(0).state(1)
-        .accepting(1)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .build();
@@ -50,8 +50,8 @@ fn new_fails_with_invalid_transition_state() {
 fn accepts_simple_string() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 1)
         .transition(1, 'b', 2)
@@ -70,8 +70,8 @@ fn accepts_with_epsilon_transition() {
     // q0 --eps--> q1 --a--> q2 (accepting)
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a')
         .epsilon(0, 1)
         .transition(1, 'a', 2)
@@ -89,8 +89,8 @@ fn accepts_with_nondeterminism() {
     // accepts a*b
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 0)
         .transition(0, 'a', 1)
@@ -112,8 +112,8 @@ fn accepts_with_multiple_epsilon_closures() {
     // q0 --eps--> q1 --eps--> q2 --a--> q3 (accepting)
     let nfa = NFA::builder()
         .state(0).state(1).state(2).state(3)
-        .initial(0)
-        .accepting(3)
+        .set_initial(0)
+        .set_final(3)
         .symbol('a')
         .epsilon(0, 1)
         .epsilon(1, 2)
@@ -129,8 +129,8 @@ fn accepts_with_multiple_epsilon_closures() {
 fn rejects_symbol_not_in_alphabet() {
     let nfa = NFA::builder()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .build()
@@ -143,8 +143,8 @@ fn rejects_symbol_not_in_alphabet() {
 fn empty_string_accepted_when_initial_is_final() {
     let nfa = NFA::builder()
         .state(0)
-        .initial(0)
-        .accepting(0)
+        .set_initial(0)
+        .set_final(0)
         .build()
         .unwrap();
 
@@ -156,8 +156,8 @@ fn empty_string_accepted_when_initial_is_final() {
 fn epsilon_closure_includes_all_reachable() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2).state(3)
-        .initial(0)
-        .accepting(3)
+        .set_initial(0)
+        .set_final(3)
         .symbol('a')
         .epsilon(0, 1)
         .epsilon(1, 2)
@@ -176,8 +176,8 @@ fn epsilon_closure_includes_all_reachable() {
 fn next_states_returns_correct_set() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a')
         .transition(0, 'a', 1)
         .transition(0, 'a', 2)
@@ -194,7 +194,7 @@ fn next_states_returns_correct_set() {
 fn is_empty_when_no_accepting() {
     let nfa = NFA::builder()
         .state(0).state(1)
-        .initial(0)
+        .set_initial(0)
         .symbol('a')
         .transition(0, 'a', 1)
         .build()
@@ -207,8 +207,8 @@ fn is_empty_when_no_accepting() {
 fn is_empty_when_accepting_unreachable() {
     let nfa = NFA::builder()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .build()
         .unwrap();
@@ -220,8 +220,8 @@ fn is_empty_when_accepting_unreachable() {
 fn is_not_empty_when_accepting_reachable() {
     let nfa = NFA::builder()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .build()
@@ -234,8 +234,8 @@ fn is_not_empty_when_accepting_reachable() {
 fn reachable_states_follows_epsilon() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a')
         .epsilon(0, 1)
         .transition(1, 'a', 2)
@@ -252,8 +252,8 @@ fn reachable_states_follows_epsilon() {
 fn nfa_to_data_roundtrip_via_builder() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 0)
         .transition(0, 'a', 1)
@@ -276,8 +276,8 @@ fn many_states_complex_nfa() {
     // NFA for (a|b)*abb
     let nfa = NFA::builder()
         .state(0).state(1).state(2).state(3)
-        .initial(0)
-        .accepting(3)
+        .set_initial(0)
+        .set_final(3)
         .symbol('a').symbol('b')
         .transition(0, 'a', 0)
         .transition(0, 'b', 0)
@@ -299,8 +299,8 @@ fn many_states_complex_nfa() {
 fn run_returns_trace_for_simple_nfa() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 1)
         .transition(1, 'b', 2)
@@ -323,8 +323,8 @@ fn run_returns_trace_for_simple_nfa() {
 fn run_tracks_epsilon_steps() {
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a')
         .epsilon(0, 1)
         .transition(1, 'a', 2)
@@ -348,8 +348,8 @@ fn run_finds_accepting_branch() {
     // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting); q0 --a--> q0
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
-        .initial(0)
-        .accepting(2)
+        .set_initial(0)
+        .set_final(2)
         .symbol('a').symbol('b')
         .transition(0, 'a', 0)
         .transition(0, 'a', 1)
@@ -377,8 +377,8 @@ fn run_finds_accepting_branch() {
 fn run_rejects_when_no_path() {
     let nfa = NFA::builder()
         .state(0).state(1)
-        .initial(0)
-        .accepting(1)
+        .set_initial(0)
+        .set_final(1)
         .symbol('a')
         .transition(0, 'a', 1)
         .build()
@@ -393,8 +393,8 @@ fn run_rejects_when_no_path() {
 fn run_accepts_empty_when_initial_is_final() {
     let nfa = NFA::builder()
         .state(0)
-        .initial(0)
-        .accepting(0)
+        .set_initial(0)
+        .set_final(0)
         .build()
         .unwrap();
 
