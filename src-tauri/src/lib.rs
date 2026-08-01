@@ -48,6 +48,7 @@ pub fn run() {
             dfa_run_str,
             dfa_remove_automaton,
             save_jff,
+            load_jff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

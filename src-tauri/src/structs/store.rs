@@ -22,15 +22,8 @@ impl AutomatonStore {
         kind: AutomatonKind,
         initial_label: &str,
     ) -> AutomatonData {
-        let id = {
-            let mut next = self.next_id.lock().unwrap();
-            let id = *next;
-            *next += 1;
-            id
-        };
-
         let entry = AutomatonData {
-            id,
+            id: 0,
             name,
             kind,
             states: vec![StateData {
@@ -45,8 +38,20 @@ impl AutomatonStore {
             alphabet: Vec::new(),
         };
 
-        self.automata.lock().unwrap().insert(id, entry.clone());
-        entry
+        self.insert(entry)
+    }
+
+    pub fn insert(&self, mut data: AutomatonData) -> AutomatonData {
+        let id = {
+            let mut next = self.next_id.lock().unwrap();
+            let id = *next;
+            *next += 1;
+            id
+        };
+
+        data.id = id;
+        self.automata.lock().unwrap().insert(id, data.clone());
+        data
     }
 
     pub fn get(&self, id: i32) -> Option<AutomatonData> {
@@ -202,6 +207,37 @@ mod tests {
 
         let ids = store.list_ids();
         assert_eq!(ids.len(), 10);
+    }
+
+    #[test]
+    fn insert_assigns_fresh_id_and_stores() {
+        let store = make_store();
+        let data = AutomatonData {
+            id: 99,
+            name: "Loaded".to_string(),
+            kind: AutomatonKind::NFA,
+            states: Vec::new(),
+            transitions: Vec::new(),
+            alphabet: Vec::new(),
+        };
+
+        let stored = store.insert(data);
+        assert_eq!(stored.id, 1);
+        assert_eq!(stored.name, "Loaded");
+        assert!(stored.states.is_empty());
+
+        let fetched = store.get(1).unwrap();
+        assert_eq!(fetched.name, "Loaded");
+
+        let again = store.insert(AutomatonData {
+            id: 100,
+            name: "Second".to_string(),
+            kind: AutomatonKind::DFA,
+            states: Vec::new(),
+            transitions: Vec::new(),
+            alphabet: Vec::new(),
+        });
+        assert_eq!(again.id, 2);
     }
 
     #[test]
