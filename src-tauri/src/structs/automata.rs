@@ -1,5 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, hash::Hash};
 
+#[allow(dead_code)]
 pub trait Automaton {
     type State: Clone + Eq + Hash + Debug;
     type Symbol: Clone + Eq + Hash + Debug;
@@ -15,10 +16,12 @@ pub trait Automaton {
     }
 }
 
+#[allow(dead_code)]
 pub trait DeterministicAutomaton: Automaton {
     fn next_state(&self, state: &Self::State, symbol: &Self::Symbol) -> Option<&Self::State>;
 }
 
+#[allow(dead_code)]
 pub trait NondeterministicAutomaton: Automaton {
     fn next_states(&self, state: &Self::State, symbol: &Self::Symbol) -> HashSet<&Self::State>;
     fn epsilon_closure(&self, state: &Self::State) -> HashSet<&Self::State>;

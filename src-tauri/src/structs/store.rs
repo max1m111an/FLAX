@@ -57,10 +57,12 @@ impl AutomatonStore {
         self.automata.lock().unwrap().insert(data.id, data);
     }
 
+    #[allow(dead_code)]
     pub fn remove(&self, id: i32) -> Option<AutomatonData> {
         self.automata.lock().unwrap().remove(&id)
     }
 
+    #[allow(dead_code)]
     pub fn list_ids(&self) -> Vec<i32> {
         self.automata.lock().unwrap().keys().copied().collect()
     }

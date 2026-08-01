@@ -5,6 +5,7 @@ use crate::structs::data_models::RunStep;
 
 pub const EPSILON: char = '$';
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct NFA {
     states: HashSet<i32>,
@@ -14,6 +15,7 @@ pub struct NFA {
     accepting_states: HashSet<i32>,
 }
 
+#[allow(dead_code)]
 impl NFA {
     pub fn new(
         states: HashSet<i32>,
@@ -283,6 +285,7 @@ pub struct NFABuilder {
     accepting_states: HashSet<i32>,
 }
 
+#[allow(dead_code)]
 impl NFABuilder {
     pub fn new() -> Self {
         NFABuilder::default()

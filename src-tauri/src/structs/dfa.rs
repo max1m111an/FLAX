@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use crate::structs::automata::{Automaton, DeterministicAutomaton};
 use crate::structs::data_models::RunStep;
 
+#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct DFA {
     states: HashSet<i32>,
@@ -12,6 +13,7 @@ pub struct DFA {
     accepting_states: HashSet<i32>,
 }
 
+#[allow(dead_code)]
 impl DFA {
     pub fn new(
         states: HashSet<i32>,
@@ -188,6 +190,7 @@ pub struct DFABuilder {
     accepting_states: HashSet<i32>,
 }
 
+#[allow(dead_code)]
 impl DFABuilder {
     pub fn new() -> Self {
         DFABuilder::default()

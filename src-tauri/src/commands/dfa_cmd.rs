@@ -1,7 +1,6 @@
 use tauri::State;
 
 use crate::structs::{
-    automata::Automaton,
     data_models::{AutomatonKind, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
     dfa::{DFA, DFABuilder},
     id_gen,
