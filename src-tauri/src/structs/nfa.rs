@@ -369,7 +369,3 @@ impl NFABuilder {
         )
     }
 }
-
-#[cfg(test)]
-#[path = "nfa_tests.rs"]
-mod tests;

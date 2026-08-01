@@ -1,5 +1,11 @@
-mod structs;
+pub mod structs;
 mod commands;
+
+#[path = "utils/id_gen.rs"]
+mod id_gen;
+
+#[cfg(test)]
+mod tests;
 
 use crate::commands::nfa_cmd::*;
 use crate::commands::dfa_cmd::*;

@@ -1,5 +1,8 @@
-use super::*;
+use std::collections::{HashMap, HashSet};
+
 use crate::structs::automata::{Automaton, DeterministicAutomaton};
+use crate::structs::data_models::RunStep;
+use crate::structs::dfa::{DFA, DFABuilder};
 
 fn make_even_a_dfa() -> DFA {
     // DFA: принимает строки с чётным количеством 'a'

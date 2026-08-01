@@ -1,5 +1,8 @@
-use super::*;
+use std::collections::{HashMap, HashSet};
+
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
+use crate::structs::data_models::RunStep;
+use crate::structs::nfa::{EPSILON, NFA};
 
 #[test]
 fn builder_creates_valid_nfa() {
@@ -32,8 +35,8 @@ fn builder_fails_without_initial() {
 #[test]
 fn new_fails_with_invalid_accepting() {
     let states = HashSet::from([0]);
-    let accepting = HashSet::from([99]);
-    let result = NFA::new(states, HashSet::new(), HashMap::new(), 0, accepting);
+    let final_states = HashSet::from([99]);
+    let result = NFA::new(states, HashSet::new(), HashMap::new(), 0, final_states);
     assert!(result.is_err());
 }
 

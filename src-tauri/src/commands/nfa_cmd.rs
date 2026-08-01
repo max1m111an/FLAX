@@ -1,10 +1,12 @@
 use tauri::State;
 
-use crate::structs::{
-    data_models::{AutomatonKind, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+use crate::{
     id_gen,
-    nfa::{NFA, EPSILON, NFABuilder},
-    store::AutomatonStore,
+    structs::{
+        data_models::{AutomatonKind, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+        nfa::{NFA, EPSILON, NFABuilder},
+        store::AutomatonStore,
+    },
 };
 
 #[tauri::command]

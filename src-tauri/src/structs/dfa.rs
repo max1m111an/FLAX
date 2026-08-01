@@ -261,7 +261,3 @@ impl DFABuilder {
         )
     }
 }
-
-#[cfg(test)]
-#[path = "dfa_tests.rs"]
-mod tests;
