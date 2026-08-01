@@ -383,6 +383,23 @@ pub fn dfa_run_str(
     }
 }
 
+#[tauri::command]
+pub fn dfa_remove_automaton(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+) -> StatusResult {
+    match state.remove(automaton_id) {
+        Some(_) => StatusResult {
+            status: 200,
+            message: format!("Автомат с id {} удалён", automaton_id),
+        },
+        None => StatusResult {
+            status: 400,
+            message: format!("Автомат с id {} не найден", automaton_id),
+        },
+    }
+}
+
 fn data_to_dfa(
     states: &[StateData],
     transitions: &[TransitionData],
