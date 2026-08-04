@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { AutomatonModel, StateModel } from "@/interface/Automaton.ts";
+import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
 
 type createNewNFAResponse = {
     status: number;
@@ -60,7 +60,7 @@ export const removeStateNFA = async (params: deleteStateNFARequest): Promise<del
     }
 };
 
-type updateStateNFARequest = {
+export type updateStateNFARequest = {
     automatonId: number;
     stateId: number;
     label?: string;
@@ -84,3 +84,72 @@ export const updateStateNFA = async (params: updateStateNFARequest): Promise<upd
         throw error;
     }
 };
+
+type addTransitNFARequest = {
+    automatonId: number;
+    from: number;
+    to: number;
+    symbols: string[];
+}
+
+type addTransitNFAResponse = {
+    status: number;
+    message: string;
+    transition: TransitionModel[];
+}
+
+export const addTransitionNFA = async (params: addTransitNFARequest): Promise<addTransitNFAResponse> => {
+    try {
+        const response = await invoke<addTransitNFAResponse>("nfa_add_transition", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_add_transition:", error);
+        throw error;
+    }
+};
+
+type updateTransitNFARequest = {
+    automatonId: number;
+    transitionId: number;
+    new_from?: number;
+    new_to?: number;
+    new_symbol?: string;
+    new_label?: string | null;
+}
+
+type updateTransitNFAResponse = {
+    status: number;
+    message: string;
+    transition: TransitionModel[];
+}
+
+export const updateTransitNFA = async (params: updateTransitNFARequest): Promise<updateTransitNFAResponse> => {
+    try {
+        const response = await invoke<updateTransitNFAResponse>("nfa_update_transition", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_update_transition:", error);
+        throw error;
+    }
+};
+
+type removeTransitNFARequest = {
+    automatonId: number;
+    transitionId: number;
+}
+
+type removeTransitNFAResponse = {
+    status: number;
+    message: string;
+}
+
+export const removeTransitNFA = async (params: removeTransitNFARequest): Promise<removeTransitNFAResponse> => {
+    try {
+        const response = await invoke<removeTransitNFAResponse>("nfa_remove_transition", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_remove_transition:", error);
+        throw error;
+    }
+};
+

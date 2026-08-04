@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
 import { useControl } from "@/context/ControlContext.tsx";
 import clsx from "clsx";
@@ -20,8 +20,8 @@ interface StateProps {
 
 export function State(
     {
-        isFinal = true,
-        isInitial = true,
+        isFinal,
+        isInitial,
         label,
         initialPosition = { x: 0, y: 0 },
         onStartEdge,
@@ -39,13 +39,15 @@ export function State(
     const dragging = useRef(false);
 
 
-    useEffect(() => {
+    const { x: initialX, y: initialY } = initialPosition;
+
+    useLayoutEffect(() => {
         if (!dragging.current && nodeRef.current) {
-            position.current = initialPosition;
-            nodeRef.current.style.left = `${initialPosition.x}px`;
-            nodeRef.current.style.top = `${initialPosition.y}px`;
+            position.current = { x: initialX, y: initialY };
+            nodeRef.current.style.left = `${initialX}px`;
+            nodeRef.current.style.top = `${initialY}px`;
         }
-    }, [ initialPosition ]);
+    }, [ initialX, initialY ]);
 
     const getCursorStyle = () => {
         if (activeControl === "Move") {

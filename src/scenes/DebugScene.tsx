@@ -1,4 +1,4 @@
-import { addStateNFA, createNewNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, addTransitionNFA, createNewNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 import styles from "@/scenes/MainScene.module.scss";
 import { useState } from "react";
 
@@ -19,8 +19,8 @@ export const DebugScene = () => {
                     const res = await addStateNFA({
                         automatonId: 2,
                         label: "q0",
-                        x: 100,
-                        y: 100,
+                        x: 5455,
+                        y: 555,
                         isInitial: false,
                         isFinal: false,
                     });
@@ -53,6 +53,19 @@ export const DebugScene = () => {
                     setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
                 }
             } }>nfa_update_state</button>
+            <button className={ styles.controlButton } onClick={ async () => {
+                try {
+                    const res = await addTransitionNFA({
+                        automatonId: 2,
+                        from: 3370849,
+                        to: 5793196,
+                        symbols: [ "d", "e", "f" ],
+                    });
+                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
+                } catch (e) {
+                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
+                }
+            } }>nfa_add_transition</button>
 
             <pre
                 className={ styles.cardDescriptionType }

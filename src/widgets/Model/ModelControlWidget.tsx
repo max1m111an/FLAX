@@ -20,11 +20,16 @@ export default function ModelControlWidget() {
     return (
         <div className={ styles.modelLeftControlWrapper }>
             <div className={ styles.modelTopGroup }>
-                <Cursor className={ clsx(styles.modelControlIcon, activeControl == "cursor" && styles.active) } onClick={ () => changeControl("cursor") } />
-                <Move className={ clsx(styles.modelControlIcon, activeControl == "Move" && styles.active) } onClick={ () => changeControl("Move") } />
-                <Circle className={ clsx(styles.modelControlIcon, activeControl == "node" && styles.active) } onClick={ () => changeControl("node") } />
-                <ArrowUpRight className={ clsx(styles.modelControlIcon, activeControl == "edge" && styles.active) } onClick={ () => changeControl("edge") } />
-                <Trashcan className={ clsx(styles.modelControlIcon, styles.trashcan, activeControl == "trashcan" && styles.active) } onClick={ () => changeControl("trashcan") } />
+                <Cursor className={ clsx(styles.modelControlIcon, activeControl == "cursor" && styles.active) }
+                    onClick={ () => changeControl("cursor") } />
+                <Move className={ clsx(styles.modelControlIcon,
+                    activeControl == "Move" && styles.active) } onClick={ () => changeControl("Move") } />
+                <Circle className={ clsx(styles.modelControlIcon,
+                    activeControl == "node" && styles.active) } onClick={ () => changeControl("node") } />
+                <ArrowUpRight className={ clsx(styles.modelControlIcon,
+                    activeControl == "edge" && styles.active) } onClick={ () => changeControl("edge") } />
+                <Trashcan className={ clsx(styles.modelControlIcon, styles.trashcan, activeControl == "trashcan" && styles.active) }
+                    onClick={ () => changeControl("trashcan") } />
                 <div className={ styles.modelDivider } />
             </div>
 

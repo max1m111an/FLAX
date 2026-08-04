@@ -26,7 +26,7 @@ export default function ModelScene() {
                 <ModelTestWidget />
             )}
             {activePane == "settings" && (
-                <ModelPropertiesWidget />
+                <ModelPropertiesWidget key={ currentTab.id } tab={ currentTab } />
             )}
         </div>
     );

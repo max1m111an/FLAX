@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { createNewNFA } from "@/api/nfaAPI.ts";
-import { AutomatonModel } from "@/interface/Automaton.ts";
+import { AutomatonModel } from "@/types/Automaton.ts";
 
 export interface tab{
     id: number;
@@ -48,7 +48,6 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             } else if (type == "Без названия*") {
                 navigate(`/models/${newTab.id}`);
             }
-
         }
     };
     const location = useLocation();

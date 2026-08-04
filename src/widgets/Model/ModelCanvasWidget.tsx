@@ -1,34 +1,43 @@
 import { State } from "@/components/State.tsx";
-import { useCallback, useState } from "react";
-import { EdgeState, useControl } from "@/context/ControlContext.tsx";
+import { useCallback, useEffect, useState } from "react";
+import { useControl } from "@/context/ControlContext.tsx";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useTabs } from "@/context/TabsContext.tsx";
-import { addStateNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, addTransitionNFA, removeStateNFA, removeTransitNFA, updateStateNFA } from "@/api/nfaAPI.ts";
+import { TransitionModel } from "@/types/Automaton.ts";
 
 interface ModelCanvasWidgetProps {
     tab: tab;
 }
+
 export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
-    const { activeControl, nodes, edges, setEdges } = useControl();
+    const { activeControl } = useControl();
     const [ currentTab, setCurrentTab ] = useState<tab>(tab);
     const { updateTab } = useTabs();
+
+    useEffect(() => {
+        setCurrentTab(tab);
+    }, [ tab ]);
+
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
         to: { x: number; y: number };
     } | null>(null);
 
-
-    const generateId = useCallback(() => Date.now(), []);
+    const [ draftEdge, setDraftEdge ] = useState<{
+        from: number;
+        to: number;
+    } | null>(null);
 
     const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
         const x1 = e.clientX - 32;
         const y1 = e.clientY - 32;
-        const nextIndex = tab.automaton.states.length;
+        const nextIndex = currentTab.automaton.states.length;
         const newNode = {
-            automatonId: tab.id,
+            automatonId: currentTab.id,
             label: `q${nextIndex}`,
             x: x1,
             y: y1,
@@ -37,51 +46,56 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
         };
         const response = await addStateNFA(newNode);
         if (response.status == 200) {
-            const newTabData = {
+            const newTabData: tab = {
                 ...currentTab,
                 automaton: {
                     ...currentTab.automaton,
                     states: [ ...currentTab.automaton.states, response.state ],
                 },
             };
-
             setCurrentTab(newTabData);
             updateTab(newTabData);
         }
     };
 
-    const addEdge = (startNode: number, endNode?: number) => {
+    const handleEdgeDrop = (startState: number, endState?: number) => {
         setTempEdge(null);
-        if (endNode === undefined) return;
-        if (startNode === endNode) return;
-        if (edges.find((edge) => (startNode === edge.idStartNode && endNode === edge.idEndNode
-        ))) {
-            return;
+
+        if (endState === undefined) return;
+        if (startState === endState) return;
+
+        setDraftEdge({ from: startState, to: endState });
+    };
+
+    const addEdge = async (startState: number, endState: number, symbolStr: string) => {
+        setDraftEdge(null); // Закрываем инпут
+
+        let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
+        if (symbols.length === 0) {
+            symbols = [ "λ" ];
         }
-        const newEdge: EdgeState = {
-            id: generateId(),
-            idStartNode: startNode,
-            idEndNode: endNode,
-            state: [],
-            isEditing: true,
+
+        const newTransition = {
+            automatonId: currentTab.id,
+            from: startState,
+            to: endState,
+            symbols,
         };
-        setEdges([ ...edges, newEdge ]);
-    };
 
-    const updateEdgeLabel = (id: number, state: string) => {
-        if (state === "") {
-            state = "λ";
+        const response = await addTransitionNFA(newTransition);
+        if (response.status == 200) {
+            const newTabData: tab = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    transitions: [ ...currentTab.automaton.transitions, ...response.transition ],
+                },
+            };
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
         }
-        const symbols = state.split(",").map((s) => s.trim()).filter((s) => s !== "");
-
-        setEdges((prev) =>
-            prev.map((edge) =>
-                edge.id === id
-                    ? { ...edge, state: symbols, isEditing: false }
-                    : edge,
-            ),
-        );
     };
+
     const moveStateLocal = useCallback((id: number, pos: { x: number; y: number }) => {
         setCurrentTab((prev) => {
             if (!prev) return prev;
@@ -96,6 +110,7 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
             };
         });
     }, []);
+
     const saveStatePosition = useCallback(async (id: number, pos: { x: number; y: number }) => {
         const request = {
             automatonId: tab.id,
@@ -140,16 +155,55 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     states: currentTab.automaton.states.filter((state) => state.id !== id),
                 },
             };
-
             setCurrentTab(newTabData);
             updateTab(newTabData);
         }
-
     }, [ currentTab, updateTab ]);
 
-    const deleteEdge = useCallback((id: number) => {
-        setEdges((prev) => prev.filter((edge) => edge.id !== id));
-    }, [ setEdges ]);
+    const groupedTransitions = Object.values(
+        currentTab.automaton.transitions.reduce((acc, edge) => {
+            const key = `${edge.from}-${edge.to}`;
+            if (!acc[key]) {
+                acc[key] = { ...edge, allSymbols: [ edge.symbol ] };
+            } else {
+                acc[key].allSymbols.push(edge.symbol);
+            }
+            return acc;
+        }, {} as Record<string, TransitionModel & { allSymbols: string[] }>),
+    );
+
+    const removeEdge = useCallback(async (id: number) => {
+        const targetTransition = currentTab.automaton.transitions.find((t) => t.id === id);
+        if (!targetTransition) return;
+
+        const transitionsToDelete = currentTab.automaton.transitions.filter(
+            (t) => t.from === targetTransition.from && t.to === targetTransition.to,
+        );
+
+        try {
+            await Promise.all(
+                transitionsToDelete.map((t) =>
+                    removeTransitNFA({ automatonId: currentTab.id, transitionId: t.id }),
+                ),
+            );
+
+            const idsToDelete = transitionsToDelete.map((t) => t.id);
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    transitions: currentTab.automaton.transitions.filter(
+                        (t) => !idsToDelete.includes(t.id),
+                    ),
+                },
+            };
+
+            setCurrentTab(newTabData);
+            updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при удалении ребра:", error);
+        }
+    }, [ currentTab, updateTab ]);
 
     return (
         <div
@@ -160,13 +214,13 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                 <State
                     label={ state.label }
                     initialPosition={ { x: state.x, y: state.y } }
-                    isInitial={ state.is_initial }
-                    isFinal={ state.is_final }
+                    isInitial={ state.isInitial }
+                    isFinal={ state.isFinal }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
                     }
-                    onEndEdge={ (hoveredNodeId) => addEdge(state.id, hoveredNodeId) }
+                    onEndEdge={ (hoveredNodeId) => handleEdgeDrop(state.id, hoveredNodeId) }
                     key={ state.id }
                     id={ state.id }
                     onDeleteNode={ removeState }
@@ -174,15 +228,17 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     onEndMoveNode={ saveStatePosition }
                 />
             ))}
+
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
-                {edges.map((edge) => {
-                    const points = calculatePoints(edge, nodes);
+
+                {groupedTransitions.map((edgeGroup) => {
+                    const points = calculatePoints(edgeGroup, currentTab.automaton.states);
                     if (!points) return null;
 
                     return (
                         <Edge
-                            key={ edge.id }
-                            id={ edge.id }
+                            key={ edgeGroup.id }
+                            id={ edgeGroup.id }
                             x1={ points.x1 }
                             y1={ points.y1 }
                             x2={ points.x2 }
@@ -190,17 +246,41 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                             textX={ points.textX }
                             textY={ points.textY }
                             angle={ points.angle }
-                            label={ edge.state }
-                            isEditing={ edge.isEditing }
-                            onDeleteEdge={ deleteEdge }
+                            label={ edgeGroup.allSymbols.join(", ") }
+                            onDeleteEdge={ removeEdge }
                         />
                     );
                 })}
-            </svg>
-            {edges.map((edge) => {
-                if (!edge.isEditing) return null;
 
-                const points = calculatePoints(edge, nodes);
+                {draftEdge && (() => {
+                    const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
+                    const points = calculatePoints(fakeEdge, currentTab.automaton.states);
+
+                    if (!points) return null;
+                    return (
+                        <Edge
+                            x1={ points.x1 }
+                            y1={ points.y1 }
+                            x2={ points.x2 }
+                            y2={ points.y2 }
+                        />
+                    );
+                })()}
+
+                {tempEdge && (
+                    <Edge
+                        x1={ tempEdge.from.x }
+                        y1={ tempEdge.from.y }
+                        x2={ tempEdge.to.x }
+                        y2={ tempEdge.to.y }
+                    />
+                )}
+            </svg>
+
+            {draftEdge && (() => {
+                const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
+                const points = calculatePoints(fakeEdge, currentTab.automaton.states);
+
                 if (!points) return null;
 
                 const midX = (points.x1 + points.x2) / 2;
@@ -208,7 +288,7 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
 
                 return (
                     <Textfield
-                        key={ `input-${edge.id}` }
+                        key="draft-edge-input"
                         autoFocus
                         onEdge
                         style={ {
@@ -216,26 +296,26 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                             left: midX,
                             top: midY,
                             transform: "translate(-50%, -50%)",
+                            zIndex: 1000,
                         } }
-                        onBlur={ (e) => updateEdgeLabel(edge.id, e.target.value) }
                         onKeyDown={ (e) => {
                             if (e.key === "Enter") {
-                                updateEdgeLabel(edge.id, (e.target as HTMLInputElement).value);
+                                addEdge(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
+                            } else if (e.key === "Escape") {
+                                setDraftEdge(null);
+                            }
+                        } }
+                        onBlur={ (e) => {
+                            const val = (e.target as HTMLInputElement).value;
+                            if (val.trim()) {
+                                addEdge(draftEdge.from, draftEdge.to, val);
+                            } else {
+                                setDraftEdge(null);
                             }
                         } }
                     />
                 );
-            })}
-            {tempEdge && (
-                <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
-                    <Edge
-                        x1={ tempEdge.from.x }
-                        y1={ tempEdge.from.y }
-                        x2={ tempEdge.to.x }
-                        y2={ tempEdge.to.y }
-                    />
-                </svg>
-            )}
+            })()}
         </div>
     );
 }

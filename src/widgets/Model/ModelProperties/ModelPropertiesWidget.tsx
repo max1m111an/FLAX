@@ -6,8 +6,13 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import clsx from "clsx";
 import styles from "./ModelProperties.module.scss";
+import { tab } from "@/context/TabsContext.tsx";
 
-export default function ModelPropertiesWidget() {
+interface ModelPropertiesWidgetProps {
+    tab: tab;
+}
+
+export default function ModelPropertiesWidget({ tab } : ModelPropertiesWidgetProps) {
     const [ typeProp, setTypeProp ] = useState<string>("nodeType");
 
     return (
@@ -35,10 +40,10 @@ export default function ModelPropertiesWidget() {
             </div>
             <div className={ styles.propTypeWrapper }>
                 {typeProp === "nodeType" ? (
-                    <NodeProperties />
+                    <NodeProperties key={ tab.id } tab={ tab } />
                 ) :
                     (
-                        <EdgeProperties />
+                        <EdgeProperties key={ tab.id } tab={ tab } />
                     )}
             </div>
         </div>
