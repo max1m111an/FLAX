@@ -39,10 +39,10 @@ pub fn to_jff(data: &AutomatonData) -> String {
         ));
         s.push_str(&format!("\t\t\t<x>{}</x>\n", fmt_coord(st.x)));
         s.push_str(&format!("\t\t\t<y>{}</y>\n", fmt_coord(st.y)));
-        if st.is_initial {
+        if st.isInitial {
             s.push_str("\t\t\t<initial/>\n");
         }
-        if st.is_final {
+        if st.isFinal {
             s.push_str("\t\t\t<final/>\n");
         }
         s.push_str("\t\t</state>\n");
@@ -146,12 +146,12 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
                 }
 
                 states.push(StateData {
-                    id,
-                    label,
-                    x,
-                    y,
-                    is_initial,
-                    is_final,
+                    id: id,
+                    label: label,
+                    x: x,
+                    y: y,
+                    isInitial: is_initial,
+                    isFinal: is_final,
                 });
             }
             "transition" => {
@@ -214,7 +214,7 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
 }
 
 pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) -> bool {
-    if states.iter().filter(|s| s.is_initial).count() != 1 {
+    if states.iter().filter(|s| s.isInitial).count() != 1 {
         return false;
     }
     let mut seen: HashSet<(i32, String)> = HashSet::new();

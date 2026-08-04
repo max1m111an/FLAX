@@ -31,8 +31,8 @@ impl AutomatonStore {
                 label: initial_label.to_string(),
                 x: 100.0,
                 y: 200.0,
-                is_initial: true,
-                is_final: false,
+                isInitial: true,
+                isFinal: false,
             }],
             transitions: Vec::new(),
             alphabet: Vec::new(),
@@ -107,8 +107,8 @@ mod tests {
         assert_eq!(entry.states.len(), 1);
         assert_eq!(entry.states[0].id, 0);
         assert_eq!(entry.states[0].label, "q0");
-        assert!(entry.states[0].is_initial);
-        assert!(!entry.states[0].is_final);
+        assert!(entry.states[0].isInitial);
+        assert!(!entry.states[0].isFinal);
         assert!(entry.transitions.is_empty());
         assert!(entry.alphabet.is_empty());
     }
@@ -140,8 +140,8 @@ mod tests {
             label: "q1".to_string(),
             x: 200.0,
             y: 300.0,
-            is_initial: false,
-            is_final: true,
+            isInitial: false,
+            isFinal: true,
         });
         store.update(entry);
 
@@ -149,7 +149,7 @@ mod tests {
         assert_eq!(fetched.name, "Updated");
         assert_eq!(fetched.states.len(), 2);
         assert_eq!(fetched.states[1].id, 1);
-        assert!(fetched.states[1].is_final);
+        assert!(fetched.states[1].isFinal);
     }
 
     #[test]
@@ -254,8 +254,8 @@ mod tests {
             label: "q1".to_string(),
             x: 300.0,
             y: 200.0,
-            is_initial: false,
-            is_final: true,
+            isInitial: false,
+            isFinal: true,
         });
         store.update(entry.clone());
         let fetched = store.get(1).unwrap();

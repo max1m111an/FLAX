@@ -71,8 +71,8 @@ pub fn nfa_add_state(
         label: label.unwrap_or_else(|| format!("q{}", new_id)),
         x: x.unwrap_or(100.0),
         y: y.unwrap_or(200.0),
-        is_initial: is_initial.unwrap_or(false),
-        is_final: is_final.unwrap_or(false),
+        isInitial: is_initial.unwrap_or(false),
+        isFinal: is_final.unwrap_or(false),
     });
 
     let created = entry.states.last().unwrap().clone();
@@ -129,13 +129,13 @@ pub fn nfa_update_state(
     if let Some(init) = is_initial {
         if init {
             for s in &mut entry.states {
-                s.is_initial = false;
+                s.isInitial = false;
             }
         }
-        entry.states[idx].is_initial = init;
+        entry.states[idx].isInitial = init;
     }
     if let Some(fin) = is_final {
-        entry.states[idx].is_final = fin;
+        entry.states[idx].isFinal = fin;
     }
 
     state.update(entry.clone());
@@ -401,10 +401,10 @@ fn data_to_nfa(
 
     for state in states {
         builder = builder.state(state.id);
-        if state.is_initial {
+        if state.isInitial {
             builder = builder.set_initial(state.id);
         }
-        if state.is_final {
+        if state.isFinal {
             builder = builder.set_final(state.id);
         }
     }

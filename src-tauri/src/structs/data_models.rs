@@ -7,13 +7,14 @@ pub enum AutomatonKind {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct StateData {
     pub id: i32,
     pub label: String,
     pub x: f32,
     pub y: f32,
-    pub is_initial: bool,
-    pub is_final: bool,
+    pub isInitial: bool,
+    pub isFinal: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

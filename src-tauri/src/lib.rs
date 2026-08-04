@@ -11,7 +11,6 @@ mod jff;
 mod tests;
 
 use crate::commands::nfa_cmd::*;
-use crate::commands::dfa_cmd::*;
 use crate::commands::file_cmd::*;
 use crate::structs::store::AutomatonStore;
 
@@ -35,18 +34,8 @@ pub fn run() {
             nfa_add_transition,
             nfa_update_transition,
             nfa_remove_transition,
-            create_new_dfa,
-            dfa_get,
-            dfa_add_state,
-            dfa_update_state,
-            dfa_remove_state,
-            dfa_add_transition,
-            dfa_update_transition,
-            dfa_remove_transition,
             nfa_run_str,
             nfa_remove_automaton,
-            dfa_run_str,
-            dfa_remove_automaton,
             save_jff,
             load_jff,
         ])

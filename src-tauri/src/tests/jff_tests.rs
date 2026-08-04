@@ -54,16 +54,16 @@ fn even_a_data() -> AutomatonData {
                 label: "q0".to_string(),
                 x: 154.0,
                 y: 136.0,
-                is_initial: true,
-                is_final: true,
+                isInitial: true,
+                isFinal: true,
             },
             StateData {
                 id: 1,
                 label: "q1".to_string(),
                 x: 308.0,
                 y: 147.0,
-                is_initial: false,
-                is_final: false,
+                isInitial: false,
+                isFinal: false,
             },
         ],
         transitions: vec![
@@ -214,11 +214,11 @@ fn parses_even_a_jff() {
     assert_eq!(parsed.states[0].label, "q0");
     assert_eq!(parsed.states[0].x, 154.0);
     assert_eq!(parsed.states[0].y, 136.0);
-    assert!(parsed.states[0].is_initial);
-    assert!(parsed.states[0].is_final);
+    assert!(parsed.states[0].isInitial);
+    assert!(parsed.states[0].isFinal);
     assert_eq!(parsed.states[1].label, "q1");
-    assert!(!parsed.states[1].is_initial);
-    assert!(!parsed.states[1].is_final);
+    assert!(!parsed.states[1].isInitial);
+    assert!(!parsed.states[1].isFinal);
 
     assert_eq!(parsed.transitions.len(), 4);
     assert_eq!(
@@ -277,7 +277,7 @@ fn state_name_defaults_to_q_prefix() {
 
     let parsed = parse_jff(xml).unwrap();
     assert_eq!(parsed.states[0].label, "q5");
-    assert!(parsed.states[0].is_final);
+    assert!(parsed.states[0].isFinal);
     assert_eq!(parsed.states[0].x, 1.0);
     assert_eq!(parsed.states[0].y, 2.0);
 }
@@ -341,8 +341,8 @@ fn roundtrip_to_jff_then_parse() {
         assert_eq!(ps.label, os.label);
         assert_eq!(ps.x, os.x);
         assert_eq!(ps.y, os.y);
-        assert_eq!(ps.is_initial, os.is_initial);
-        assert_eq!(ps.is_final, os.is_final);
+        assert_eq!(ps.isInitial, os.isInitial);
+        assert_eq!(ps.isFinal, os.isFinal);
     }
     assert_eq!(parsed.alphabet, original.alphabet);
     assert_eq!(parsed.transitions.len(), original.transitions.len());
@@ -403,7 +403,7 @@ fn loads_file_from_target_and_roundtrips() {
     let parsed = parse_jff(&content).unwrap();
 
     assert_eq!(parsed.states.len(), 2);
-    assert!(parsed.states[0].is_initial);
+    assert!(parsed.states[0].isInitial);
     assert_eq!(parsed.transitions.len(), 4);
     assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::DFA);
 }
