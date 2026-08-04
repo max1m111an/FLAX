@@ -4,11 +4,15 @@ mod commands;
 #[path = "utils/id_gen.rs"]
 mod id_gen;
 
+#[path = "utils/jff.rs"]
+mod jff;
+
 #[cfg(test)]
 mod tests;
 
 use crate::commands::nfa_cmd::*;
 use crate::commands::dfa_cmd::*;
+use crate::commands::file_cmd::*;
 use crate::structs::store::AutomatonStore;
 
 #[tauri::command]
@@ -43,6 +47,8 @@ pub fn run() {
             nfa_remove_automaton,
             dfa_run_str,
             dfa_remove_automaton,
+            save_jff,
+            load_jff,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
