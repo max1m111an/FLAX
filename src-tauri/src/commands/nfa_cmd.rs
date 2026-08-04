@@ -305,9 +305,7 @@ pub fn nfa_update_transition(
 pub fn nfa_remove_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-    from: i32,
-    to: i32,
-    symbol: char,
+    transition_id: i32,
 ) -> StatusResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
@@ -322,7 +320,7 @@ pub fn nfa_remove_transition(
     let original_count = entry.transitions.len();
     entry
         .transitions
-        .retain(|t| !(t.from == from && t.to == to && t.symbol == symbol.to_string()));
+        .retain(|t| t.id != transition_id);
     let removed = original_count - entry.transitions.len();
 
     let (code, msg) = if removed > 0 {
