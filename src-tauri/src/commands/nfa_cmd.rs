@@ -193,7 +193,7 @@ pub fn nfa_add_transition(
             return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                transition: None,
+                transition: vec![],
             };
         }
     };
@@ -202,14 +202,14 @@ pub fn nfa_add_transition(
         return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", from),
-            transition: None,
+            transition: vec![],
         };
     }
     if !entry.states.iter().any(|s| s.id == to) {
         return TransitionResult {
             status: 400,
             message: format!("Состояние {} не существует", to),
-            transition: None,
+            transition: vec![],
         };
     }
 
@@ -225,7 +225,7 @@ pub fn nfa_add_transition(
             return TransitionResult {
                 status: 400,
                 message: format!("Переход {} -> {} по '{}' уже существует", from, to, symbol),
-                transition: None,
+                transition: vec![],
             };
         }
 
@@ -244,12 +244,11 @@ pub fn nfa_add_transition(
         count += 1;
     }
 
-    let created = entry.transitions.last().unwrap().clone();
     state.update(entry.clone());
     TransitionResult {
         status: 200,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
-        transition: Some(created),
+        transition: entry.transitions.clone(),
     }
 }
 
@@ -268,7 +267,7 @@ pub fn nfa_update_transition(
             return TransitionResult {
                 status: 400,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                transition: None,
+                transition: vec![],
             };
         }
     };
@@ -279,7 +278,7 @@ pub fn nfa_update_transition(
             return TransitionResult {
                 status: 400,
                 message: format!("Переход {} не найден", transition_id),
-                transition: None,
+                transition: vec![],
             };
         }
     };
@@ -298,7 +297,7 @@ pub fn nfa_update_transition(
     TransitionResult {
         status: 200,
         message: "Переход обновлён".to_string(),
-        transition: Some(entry.transitions[idx].clone()),
+        transition: vec![entry.transitions[idx].clone()],
     }
 }
 

@@ -202,7 +202,6 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
             from,
             to,
             symbol,
-            label: None,
         });
     }
 

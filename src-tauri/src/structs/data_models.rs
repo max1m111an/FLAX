@@ -58,7 +58,7 @@ pub struct StateResult {
 pub struct TransitionResult {
     pub status: u16,
     pub message: String,
-    pub transition: Option<TransitionData>,
+    pub transition: Vec<TransitionData>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
