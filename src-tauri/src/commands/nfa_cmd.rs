@@ -186,7 +186,6 @@ pub fn nfa_add_transition(
     from: i32,
     to: i32,
     symbols: Vec<char>,
-    label: Option<String>,
 ) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
@@ -241,7 +240,6 @@ pub fn nfa_add_transition(
             from,
             to,
             symbol: sym_str,
-            label: label.clone(),
         });
         count += 1;
     }
@@ -263,7 +261,6 @@ pub fn nfa_update_transition(
     new_from: Option<i32>,
     new_to: Option<i32>,
     new_symbol: Option<char>,
-    new_label: Option<Option<String>>,
 ) -> TransitionResult {
     let mut entry = match state.get(automaton_id) {
         Some(e) => e,
@@ -295,9 +292,6 @@ pub fn nfa_update_transition(
     }
     if let Some(s) = new_symbol {
         entry.transitions[idx].symbol = s.to_string();
-    }
-    if let Some(l) = new_label {
-        entry.transitions[idx].label = l;
     }
 
     state.update(entry.clone());
