@@ -214,6 +214,7 @@ pub fn nfa_add_transition(
     }
 
     let mut count = 0u32;
+    let mut added: Vec<TransitionData> = Vec::new();
     for &symbol in &symbols {
         let sym_str = symbol.to_string();
         let already_exists = entry
@@ -235,12 +236,14 @@ pub fn nfa_add_transition(
 
         let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
         let tid = id_gen::generate_id(&used);
-        entry.transitions.push(TransitionData {
+        let created = TransitionData {
             id: tid,
             from,
             to,
             symbol: sym_str,
-        });
+        };
+        entry.transitions.push(created.clone());
+        added.push(created);
         count += 1;
     }
 
@@ -248,7 +251,7 @@ pub fn nfa_add_transition(
     TransitionResult {
         status: 200,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
-        transition: entry.transitions.clone(),
+        transition: added,
     }
 }
 
