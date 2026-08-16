@@ -7,8 +7,9 @@ node_modules/
 # Output of 'npm pack'
 *.tgz
 
-# dotenv environment variables file
-.env
+# env file
+.env*
+!.env.example
 
 # .vscode workspace settings file
 .vscode/settings.json
@@ -23,9 +24,6 @@ bun.lockb
 debug/
 target/
 Cargo.lock
-
-# test video for streaming example
-streaming_example_test_video.mp4
 
 # examples /gen directory
 /examples/**/src-tauri/gen/
@@ -74,6 +72,8 @@ dist-ssr
 # will have schema files for capabilities auto-completion
 src-tauri/gen/schemas/
 
-
 # max1m111an api file
 api.md
+
+# zed
+.zed
