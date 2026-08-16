@@ -23,9 +23,38 @@ npm install
 npm run tauri dev
 ```
 
+Или используйте скрипт `run.dev.sh` для запуска:
+
+```bash
+./run.dev.sh
+```
+
 Также в доступных [релизах](https://github.com/max1m111an/FLAX/releases) находится архив с исполняемым файлом приложения.
 
 ## Зависимости
 1. `tauri` - фреймворк для создания десктопных приложений с использованием Rust;
 2. `serde` - фреймворк для сериализации и десериализации данных в Rust;
 3. `serde_json` - фреймворк для сериализации и десериализации данных в JSON формат;
+
+## Dev запуск (nightly)
+Оптимзированная версия для ускорения сборки. Изменен `Cargo` манифест:
+- `cranelift` генератор кода вместо `LLVM`;
+- `nightly` Rust toolchain для ускорения сборки (несколько потоков на компиляцию);
+- упрощен `debugger` (отображение только индексов строк кода с кодом ошибки).
+
+ ```bash
+rustup update nightly
+rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+cd .\src-tauri\
+cargo +nightly clean
+cd ..
+rustup default nightly
+npm install
+npm run tauri dev
+```
+
+Или используйте скрипт `run.dev.sh` для запуска:
+
+```bash
+./run.dev.sh
+```
