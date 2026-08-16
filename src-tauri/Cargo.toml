@@ -1,3 +1,5 @@
+cargo-features = ["codegen-backend"]
+
 [package]
 name = "flax"
 version = "0.1.0"
@@ -27,9 +29,17 @@ roxmltree = "0.21.1"
 
 [profile.dev]
 strip = true
+debug = "line-tables-only"
+codegen-backend = "cranelift"
 
 [profile.release]
 lto = true
 codegen-units = 1
 strip = true
 opt-level = "z"
+
+[build]
+rustflags = ["-Z", "threads=8"]
+
+[unstable]
+codegen-backend = true
