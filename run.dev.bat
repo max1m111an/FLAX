@@ -11,6 +11,7 @@ set "UPD=false"
 set "CLEAN=false"
 set "SHOW_HELP=false"
 set "ORIGINAL_TOOLCHAIN="
+set "CRANELIFT_INSTALLED=false"
 
 :parse_args
 if "%~1"=="" goto :args_done
@@ -79,16 +80,52 @@ rustup update nightly
 if errorlevel 1 goto :err_upd_nightly
 echo [OK] Nightly успешно обновлен
 
-rem --- 2. Добавляем компонент Cranelift для nightly ---
+rem --- 2. Проверяем наличие Cranelift компонента ---
 echo.
-echo === Установка компонента Cranelift ===
-rustup component add rustc-codegen-cranelift-preview --toolchain nightly
+echo === Проверка компонента Cranelift ===
+
+rem Проверяем, установлен ли уже Cranelift
+rustup component list --toolchain nightly 2>nul | findstr /R /C:"rustc-codegen-cranelift-preview.*installed" >nul
 if errorlevel 1 (
-    echo [WARN] Не удалось установить Cranelift компонент
-    echo [WARN] Проверьте: https://github.com/rust-lang/rustc_codegen_cranelift
-    echo [WARN] Продолжаем без Cranelift...
+    echo [INFO] Cranelift компонент не установлен. Пытаемся установить...
+    
+    rem Пытаемся установить Cranelift
+    rustup component add rustc-codegen-cranelift-preview --toolchain nightly 2>nul
+    if errorlevel 1 (
+        echo [WARN] Не удалось установить Cranelift компонент через rustup
+        echo [WARN] Проверьте доступность: https://github.com/rust-lang/rustc_codegen_cranelift
+        echo [WARN] Продолжаем без Cranelift...
+        set "CRANELIFT_INSTALLED=false"
+    ) else (
+        echo [OK] Cranelift компонент успешно установлен
+        set "CRANELIFT_INSTALLED=true"
+    )
 ) else (
-    echo [OK] Cranelift компонент успешно установлен
+    echo [OK] Cranelift компонент уже установлен
+    set "CRANELIFT_INSTALLED=true"
+)
+
+rem --- Альтернативная установка через cargo (если rustup не помог) ---
+if "%CRANELIFT_INSTALLED%"=="false" (
+    echo.
+    echo [INFO] Пытаемся установить Cranelift через cargo...
+    
+    rem Проверяем наличие cargo-clif
+    where cargo-clif >nul 2>nul
+    if errorlevel 1 (
+        echo [INFO] Устанавливаем cargo-clif...
+        cargo install cargo-clif 2>nul
+        if errorlevel 1 (
+            echo [WARN] Не удалось установить cargo-clif
+            echo [WARN] Продолжаем без Cranelift
+        ) else (
+            echo [OK] cargo-clif установлен
+            set "CRANELIFT_INSTALLED=true"
+        )
+    ) else (
+        echo [OK] cargo-clif уже установлен
+        set "CRANELIFT_INSTALLED=true"
+    )
 )
 
 rem --- 3. Устанавливаем зависимости npm ---
@@ -127,18 +164,45 @@ echo.
 echo === Запуск Tauri dev с nightly + Cranelift ===
 echo =========================================
 
-rem --- Проверяем, установлен ли Cranelift ---
-rustup component list --toolchain nightly 2>nul | findstr /R /C:"rustc-codegen-cranelift-preview.*installed" >nul
-if errorlevel 1 (
-    echo [WARN] Cranelift не установлен, используем стандартный бекенд
-) else (
+rem --- Проверяем, установлен ли Cranelift и настраиваем флаги ---
+set "RUSTFLAGS="
+
+if "%CRANELIFT_INSTALLED%"=="true" (
     echo [INFO] Используем Cranelift для ускорения сборки
-    set "RUSTFLAGS=-Z codegen-backend=cranelift"
+    
+    rem Проверяем, что компонент действительно установлен через rustup
+    rustup component list --toolchain nightly 2>nul | findstr /R /C:"rustc-codegen-cranelift-preview.*installed" >nul
+    if not errorlevel 1 (
+        set "RUSTFLAGS=-Z codegen-backend=cranelift"
+        echo [INFO] Cranelift активирован через RUSTFLAGS
+    ) else (
+        rem Проверяем наличие cargo-clif
+        where cargo-clif >nul 2>nul
+        if not errorlevel 1 (
+            echo [INFO] Используем cargo-clif вместо cargo
+            call cargo-clif tauri dev
+            if errorlevel 1 goto :err_dev
+            goto :success
+        ) else (
+            echo [WARN] Cranelift не найден, используем стандартный бекенд
+        )
+    )
+) else (
+    echo [WARN] Cranelift не установлен, используем стандартный бекенд
+)
+
+rem --- Запускаем Tauri с установленными флагами ---
+if defined RUSTFLAGS (
+    echo [INFO] RUSTFLAGS=%RUSTFLAGS%
+    set "RUSTFLAGS=%RUSTFLAGS%"
+) else (
+    echo [INFO] Используем стандартную сборку без Cranelift
 )
 
 call npm run tauri dev
 if errorlevel 1 goto :err_dev
 
+:success
 echo.
 echo [OK] Проект успешно запущен с nightly + Cranelift!
 call :restore_toolchain
@@ -148,15 +212,18 @@ exit /b 0
 echo Использование: run.dev.bat [ОПЦИИ]
 echo.
 echo Опции:
-echo   --upd       Обновить nightly Rust и выполнить npm install перед запуском
-echo   --clean     Очистить проект ^(cargo clean^) перед сборкой
+echo   --upd       Обновить nightly Rust, установить Cranelift и выполнить npm install
+echo   --clean     Очистить проект (cargo clean) перед сборкой
 echo   --help, -h  Показать эту справку
 echo.
 echo Примеры:
 echo   run.dev.bat                Быстрый запуск с nightly
-echo   run.dev.bat --upd          Запуск с обновлением зависимостей
+echo   run.dev.bat --upd          Запуск с обновлением зависимостей и установкой Cranelift
 echo   run.dev.bat --clean        Запуск с очисткой проекта
 echo   run.dev.bat --upd --clean  Полный запуск с обновлениями и очисткой
+echo.
+echo Примечание: Скрипт автоматически пытается установить Cranelift
+echo если он не найден.
 exit /b 0
 
 :restore_toolchain
