@@ -11,12 +11,13 @@ export interface StateModel {
     label: string;
     x: number;
     y: number;
-    is_initial: boolean;
-    is_final: boolean;
+    isInitial: boolean;
+    isFinal: boolean;
 }
+
 export interface TransitionModel {
-    from: number;
+    id: number;
+    from: number
     to: number;
     symbol: string;
-    label?: string;
 }

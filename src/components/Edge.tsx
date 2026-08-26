@@ -10,7 +10,7 @@ interface EdgeProps {
     textX?: number;
     textY?: number;
     angle?: number;
-    label?: string[];
+    label?: string;
     isEditing?: boolean;
     onDeleteEdge?: (id: number) => void;
     id?: number;
@@ -83,7 +83,7 @@ export default function Edge(
                     transform={ `rotate(${angle}, ${textX}, ${textY})` }
                     style={ { cursor: activeControl === "trashcan" ? "pointer" : "default" } }
                 >
-                    {label.join(", ")}
+                    {label}
                 </text>
             )}
         </g>

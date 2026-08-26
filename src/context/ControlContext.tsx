@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { StateModel } from "@/interface/Automaton.ts";
+import { StateModel } from "@/types/Automaton.ts";
 
 
 export interface EdgeState {

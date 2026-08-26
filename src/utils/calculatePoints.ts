@@ -1,8 +1,8 @@
-import { EdgeState, NodeState } from "@/context/ControlContext.tsx";
+import { StateModel, TransitionModel } from "@/types/Automaton.ts";
 
 export default function calculatePoints(
-    edge: EdgeState,
-    nodes: NodeState[],
+    edge: TransitionModel,
+    nodes: StateModel[],
 ): {
     x1: number;
     y1: number;
@@ -12,8 +12,8 @@ export default function calculatePoints(
     textY: number;
     angle: number;
 } | null {
-    const startNode = nodes.find((node) => node.id === edge.idStartNode);
-    const endNode = nodes.find((node) => node.id === edge.idEndNode);
+    const startNode = nodes.find((node) => node.id === edge.from);
+    const endNode = nodes.find((node) => node.id === edge.to);
 
     if (!startNode || !endNode) return null;
 
