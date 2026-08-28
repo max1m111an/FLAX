@@ -21,7 +21,7 @@ export default function ModelPropertiesWidget() {
                     if (currentTab) {
                         updateTab({
                             ...currentTab,
-                            activePane: null,
+                            activePanel: null,
                         });
                     }
                 } }>

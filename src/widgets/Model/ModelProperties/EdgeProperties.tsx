@@ -25,7 +25,7 @@ export default function EdgeProperties() {
     const [ newEdgeSymbols, setNewEdgeSymbols ] = useState<string>("");
 
     if (!currentTab) return null;
-    const selectedState = currentTab.selectedState;
+    const selectedState = currentTab.selectedState?.[0]?.id ?? null;
     if (selectedState == null) {
         return (
             <Typography variant="label">Выберите вершину...</Typography>

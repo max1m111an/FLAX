@@ -49,6 +49,8 @@ export function State(
         }
     }, [ initialX, initialY ]);
 
+    const highlight = currentTab?.selectedState?.find((s) => s.id === id);
+
     const getCursorStyle = () => {
         if (currentTab?.activeControl === "move") {
             return dragging ? "grabbing" : "grab";
@@ -180,7 +182,7 @@ export function State(
                 currentTab?.activeControl === "cursor"
                     ? () => {
                         if (currentTab) {
-                            updateTab({ ...currentTab, selectedState: id });
+                            updateTab({ ...currentTab, selectedState: [ { id } ] });
                         }
                     }
                     : undefined
@@ -192,7 +194,13 @@ export function State(
                     styles.stateNode,
                     isFinal && styles.stateFinal,
                     currentTab?.activeControl === "trashcan" && styles.deleteMode,
-                    currentTab?.selectedState === id && styles.selected,
+                    highlight
+                        ? (highlight.status === "success"
+                            ? styles.traceSuccess
+                            : highlight.status === "error"
+                                ? styles.traceError
+                                : styles.selected)
+                        : "",
                 ) }
                 onMouseDown={ onMouseDown }
             >

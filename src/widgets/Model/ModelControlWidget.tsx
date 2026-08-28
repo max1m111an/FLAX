@@ -83,35 +83,35 @@ export default function ModelControlWidget() {
 
             <div className={ styles.modelBottomGroup }>
                 <Settings
-                    className={ clsx(styles.modelControlIcon, currentTab?.activePane == "settings" && styles.active) }
+                    className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "settings" && styles.active) }
                     onClick={ () => {
                         if (currentTab) {
-                            if (currentTab.activePane !== "settings") {
+                            if (currentTab.activePanel !== "settings") {
                                 updateTab({
                                     ...currentTab,
-                                    activePane: "settings",
+                                    activePanel: "settings",
                                 });
                             } else {
                                 updateTab({
                                     ...currentTab,
-                                    activePane: null,
+                                    activePanel: null,
                                 });
                             }
                         }
                     } } />
                 <Play
-                    className={ clsx(styles.modelControlIcon, currentTab?.activePane == "play" && styles.active) }
+                    className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "play" && styles.active) }
                     onClick={ () => {
                         if (currentTab) {
-                            if (currentTab.activePane !== "play") {
+                            if (currentTab.activePanel !== "play") {
                                 updateTab({
                                     ...currentTab,
-                                    activePane: "play",
+                                    activePanel: "play",
                                 });
                             } else {
                                 updateTab({
                                     ...currentTab,
-                                    activePane: null,
+                                    activePanel: null,
                                 });
                             }
                         }

@@ -24,6 +24,30 @@
   polygon {
     fill: var(--accent-primary);
   }
+
+  &.traceSuccess {
+    filter: drop-shadow(0 0 3px var(--green-main)) drop-shadow(0 0 6px var(--green-bg));
+
+    line:not(.delete) {
+      stroke: var(--green-main);
+    }
+
+    .edgeLabel {
+      fill: var(--green-main);
+    }
+  }
+
+  &.traceError {
+    filter: drop-shadow(0 0 3px var(--red-main)) drop-shadow(0 0 6px var(--red-bg));
+
+    line:not(.delete) {
+      stroke: var(--red-main);
+    }
+
+    .edgeLabel {
+      fill: var(--red-main);
+    }
+  }
 }
 
 .edgeLabel {

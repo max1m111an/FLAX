@@ -22,7 +22,7 @@ export default function ModelTestWidget() {
                     if (currentTab) {
                         updateTab({
                             ...currentTab,
-                            activePane: null,
+                            activePanel: null,
                         });
                     }
                 } }>

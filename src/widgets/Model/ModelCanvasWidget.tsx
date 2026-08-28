@@ -126,20 +126,38 @@ export default function ModelCanvasWidget() {
     };
 
     const removeState = async (id: number) => {
-        const request = {
-            automatonId: currentTab.id,
-            stateId: id,
-        };
-        const response = await removeStateNFA(request);
-        if (response.status == 200) {
-            const newTabData = {
-                ...currentTab,
-                automaton: {
-                    ...currentTab.automaton,
-                    states: currentTab.automaton.states.filter((state) => state.id !== id),
-                },
+        const connectedTransitions = currentTab.automaton.transitions.filter(
+            (t) => t.from === id || t.to === id,
+        );
+
+        try {
+            await Promise.all(
+                connectedTransitions.map((t) =>
+                    removeTransitNFA({ automatonId: currentTab.id, transitionId: t.id }),
+                ),
+            );
+
+            const request = {
+                automatonId: currentTab.id,
+                stateId: id,
             };
-            updateTab(newTabData);
+            const response = await removeStateNFA(request);
+            if (response.status == 200) {
+                const connectedIds = connectedTransitions.map((t) => t.id);
+                const newTabData = {
+                    ...currentTab,
+                    automaton: {
+                        ...currentTab.automaton,
+                        states: currentTab.automaton.states.filter((state) => state.id !== id),
+                        transitions: currentTab.automaton.transitions.filter(
+                            (t) => !connectedIds.includes(t.id),
+                        ),
+                    },
+                };
+                updateTab(newTabData);
+            }
+        } catch (error) {
+            console.error("Ошибка при удалении состояния:", error);
         }
     };
 
@@ -221,6 +239,8 @@ export default function ModelCanvasWidget() {
                         <Edge
                             key={ edgeGroup.id }
                             id={ edgeGroup.id }
+                            from={ edgeGroup.from }
+                            to={ edgeGroup.to }
                             x1={ points.x1 }
                             y1={ points.y1 }
                             x2={ points.x2 }

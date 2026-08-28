@@ -5,21 +5,26 @@ import { model } from "@/data/models.ts";
 import { createNewNFA } from "@/api/nfaAPI.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
 
+export interface TraceHighlight {
+    id: number;
+    status?: "success" | "error";
+}
+
 export interface tab{
     id: number;
     title: string;
     model: model;
     automaton: AutomatonModel;
     activeControl: string | null;
-    activePane: string | null;
-    selectedState: number | null;
-    selectedTransition: number | null;
+    activePanel: string | null;
+    selectedState: TraceHighlight[] | null;
+    selectedTransition: TraceHighlight[] | null;
 
 }
 
 interface TabsContextProps {
     tabs: tab[];
-    addTab: (model: model, type?: string) => void;
+    addTab: (model: model, type?: string) => Promise<tab | void>;
     removeTab: (tab: tab) => void;
     updateTab: (updatedTab: tab) => void;
 }
@@ -30,7 +35,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
 
-    const addTab = async (model: model, type: string = "Без названия*"): Promise<void> => {
+    const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
         if (type === "Настройки") {
             const existingSettingsTab = tabs.find((t) => t.title === "Настройки");
             if (existingSettingsTab) {
@@ -46,7 +51,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 model,
                 automaton: response.automaton,
                 activeControl: "cursor",
-                activePane: null,
+                activePanel: null,
                 selectedState: null,
                 selectedTransition: null,
             };
@@ -57,6 +62,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             } else if (type == "Без названия*") {
                 navigate(`/models/${newTab.id}`);
             }
+            return newTab;
         }
     };
 

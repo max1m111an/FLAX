@@ -11,6 +11,8 @@ export default function NodeProperties() {
 
     if (!currentTab) return null;
 
+    const selectedStateId = currentTab.selectedState?.[0]?.id ?? null;
+
     const fetchUpdateState = async (request: updateStateNFARequest) => {
         const response = await updateStateNFA(request);
         if (response.status == 200) {
@@ -19,7 +21,7 @@ export default function NodeProperties() {
                 automaton: {
                     ...currentTab.automaton,
                     states: currentTab.automaton.states.map((state) =>
-                        state.id === currentTab.selectedState ? response.state : state,
+                        state.id === selectedStateId ? response.state : state,
                     ),
                 },
             };
@@ -28,10 +30,10 @@ export default function NodeProperties() {
     };
 
     const handleNameChange = async (name: string) => {
-        if (currentTab.selectedState === null) return;
+        if (selectedStateId === null) return;
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: currentTab.selectedState,
+            stateId: selectedStateId,
             label: name,
         };
         await fetchUpdateState(request);
@@ -40,11 +42,11 @@ export default function NodeProperties() {
     const handleInitialChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.checked;
 
-        if (currentTab.selectedState === null) return;
+        if (selectedStateId === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: currentTab.selectedState,
+            stateId: selectedStateId,
             isInitial: newValue,
         };
 
@@ -54,11 +56,11 @@ export default function NodeProperties() {
     const handleFinalChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.checked;
 
-        if (currentTab.selectedState === null) return;
+        if (selectedStateId === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: currentTab.selectedState,
+            stateId: selectedStateId,
             isFinal: newValue,
         };
 
@@ -68,11 +70,11 @@ export default function NodeProperties() {
     const handleXChange = async (x: string) => {
         const newValue = parseInt(x);
 
-        if (currentTab.selectedState === null) return;
+        if (selectedStateId === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: currentTab.selectedState,
+            stateId: selectedStateId,
             x: newValue,
         };
 
@@ -81,17 +83,17 @@ export default function NodeProperties() {
     const handleYChange = async (y: string) => {
         const newValue = parseInt(y);
 
-        if (currentTab.selectedState === null) return;
+        if (selectedStateId === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: currentTab.selectedState,
+            stateId: selectedStateId,
             y: newValue,
         };
 
         await fetchUpdateState(request);
     };
-    if (currentTab.selectedState === null) {
+    if (selectedStateId === null) {
         return (
             <Typography variant="label">Выберите вершину...</Typography>
         );
@@ -100,23 +102,23 @@ export default function NodeProperties() {
         <>
             <Typography variant="pretitle">Имя состояния</Typography>
             <Textfield
-                value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.label || "" }
+                value={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.label || "" }
                 onChange={ (e) => handleNameChange(e.currentTarget.value) }
             />
 
             <div className={ styles.stateWrapper }>
                 <Typography variant="label">Начальное состояние</Typography>
                 <Switch
-                    checked={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isInitial }
-                    disabled={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isFinal }
+                    checked={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.isInitial }
+                    disabled={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.isFinal }
                     onChange={ handleInitialChange }
                 />
             </div>
             <div className={ styles.stateWrapper }>
                 <Typography variant="label">Финальное состояние</Typography>
                 <Switch
-                    checked={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isFinal }
-                    disabled={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isInitial }
+                    checked={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.isFinal }
+                    disabled={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.isInitial }
                     onChange={ handleFinalChange }
                 />
             </div>
@@ -127,7 +129,7 @@ export default function NodeProperties() {
                     <Typography variant="label">X</Typography>
                     <Textfield
                         type="number"
-                        value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.x }
+                        value={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.x }
                         onChange={ (e) => handleXChange(e.currentTarget.value) }
                     />
                 </div>
@@ -135,7 +137,7 @@ export default function NodeProperties() {
                     <Typography variant="label">Y</Typography>
                     <Textfield
                         type="number"
-                        value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.y }
+                        value={ currentTab.automaton.states.find((node) => node.id === selectedStateId)?.y }
                         onChange={ (e) => handleYChange(e.currentTarget.value) }
                     />
                 </div>
