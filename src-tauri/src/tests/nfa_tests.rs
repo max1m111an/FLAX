@@ -404,3 +404,196 @@ fn run_accepts_empty_when_initial_is_final() {
     let trace = nfa.run(&[]).unwrap();
     assert!(trace.is_empty());
 }
+
+#[test]
+fn run_partial_full_acceptance() {
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(1, 'b', 2)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(accepted);
+    assert_eq!(histories.len(), 1);
+    assert_eq!(
+        histories[0],
+        vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+            RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+        ]
+    );
+}
+
+#[test]
+fn run_partial_rejected_no_path() {
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['b']);
+    assert!(!accepted);
+    assert!(histories.is_empty());
+}
+
+#[test]
+fn run_partial_rejected_empty_on_non_final() {
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&[]);
+    assert!(!accepted);
+    assert_eq!(histories, vec![Vec::<RunStep>::new()]);
+}
+
+#[test]
+fn run_partial_full_accepts_empty_when_initial_final() {
+    let nfa = NFA::builder()
+        .state(0)
+        .set_initial(0)
+        .set_final(0)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&[]);
+    assert!(accepted);
+    assert_eq!(histories, vec![Vec::<RunStep>::new()]);
+}
+
+#[test]
+fn run_partial_stuck_mid_string() {
+    // q0 --a--> q1, no transition from q1 on 'b'
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(!accepted);
+    assert_eq!(histories.len(), 1);
+    assert_eq!(
+        histories[0],
+        vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }]
+    );
+}
+
+#[test]
+fn run_partial_consumed_all_not_final() {
+    // q0 --a--> q1 (not final)
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    // Input "aa" — first 'a' goes to q1, second 'a' has no transition from q1
+    let (histories, accepted) = nfa.run_partial(&['a', 'a']);
+    assert!(!accepted);
+    assert_eq!(histories.len(), 1);
+    assert_eq!(histories[0].len(), 1);
+}
+
+#[test]
+fn run_partial_with_epsilon() {
+    // q0 --eps--> q1 --a--> q2 (final)
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a')
+        .epsilon(0, 1)
+        .transition(1, 'a', 2)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a']);
+    assert!(accepted);
+    assert_eq!(histories.len(), 1);
+    assert_eq!(
+        histories[0],
+        vec![RunStep { from: 1, symbol: "a".to_string(), to: 2 }]
+    );
+}
+
+#[test]
+fn run_partial_nondeterministic() {
+    // q0 --a--> {q0, q1}, q1 --b--> q2 (final)
+    // input "aab": branches merge, accepted path q0->q0->q1->q2
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 0)
+        .transition(0, 'a', 1)
+        .transition(1, 'b', 2)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a', 'a', 'b']);
+    assert!(accepted);
+    assert_eq!(histories.len(), 1);
+    assert_eq!(histories[0].len(), 3);
+}
+
+#[test]
+fn run_partial_nondeterministic_parallel() {
+    // q0 --a--> {q0, q1}, separate reading histories per branch
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 0)
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a']);
+    assert!(accepted);
+    assert_eq!(histories.len(), 2);
+    assert!(histories.contains(
+        &vec![RunStep { from: 0, symbol: "a".to_string(), to: 0 }]
+    ));
+    assert!(histories.contains(
+        &vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }]
+    ));
+}
+
+#[test]
+fn run_partial_symbol_not_in_alphabet() {
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['b']);
+    assert!(!accepted);
+    assert!(histories.is_empty());
+}

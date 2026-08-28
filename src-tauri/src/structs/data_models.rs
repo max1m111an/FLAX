@@ -73,5 +73,7 @@ pub struct RunStep {
 pub struct RunResult {
     pub status: u16,
     pub message: String,
-    pub trace: Vec<RunStep>,
+    /// Истории параллельных чтений. Каждый элемент — массив шагов одного
+    /// потока чтения (одной ветки NFA).
+    pub trace: Vec<Vec<RunStep>>,
 }

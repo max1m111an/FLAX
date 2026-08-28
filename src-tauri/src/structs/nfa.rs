@@ -183,6 +183,55 @@ impl NFA {
         }
     }
 
+    /// JFLAP-style parallel run over NFA threads. Returns (histories, accepted).
+    /// Each element of the outer vector is the step history of one parallel
+    /// reading (thread). When the NFA branches, several threads (each with its
+    /// own history) are produced. A thread is identified by its current state
+    /// at a given position, so threads converging to the same state are merged.
+    pub fn run_partial(&self, input: &[char]) -> (Vec<Vec<RunStep>>, bool) {
+        let mut threads: Vec<(Vec<RunStep>, i32)> = vec![(Vec::new(), self.initial_state)];
+
+        for &symbol in input {
+            if !self.alphabet.contains(&symbol) {
+                return (Vec::new(), false);
+            }
+
+            let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
+            let mut seen: HashSet<i32> = HashSet::new();
+
+            for (history, state) in &threads {
+                for c in self.epsilon_closure_owned(*state) {
+                    if let Some(targets) = self.transitions.get(&(c, symbol)) {
+                        for &t in targets {
+                            if seen.insert(t) {
+                                let mut h = history.clone();
+                                h.push(RunStep {
+                                    from: c,
+                                    symbol: symbol.to_string(),
+                                    to: t,
+                                });
+                                next_threads.push((h, t));
+                            }
+                        }
+                    }
+                }
+            }
+
+            if next_threads.is_empty() {
+                return (threads.into_iter().map(|(h, _)| h).collect(), false);
+            }
+
+            threads = next_threads;
+        }
+
+        let accepted = threads.iter().any(|(_, s)| {
+            self.epsilon_closure_owned(*s)
+                .iter()
+                .any(|c| self.final_states.contains(c))
+        });
+        (threads.into_iter().map(|(h, _)| h).collect(), accepted)
+    }
+
     fn epsilon_closure_owned(&self, state: i32) -> HashSet<i32> {
         let mut closure: HashSet<i32> = HashSet::new();
         let mut stack: Vec<i32> = vec![state];

@@ -349,7 +349,7 @@ pub fn nfa_run_str(
         Some(e) => e,
         None => {
             return RunResult {
-                status: 400,
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 trace: Vec::new(),
             };
@@ -358,18 +358,28 @@ pub fn nfa_run_str(
 
     let chars: Vec<char> = input.chars().collect();
     match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
-        Ok(nfa) => match nfa.run(&chars) {
-            Some(trace) => RunResult {
-                status: 200,
-                message: format!("Цепочка '{}' принята", input),
-                trace,
-            },
-            None => RunResult {
-                status: 401,
-                message: format!("Цепочка '{}' отклонена", input),
-                trace: Vec::new(),
-            },
-        },
+        Ok(nfa) => {
+            let (histories, accepted) = nfa.run_partial(&chars);
+            let processed_len = histories.first().map_or(0, |h| h.len());
+            let (status, message) = if accepted {
+                (200u16, format!("Цепочка '{}' принята", input))
+            } else if processed_len > 0 {
+                (
+                    401,
+                    format!(
+                        "Цепочка '{}' принята частично (обработано {} из {} символов)",
+                        input, processed_len, chars.len()
+                    ),
+                )
+            } else {
+                (402, format!("Цепочка '{}' отклонена", input))
+            };
+            RunResult {
+                status,
+                message,
+                trace: histories,
+            }
+        }
         Err(err) => RunResult {
             status: 400,
             message: format!("Некорректный автомат: {}", err),
