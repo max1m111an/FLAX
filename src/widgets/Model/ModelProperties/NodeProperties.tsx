@@ -1,24 +1,15 @@
-import { useControl } from "@/context/ControlContext.tsx";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import { Switch } from "@/components/ui/Switch/Switch.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelProperties.module.scss";
-import { useEffect, useState } from "react";
-import { tab, useTabs } from "@/context/TabsContext";
+import { tab, useCurrentTab, useTabs } from "@/context/TabsContext";
 import { updateStateNFA, updateStateNFARequest } from "@/api/nfaAPI.ts";
 
-interface NodePropertiesProps {
-    tab: tab;
-}
-
-export default function NodeProperties({ tab }: NodePropertiesProps) {
-    const { selectedNode } = useControl();
-    const [ currentTab, setCurrentTab ] = useState<tab>(tab);
+export default function NodeProperties() {
+    const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
 
-    useEffect(() => {
-        setCurrentTab(tab);
-    }, [ tab ]);
+    if (!currentTab) return null;
 
     const fetchUpdateState = async (request: updateStateNFARequest) => {
         const response = await updateStateNFA(request);
@@ -28,20 +19,19 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
                 automaton: {
                     ...currentTab.automaton,
                     states: currentTab.automaton.states.map((state) =>
-                        state.id === selectedNode ? response.state : state,
+                        state.id === currentTab.selectedState ? response.state : state,
                     ),
                 },
             };
-            setCurrentTab(newTabData);
             updateTab(newTabData);
         }
     };
 
     const handleNameChange = async (name: string) => {
-        if (selectedNode === null) return;
+        if (currentTab.selectedState === null) return;
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedNode,
+            stateId: currentTab.selectedState,
             label: name,
         };
         await fetchUpdateState(request);
@@ -50,11 +40,11 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
     const handleInitialChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.checked;
 
-        if (selectedNode === null) return;
+        if (currentTab.selectedState === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedNode,
+            stateId: currentTab.selectedState,
             isInitial: newValue,
         };
 
@@ -64,11 +54,11 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
     const handleFinalChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const newValue = e.target.checked;
 
-        if (selectedNode === null) return;
+        if (currentTab.selectedState === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedNode,
+            stateId: currentTab.selectedState,
             isFinal: newValue,
         };
 
@@ -78,11 +68,11 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
     const handleXChange = async (x: string) => {
         const newValue = parseInt(x);
 
-        if (selectedNode === null) return;
+        if (currentTab.selectedState === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedNode,
+            stateId: currentTab.selectedState,
             x: newValue,
         };
 
@@ -91,17 +81,17 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
     const handleYChange = async (y: string) => {
         const newValue = parseInt(y);
 
-        if (selectedNode === null) return;
+        if (currentTab.selectedState === null) return;
 
         const request: updateStateNFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedNode,
+            stateId: currentTab.selectedState,
             y: newValue,
         };
 
         await fetchUpdateState(request);
     };
-    if (selectedNode === null) {
+    if (currentTab.selectedState === null) {
         return (
             <Typography variant="label">Выберите вершину...</Typography>
         );
@@ -110,23 +100,23 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
         <>
             <Typography variant="pretitle">Имя состояния</Typography>
             <Textfield
-                value={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.label || "" }
+                value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.label || "" }
                 onChange={ (e) => handleNameChange(e.currentTarget.value) }
             />
 
             <div className={ styles.stateWrapper }>
                 <Typography variant="label">Начальное состояние</Typography>
                 <Switch
-                    checked={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.isInitial }
-                    disabled={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.isFinal }
+                    checked={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isInitial }
+                    disabled={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isFinal }
                     onChange={ handleInitialChange }
                 />
             </div>
             <div className={ styles.stateWrapper }>
                 <Typography variant="label">Финальное состояние</Typography>
                 <Switch
-                    checked={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.isFinal }
-                    disabled={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.isInitial }
+                    checked={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isFinal }
+                    disabled={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.isInitial }
                     onChange={ handleFinalChange }
                 />
             </div>
@@ -137,7 +127,7 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
                     <Typography variant="label">X</Typography>
                     <Textfield
                         type="number"
-                        value={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.x }
+                        value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.x }
                         onChange={ (e) => handleXChange(e.currentTarget.value) }
                     />
                 </div>
@@ -145,7 +135,7 @@ export default function NodeProperties({ tab }: NodePropertiesProps) {
                     <Typography variant="label">Y</Typography>
                     <Textfield
                         type="number"
-                        value={ currentTab.automaton.states.find((node) => node.id === selectedNode)?.y }
+                        value={ currentTab.automaton.states.find((node) => node.id === currentTab.selectedState)?.y }
                         onChange={ (e) => handleYChange(e.currentTarget.value) }
                     />
                 </div>

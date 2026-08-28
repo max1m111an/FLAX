@@ -1,26 +1,16 @@
 import { State } from "@/components/State.tsx";
-import { useCallback, useEffect, useState } from "react";
-import { useControl } from "@/context/ControlContext.tsx";
+import { useState } from "react";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
-import { tab, useTabs } from "@/context/TabsContext.tsx";
+import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addStateNFA, addTransitionNFA, removeStateNFA, removeTransitNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 
-interface ModelCanvasWidgetProps {
-    tab: tab;
-}
-
-export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
-    const { activeControl } = useControl();
-    const [ currentTab, setCurrentTab ] = useState<tab>(tab);
+export default function ModelCanvasWidget() {
+    const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
-
-    useEffect(() => {
-        setCurrentTab(tab);
-    }, [ tab ]);
 
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
@@ -31,6 +21,8 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
         from: number;
         to: number;
     } | null>(null);
+
+    if (!currentTab) return null;
 
     const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
         const x1 = e.clientX - 32;
@@ -53,7 +45,6 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     states: [ ...currentTab.automaton.states, response.state ],
                 },
             };
-            setCurrentTab(newTabData);
             updateTab(newTabData);
         }
     };
@@ -91,29 +82,25 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     transitions: [ ...currentTab.automaton.transitions, ...response.transition ],
                 },
             };
-            setCurrentTab(newTabData);
             updateTab(newTabData);
         }
     };
 
-    const moveStateLocal = useCallback((id: number, pos: { x: number; y: number }) => {
-        setCurrentTab((prev) => {
-            if (!prev) return prev;
-            return {
-                ...prev,
-                automaton: {
-                    ...prev.automaton,
-                    states: prev.automaton.states.map((state) =>
-                        state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
-                    ),
-                },
-            };
+    const moveStateLocal = (id: number, pos: { x: number; y: number }) => {
+        updateTab({
+            ...currentTab,
+            automaton: {
+                ...currentTab.automaton,
+                states: currentTab.automaton.states.map((state) =>
+                    state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
+                ),
+            },
         });
-    }, []);
+    };
 
-    const saveStatePosition = useCallback(async (id: number, pos: { x: number; y: number }) => {
+    const saveStatePosition = async (id: number, pos: { x: number; y: number }) => {
         const request = {
-            automatonId: tab.id,
+            automatonId: currentTab.id,
             stateId: id,
             x: pos.x,
             y: pos.y,
@@ -122,26 +109,23 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
         try {
             const response = await updateStateNFA(request);
             if (response.status === 200) {
-                setCurrentTab((prev) => {
-                    const newTabData = {
-                        ...prev,
-                        automaton: {
-                            ...prev.automaton,
-                            states: prev.automaton.states.map((state) =>
-                                state.id === id ? response.state : state,
-                            ),
-                        },
-                    };
-                    updateTab(newTabData);
-                    return newTabData;
-                });
+                const newTabData: tab = {
+                    ...currentTab,
+                    automaton: {
+                        ...currentTab.automaton,
+                        states: currentTab.automaton.states.map((state) =>
+                            state.id === id ? response.state : state,
+                        ),
+                    },
+                };
+                updateTab(newTabData);
             }
         } catch (error) {
             console.error("Ошибка при сохранении позиции вершины:", error);
         }
-    }, [ tab.id, updateTab ]);
+    };
 
-    const removeState = useCallback(async (id: number) => {
+    const removeState = async (id: number) => {
         const request = {
             automatonId: currentTab.id,
             stateId: id,
@@ -155,10 +139,9 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                     states: currentTab.automaton.states.filter((state) => state.id !== id),
                 },
             };
-            setCurrentTab(newTabData);
             updateTab(newTabData);
         }
-    }, [ currentTab, updateTab ]);
+    };
 
     const groupedTransitions = Object.values(
         currentTab.automaton.transitions.reduce((acc, edge) => {
@@ -172,7 +155,7 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
         }, {} as Record<string, TransitionModel & { allSymbols: string[] }>),
     );
 
-    const removeEdge = useCallback(async (id: number) => {
+    const removeEdge = async (id: number) => {
         const targetTransition = currentTab.automaton.transitions.find((t) => t.id === id);
         if (!targetTransition) return;
 
@@ -198,17 +181,16 @@ export default function ModelCanvasWidget({ tab }: ModelCanvasWidgetProps) {
                 },
             };
 
-            setCurrentTab(newTabData);
             updateTab(newTabData);
         } catch (error) {
             console.error("Ошибка при удалении ребра:", error);
         }
-    }, [ currentTab, updateTab ]);
+    };
 
     return (
         <div
             className={ styles.modelCanvasWrapper }
-            onClick={ activeControl === "node" ? addNode : undefined }
+            onClick={ currentTab.activeControl === "node" ? addNode : undefined }
         >
             {currentTab.automaton.states.map((state) => (
                 <State

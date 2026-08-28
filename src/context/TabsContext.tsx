@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { createNewNFA } from "@/api/nfaAPI.ts";
@@ -10,6 +10,11 @@ export interface tab{
     title: string;
     model: model;
     automaton: AutomatonModel;
+    activeControl: string | null;
+    activePane: string | null;
+    selectedState: number | null;
+    selectedTransition: number | null;
+
 }
 
 interface TabsContextProps {
@@ -40,6 +45,10 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 title: response.automaton.name,
                 model,
                 automaton: response.automaton,
+                activeControl: "cursor",
+                activePane: null,
+                selectedState: null,
+                selectedTransition: null,
             };
             setTabs([ ...tabs, newTab ]);
 
@@ -50,7 +59,9 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             }
         }
     };
+
     const location = useLocation();
+
     const updateTab = (updatedTab: tab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
@@ -84,4 +95,11 @@ export const useTabs = () => {
     const context = useContext(TabsContext);
     if (!context) throw new Error("useTabs must be used within TabsProvider");
     return context;
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useCurrentTab = (): tab | undefined => {
+    const { tabs } = useTabs();
+    const { id } = useParams();
+    return tabs.find((tab) => String(tab.id) === id);
 };

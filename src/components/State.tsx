@@ -1,8 +1,8 @@
 import React, { useLayoutEffect, useRef } from "react";
 import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
-import { useControl } from "@/context/ControlContext.tsx";
 import clsx from "clsx";
 import styles from "./StateNode.module.scss";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 interface StateProps {
     isFinal?: boolean;
@@ -32,12 +32,12 @@ export function State(
         onDeleteNode,
         onEndMoveNode,
     }: StateProps) {
-    const { activeControl, setSelectedNode, selectedNode } = useControl();
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
     const offset = useRef({ x: 0, y: 0 });
     const dragging = useRef(false);
-
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
 
     const { x: initialX, y: initialY } = initialPosition;
 
@@ -50,7 +50,7 @@ export function State(
     }, [ initialX, initialY ]);
 
     const getCursorStyle = () => {
-        if (activeControl === "Move") {
+        if (currentTab?.activeControl === "move") {
             return dragging ? "grabbing" : "grab";
         }
         return "default";
@@ -62,7 +62,7 @@ export function State(
     const onMouseDown = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (activeControl === "Move") {
+        if (currentTab?.activeControl === "move") {
             dragging.current = true;
 
             if (nodeRef.current) {
@@ -77,12 +77,12 @@ export function State(
             document.addEventListener("mouseup", onMouseUp);
             return;
         }
-        if (activeControl === "edge") {
+        if (currentTab?.activeControl === "edge") {
             document.addEventListener("mousemove", onMouseMove);
             document.addEventListener("mouseup", onMouseUp);
             return;
         }
-        if (activeControl === "trashcan") {
+        if (currentTab?.activeControl === "trashcan") {
             onDeleteNode?.(id);
             return;
         }
@@ -91,7 +91,7 @@ export function State(
     const onMouseMove = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (activeControl === "edge") {
+        if (currentTab?.activeControl === "edge") {
             const rect = nodeRef.current!.getBoundingClientRect();
 
             const cx = rect.left + rect.width / 2;
@@ -125,7 +125,7 @@ export function State(
                 y: e.clientY,
             });
         }
-        if (activeControl === "Move") {
+        if (currentTab?.activeControl === "move") {
             if (!dragging.current) return;
 
             let newX = e.clientX - offset.current.x;
@@ -149,7 +149,7 @@ export function State(
     const onMouseUp = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (activeControl === "edge") {
+        if (currentTab?.activeControl === "edge") {
             const element = document.elementFromPoint(e.clientX, e.clientY);
             const hoveredNode = element?.closest("[data-node-id]");
             const hoveredId = hoveredNode ? Number(hoveredNode.getAttribute("data-node-id")) : undefined;
@@ -159,7 +159,7 @@ export function State(
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         }
-        if (activeControl === "Move") {
+        if (currentTab?.activeControl === "move") {
             dragging.current = false;
             onEndMoveNode?.(id, position.current);
             document.removeEventListener("mousemove", onMouseMove);
@@ -170,22 +170,29 @@ export function State(
     return (
         <div
             ref={ nodeRef }
-            className={ clsx(styles.stateNodeWrapper, activeControl === "trashcan" && styles.deleteMode) }
+            className={ clsx(styles.stateNodeWrapper, currentTab?.activeControl === "trashcan" && styles.deleteMode) }
             style={ {
                 cursor: getCursorStyle(),
                 zIndex: getZIndex(),
             } }
             data-node-id={ id }
-            onClick={ activeControl === "cursor" ? () => (setSelectedNode(id)) : undefined }
-        >
+            onClick={
+                currentTab?.activeControl === "cursor"
+                    ? () => {
+                        if (currentTab) {
+                            updateTab({ ...currentTab, selectedState: id });
+                        }
+                    }
+                    : undefined
+            }>
             {isInitial && <ChevronsRight className={ styles.stateInitial }
             />}
             <div
                 className={ clsx(
                     styles.stateNode,
                     isFinal && styles.stateFinal,
-                    activeControl === "trashcan" && styles.deleteMode,
-                    selectedNode === id && styles.selected,
+                    currentTab?.activeControl === "trashcan" && styles.deleteMode,
+                    currentTab?.selectedState === id && styles.selected,
                 ) }
                 onMouseDown={ onMouseDown }
             >

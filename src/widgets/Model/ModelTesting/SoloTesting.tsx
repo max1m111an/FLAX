@@ -5,12 +5,12 @@ import Forward from "@/assets/svg/Forward.svg?react";
 import Reset from "@/assets/svg/Reset.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
 import { useState } from "react";
-import { useControl } from "@/context/ControlContext.tsx";
 import { Button } from "@/components/ui/Button/Button.tsx";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import clsx from "clsx";
 import styles from "./SoloTesting.module.scss";
+import { useCurrentTab } from "@/context/TabsContext.tsx";
 
 interface Step {
     id: number;
@@ -22,19 +22,17 @@ interface Step {
 
 export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");
-    const [ isPlay, setIsPlay ] = useState(false);
-
-    const { nodes, edges, setSelectedEdge, setSelectedNode } = useControl();
-
+    const [ isPlay ] = useState(false);
+    const currentTab = useCurrentTab();
     const symbols = testLine.split("");
 
-    const [ history, setHistory ] = useState<Step[]>([]);
-    const [ currentIndex, setCurrentIndex ] = useState(0);
-    const [ currentNode, setCurrentNode ] = useState<number | null>(null);
-    const [ finalStatus, setFinalStatus ] = useState<string | null>(null);
+    const [ history ] = useState<Step[]>([]);
+    const [ currentIndex ] = useState(0);
+    const [ currentNode ] = useState<number | null>(null);
+    const [ finalStatus ] = useState<string | null>(null);
 
     const handlePlay = () => {
-        if (!testLine) return;
+        /*if (!testLine) return;
 
         const startNode = nodes.find((n) => n.isInitial)?.id;
 
@@ -42,11 +40,11 @@ export default function SoloTesting() {
         setCurrentIndex(0);
         setHistory([]);
         setFinalStatus(null);
-        setIsPlay(true);
+        setIsPlay(true);*/
     };
 
     const handleStep = () => {
-        if (currentNode === null || finalStatus) return;
+        /* if (currentNode === null || finalStatus) return;
 
         if (currentIndex >= symbols.length) {
             const isAccepted = nodes.find((n) => n.id === currentNode)?.isFinal;
@@ -96,26 +94,26 @@ export default function SoloTesting() {
         ]);
 
         setCurrentNode(nextNode);
-        setCurrentIndex((prev) => prev + 1);
+        setCurrentIndex((prev) => prev + 1);*/
     };
 
     const handleFastForward = () => {
-        let stepsGuard = 0;
+        /*let stepsGuard = 0;
 
         while (!finalStatus && stepsGuard < 1000) {
             stepsGuard++;
             handleStep();
-        }
+        }*/
     };
 
     const handleReset = () => {
-        setIsPlay(false);
+        /*setIsPlay(false);
         setHistory([]);
         setCurrentIndex(0);
         setCurrentNode(null);
         setFinalStatus(null);
         setSelectedNode(null);
-        setSelectedEdge(null);
+        setSelectedEdge(null);*/
     };
 
     return (
@@ -193,7 +191,7 @@ export default function SoloTesting() {
 
                         <div className={ styles.stateStatusWrapper }>
                             <p className={ styles.stateLbl }>
-                                Состояние: {nodes.find((n) => n.id === currentNode)?.name}
+                                Состояние: {currentTab?.automaton.states.find((n) => n.id === currentNode)?.label}
                             </p>
 
                             <p
@@ -227,10 +225,10 @@ export default function SoloTesting() {
                                     <span className={ styles.historyActive }>{index + 1}.</span>
 
                                     <span className={ styles.historyState }>
-                                        {nodes.find((n) => n.id === step.fromState)?.name}
+                                        {currentTab?.automaton.states.find((n) => n.id === step.fromState)?.label}
                                         <ArrowRight />
                                         {step.toState !== undefined
-                                            ? nodes.find((n) => n.id === step.toState)?.name
+                                            ? currentTab?.automaton.states.find((n) => n.id === step.toState)?.label
                                             : "—"}
                                         <ArrowRightToLine />
                                     </span>
