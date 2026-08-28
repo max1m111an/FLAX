@@ -6,15 +6,25 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import clsx from "clsx";
 import styles from "./ModelProperties.module.scss";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 export default function ModelPropertiesWidget() {
     const [ typeProp, setTypeProp ] = useState<string>("nodeType");
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
 
     return (
         <div className={ styles.wrapper }>
             <div className={ styles.titleCancelWrapper }>
                 <Typography variant="title">Свойства</Typography>
-                <IconButton variant="cancel" onClick={ () => {} }>
+                <IconButton variant="cancel" onClick={ () => {
+                    if (currentTab) {
+                        updateTab({
+                            ...currentTab,
+                            activePane: null,
+                        });
+                    }
+                } }>
                     <Cancel />
                 </IconButton>
             </div>

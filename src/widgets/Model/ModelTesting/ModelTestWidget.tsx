@@ -7,14 +7,25 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import clsx from "clsx";
 import styles from "./ModelTestWidget.module.scss";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 export default function ModelTestWidget() {
     const [ typeTest, setTypeTest ] = useState<string>("solo");
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
+
     return (
         <div className={ styles.wrapper }>
             <div className={ styles.titleCancelWrapper }>
                 <Typography variant="title">Тестирование</Typography>
-                <IconButton variant="cancel" onClick={ () => {} }>
+                <IconButton variant="cancel" onClick={ () => {
+                    if (currentTab) {
+                        updateTab({
+                            ...currentTab,
+                            activePane: null,
+                        });
+                    }
+                } }>
                     <Cancel />
                 </IconButton>
             </div>
