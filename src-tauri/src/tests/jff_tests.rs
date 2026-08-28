@@ -1,4 +1,3 @@
-use std::env;
 use std::fs;
 use std::path::Path;
 
@@ -202,6 +201,13 @@ fn writes_example_files_to_target() {
     fs::create_dir_all(&out_dir).unwrap();
     fs::write(out_dir.join("even_a_dfa.jff"), dfa).unwrap();
     fs::write(out_dir.join("nfa_with_epsilon.jff"), nfa).unwrap();
+
+    let content = fs::read_to_string(out_dir.join("even_a_dfa.jff")).unwrap();
+    let parsed = parse_jff(&content).unwrap();
+    assert_eq!(parsed.states.len(), 2);
+    assert!(parsed.states[0].isInitial);
+    assert_eq!(parsed.transitions.len(), 4);
+    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::DFA);
 }
 
 #[test]
@@ -391,19 +397,4 @@ fn infer_kind_nondeterministic_is_nfa() {
     let parsed = parse_jff(xml).unwrap();
     assert!(!is_deterministic(&parsed.states, &parsed.transitions));
     assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::NFA);
-}
-
-#[test]
-fn loads_file_from_target_and_roundtrips() {
-    let out_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("target")
-        .join("jff_examples");
-    let file = out_dir.join("even_a_dfa.jff");
-    let content = fs::read_to_string(&file).unwrap();
-    let parsed = parse_jff(&content).unwrap();
-
-    assert_eq!(parsed.states.len(), 2);
-    assert!(parsed.states[0].isInitial);
-    assert_eq!(parsed.transitions.len(), 4);
-    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::DFA);
 }
