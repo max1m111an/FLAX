@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::structs::data_models::RunStep;
+use crate::structs::data_models::{RunStep, Trace};
 use crate::structs::nfa::{EPSILON, NFA};
 
 #[test]
@@ -417,15 +417,19 @@ fn run_partial_full_acceptance() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
     assert!(accepted);
-    assert_eq!(histories.len(), 1);
+    assert_eq!(traces.len(), 1);
+    assert!(traces[0].isFinal);
     assert_eq!(
-        histories[0],
-        vec![
-            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-            RunStep { from: 1, symbol: "b".to_string(), to: 2 },
-        ]
+        traces[0],
+        Trace {
+            steps: vec![
+                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+                RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+            ],
+            isFinal: true,
+        }
     );
 }
 
@@ -440,9 +444,11 @@ fn run_partial_rejected_no_path() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['b']);
+    // 'b' is not in the alphabet: reading stops before it (0 symbols consumed),
+    // the single (empty so far) thread remains, and the string is rejected.
+    let (traces, accepted) = nfa.run_partial(&['b']);
     assert!(!accepted);
-    assert!(histories.is_empty());
+    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
 }
 
 #[test]
@@ -456,9 +462,9 @@ fn run_partial_rejected_empty_on_non_final() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = nfa.run_partial(&[]);
     assert!(!accepted);
-    assert_eq!(histories, vec![Vec::<RunStep>::new()]);
+    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
 }
 
 #[test]
@@ -470,9 +476,9 @@ fn run_partial_full_accepts_empty_when_initial_final() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = nfa.run_partial(&[]);
     assert!(accepted);
-    assert_eq!(histories, vec![Vec::<RunStep>::new()]);
+    assert_eq!(traces, vec![Trace { steps: vec![], is_final: true }]);
 }
 
 #[test]
@@ -487,12 +493,15 @@ fn run_partial_stuck_mid_string() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
     assert!(!accepted);
-    assert_eq!(histories.len(), 1);
+    assert_eq!(traces.len(), 1);
     assert_eq!(
-        histories[0],
-        vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }]
+        traces[0],
+        Trace {
+            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
+            is_final: true,
+        }
     );
 }
 
@@ -509,10 +518,10 @@ fn run_partial_consumed_all_not_final() {
         .unwrap();
 
     // Input "aa" — first 'a' goes to q1, second 'a' has no transition from q1
-    let (histories, accepted) = nfa.run_partial(&['a', 'a']);
+    let (traces, accepted) = nfa.run_partial(&['a', 'a']);
     assert!(!accepted);
-    assert_eq!(histories.len(), 1);
-    assert_eq!(histories[0].len(), 1);
+    assert_eq!(traces.len(), 1);
+    assert_eq!(traces[0].steps.len(), 1);
 }
 
 #[test]
@@ -528,12 +537,15 @@ fn run_partial_with_epsilon() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['a']);
+    let (traces, accepted) = nfa.run_partial(&['a']);
     assert!(accepted);
-    assert_eq!(histories.len(), 1);
+    assert_eq!(traces.len(), 1);
     assert_eq!(
-        histories[0],
-        vec![RunStep { from: 1, symbol: "a".to_string(), to: 2 }]
+        traces[0],
+        Trace {
+            steps: vec![RunStep { from: 1, symbol: "a".to_string(), to: 2 }],
+            is_final: true,
+        }
     );
 }
 
@@ -552,10 +564,11 @@ fn run_partial_nondeterministic() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['a', 'a', 'b']);
+    let (traces, accepted) = nfa.run_partial(&['a', 'a', 'b']);
     assert!(accepted);
-    assert_eq!(histories.len(), 1);
-    assert_eq!(histories[0].len(), 3);
+    assert_eq!(traces.len(), 1);
+    assert!(traces[0].is_final);
+    assert_eq!(traces[0].steps.len(), 3);
 }
 
 #[test]
@@ -571,14 +584,112 @@ fn run_partial_nondeterministic_parallel() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['a']);
+    let (traces, accepted) = nfa.run_partial(&['a']);
     assert!(accepted);
-    assert_eq!(histories.len(), 2);
-    assert!(histories.contains(
-        &vec![RunStep { from: 0, symbol: "a".to_string(), to: 0 }]
+    assert_eq!(traces.len(), 2);
+    assert!(traces.contains(
+        &Trace {
+            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 0 }],
+            is_final: false,
+        }
     ));
-    assert!(histories.contains(
-        &vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }]
+    assert!(traces.contains(
+        &Trace {
+            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
+            is_final: true,
+        }
+    ));
+}
+
+#[test]
+fn run_partial_converging_branches_keep_separate_histories() {
+    // Two nearly-identical paths that converge to the same final state:
+    //   q0 -a-> q1 -b-> q3 (final)
+    //   q0 -a-> q2 -b-> q3 (final)
+    // Both reading streams must be reported separately (2 histories), not merged.
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2).state(3)
+        .set_initial(0)
+        .set_final(3)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(0, 'a', 2)
+        .transition(1, 'b', 3)
+        .transition(2, 'b', 3)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 2);
+    let t1 = Trace {
+        steps: vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+            RunStep { from: 1, symbol: "b".to_string(), to: 3 },
+        ],
+        is_final: true,
+    };
+    let t2 = Trace {
+        steps: vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 2 },
+            RunStep { from: 2, symbol: "b".to_string(), to: 3 },
+        ],
+        is_final: true,
+    };
+    assert!(traces.contains(&t1));
+    assert!(traces.contains(&t2));
+}
+
+#[test]
+fn run_partial_explores_all_branches() {
+    // Three independent branches, each ending in the same final state:
+    //   q0 -a-> q1 -b-> q4 (final)
+    //   q0 -a-> q2 -b-> q4 (final)
+    //   q0 -a-> q3 -b-> q4 (final)
+    // All three branches must be reported as separate histories.
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2).state(3).state(4)
+        .set_initial(0)
+        .set_final(4)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(0, 'a', 2)
+        .transition(0, 'a', 3)
+        .transition(1, 'b', 4)
+        .transition(2, 'b', 4)
+        .transition(3, 'b', 4)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 3);
+    assert!(traces.contains(
+        &Trace {
+            steps: vec![
+                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+                RunStep { from: 1, symbol: "b".to_string(), to: 4 },
+            ],
+            is_final: true,
+        }
+    ));
+    assert!(traces.contains(
+        &Trace {
+            steps: vec![
+                RunStep { from: 0, symbol: "a".to_string(), to: 2 },
+                RunStep { from: 2, symbol: "b".to_string(), to: 4 },
+            ],
+            is_final: true,
+        }
+    ));
+    assert!(traces.contains(
+        &Trace {
+            steps: vec![
+                RunStep { from: 0, symbol: "a".to_string(), to: 3 },
+                RunStep { from: 3, symbol: "b".to_string(), to: 4 },
+            ],
+            is_final: true,
+        }
     ));
 }
 
@@ -593,7 +704,60 @@ fn run_partial_symbol_not_in_alphabet() {
         .build()
         .unwrap();
 
-    let (histories, accepted) = nfa.run_partial(&['b']);
+    // 'b' not in alphabet: reading stops before it, thread has 0 steps, rejected.
+    let (traces, accepted) = nfa.run_partial(&['b']);
     assert!(!accepted);
-    assert!(histories.is_empty());
+    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
+}
+
+#[test]
+fn run_partial_stops_before_symbol_not_in_alphabet() {
+    // q0 --a--> q1 --b--> q2 (final); 'x' not in alphabet.
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(1, 'b', 2)
+        .build()
+        .unwrap();
+
+    // Input "abx": should consume 'a' and 'b' (2 steps), then stop before 'x'.
+    let (traces, accepted) = nfa.run_partial(&['a', 'b', 'x']);
+    assert!(!accepted);
+    assert_eq!(traces.len(), 1);
+    assert_eq!(traces[0].steps.len(), 2);
+    assert_eq!(
+        traces[0],
+        Trace {
+            steps: vec![
+                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+                RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+            ],
+            is_final: true,
+        }
+    );
+}
+
+#[test]
+fn run_partial_rejects_all_when_no_final_state() {
+    // No final states at all -> every string rejected, no histories.
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(0, 'b', 2)
+        .transition(0, 'a', 0)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(!accepted);
+    assert!(traces.is_empty());
+
+    let (traces, accepted) = nfa.run_partial(&[]);
+    assert!(!accepted);
+    assert!(traces.is_empty());
 }

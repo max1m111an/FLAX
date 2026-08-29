@@ -351,7 +351,7 @@ pub fn nfa_run_str(
             return RunResult {
                 status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                trace: Vec::new(),
+                traces: Vec::new(),
             };
         }
     };
@@ -359,8 +359,8 @@ pub fn nfa_run_str(
     let chars: Vec<char> = input.chars().collect();
     match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(nfa) => {
-            let (histories, accepted) = nfa.run_partial(&chars);
-            let processed_len = histories.first().map_or(0, |h| h.len());
+            let (traces, accepted) = nfa.run_partial(&chars);
+            let processed_len = traces.iter().map(|t| t.steps.len()).max().unwrap_or(0);
             let (status, message) = if accepted {
                 (200u16, format!("Цепочка '{}' принята", input))
             } else if processed_len > 0 {
@@ -377,13 +377,13 @@ pub fn nfa_run_str(
             RunResult {
                 status,
                 message,
-                trace: histories,
+                traces,
             }
         }
         Err(err) => RunResult {
             status: 400,
             message: format!("Некорректный автомат: {}", err),
-            trace: Vec::new(),
+            traces: Vec::new(),
         },
     }
 }

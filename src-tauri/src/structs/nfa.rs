@@ -1,9 +1,14 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::structs::data_models::RunStep;
+use crate::structs::data_models::{RunStep, Trace};
 
 pub const EPSILON: char = '$';
+
+/// Hard cap on the number of parallel reading threads kept by `run_partial`.
+/// Set high enough to explore all branches of realistic (educational) NFAs while
+/// still bounding worst-case (exponential) blowup.
+const MAX_THREADS: usize = 1_000_000;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -183,53 +188,84 @@ impl NFA {
         }
     }
 
-    /// JFLAP-style parallel run over NFA threads. Returns (histories, accepted).
-    /// Each element of the outer vector is the step history of one parallel
-    /// reading (thread). When the NFA branches, several threads (each with its
-    /// own history) are produced. A thread is identified by its current state
-    /// at a given position, so threads converging to the same state are merged.
-    pub fn run_partial(&self, input: &[char]) -> (Vec<Vec<RunStep>>, bool) {
+    /// JFLAP-style parallel run over NFA threads. Returns (traces, accepted).
+    /// Each element of the outer is one parallel reading (thread): its step
+    /// history plus whether it ended in a final state. Every distinct path is
+    /// kept as its own trace, so two branches landing in the same state produce
+    /// two separate traces.
+    ///
+    /// Semantics:
+    /// - If the automaton has no final states at all, any string is rejected.
+    /// - Every symbol is consumed along every thread that can read it; a symbol
+    ///   not present in the alphabet stops reading right before it and rejects.
+    /// - The thread count is capped to bound the worst-case (exponential) blowup.
+    pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
+        let is_terminal_final = |nfa: &Self, state: i32| {
+            nfa.epsilon_closure_owned(state)
+                .iter()
+                .any(|c| nfa.final_states.contains(c))
+        };
+
+        let to_traces = |threads: Vec<(Vec<RunStep>, i32)>| {
+            threads
+                .into_iter()
+                .map(|(steps, state)| Trace {
+                    steps,
+                    isFinal: is_terminal_final(self, state),
+                })
+                .collect()
+        };
+
+        if self.final_states.is_empty() {
+            return (Vec::new(), false);
+        }
+
         let mut threads: Vec<(Vec<RunStep>, i32)> = vec![(Vec::new(), self.initial_state)];
 
         for &symbol in input {
+            // Symbol outside the alphabet: stop reading right before it and reject,
+            // preserving the partial progress made so far.
             if !self.alphabet.contains(&symbol) {
-                return (Vec::new(), false);
+                return (to_traces(threads), false);
             }
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
-            let mut seen: HashSet<i32> = HashSet::new();
-
-            for (history, state) in &threads {
+            'outer: for (history, state) in &threads {
                 for c in self.epsilon_closure_owned(*state) {
                     if let Some(targets) = self.transitions.get(&(c, symbol)) {
                         for &t in targets {
-                            if seen.insert(t) {
-                                let mut h = history.clone();
-                                h.push(RunStep {
-                                    from: c,
-                                    symbol: symbol.to_string(),
-                                    to: t,
-                                });
-                                next_threads.push((h, t));
+                            if next_threads.len() >= MAX_THREADS {
+                                break 'outer;
                             }
+                            let mut h = history.clone();
+                            h.push(RunStep {
+                                from: c,
+                                symbol: symbol.to_string(),
+                                to: t,
+                            });
+                            next_threads.push((h, t));
                         }
                     }
                 }
             }
 
+            // No thread could read this symbol: reject, keeping the threads that
+            // were alive before this symbol (partial progress).
             if next_threads.is_empty() {
-                return (threads.into_iter().map(|(h, _)| h).collect(), false);
+                return (to_traces(threads), false);
+            }
+
+            if next_threads.len() >= MAX_THREADS {
+                break;
             }
 
             threads = next_threads;
         }
 
-        let accepted = threads.iter().any(|(_, s)| {
-            self.epsilon_closure_owned(*s)
-                .iter()
-                .any(|c| self.final_states.contains(c))
-        });
-        (threads.into_iter().map(|(h, _)| h).collect(), accepted)
+        let accepted = threads
+            .iter()
+            .any(|(_, s)| is_terminal_final(self, *s));
+        (to_traces(threads), accepted)
     }
 
     fn epsilon_closure_owned(&self, state: i32) -> HashSet<i32> {
