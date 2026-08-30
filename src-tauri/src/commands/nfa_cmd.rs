@@ -405,7 +405,7 @@ pub fn nfa_remove_automaton(
     }
 }
 
-fn data_to_nfa(
+pub(crate) fn data_to_nfa(
     states: &[StateData],
     transitions: &[TransitionData],
     alphabet: &[char],
@@ -426,7 +426,13 @@ fn data_to_nfa(
         builder = builder.symbol(symbol);
     }
 
+    // Ignore transitions that reference states not present in the automaton
+    // (orphan IDs) — they are stale and should not create extra branches.
+    let state_ids: std::collections::HashSet<i32> = states.iter().map(|s| s.id).collect();
     for trans in transitions {
+        if !state_ids.contains(&trans.from) || !state_ids.contains(&trans.to) {
+            continue;
+        }
         if trans.symbol == EPSILON.to_string() {
             builder = builder.epsilon(trans.from, trans.to);
         } else if let Some(symbol) = trans.symbol.chars().next() {

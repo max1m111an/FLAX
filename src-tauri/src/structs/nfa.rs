@@ -194,6 +194,11 @@ impl NFA {
     /// kept as its own trace, so two branches landing in the same state produce
     /// two separate traces.
     ///
+    /// Every branch is reported, including ones that terminate early: a thread
+    /// that cannot read the current symbol is finalized (kept with its partial
+    /// history and `isFinal` from its stop state) instead of being dropped. Only
+    /// threads that consumed the whole input drive `accepted`.
+    ///
     /// Semantics:
     /// - If the automaton has no final states at all, any string is rejected.
     /// - Every symbol is consumed along every thread that can read it; a symbol
@@ -206,33 +211,32 @@ impl NFA {
                 .any(|c| nfa.final_states.contains(c))
         };
 
-        let to_traces = |threads: Vec<(Vec<RunStep>, i32)>| {
-            threads
-                .into_iter()
-                .map(|(steps, state)| Trace {
-                    steps,
-                    isFinal: is_terminal_final(self, state),
-                })
-                .collect()
+        let finalize = |nfa: &Self, thread: (Vec<RunStep>, i32)| Trace {
+            steps: thread.0,
+            isFinal: is_terminal_final(nfa, thread.1),
         };
 
         if self.final_states.is_empty() {
             return (Vec::new(), false);
         }
 
+        let mut result: Vec<Trace> = Vec::new();
         let mut threads: Vec<(Vec<RunStep>, i32)> = vec![(Vec::new(), self.initial_state)];
 
         for &symbol in input {
             // Symbol outside the alphabet: stop reading right before it and reject,
-            // preserving the partial progress made so far.
+            // finalizing the threads alive so far (partial progress).
             if !self.alphabet.contains(&symbol) {
-                return (to_traces(threads), false);
+                result.extend(threads.into_iter().map(|t| finalize(self, t)));
+                return (result, false);
             }
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
             'outer: for (history, state) in &threads {
+                let mut advanced = false;
                 for c in self.epsilon_closure_owned(*state) {
                     if let Some(targets) = self.transitions.get(&(c, symbol)) {
+                        advanced = true;
                         for &t in targets {
                             if next_threads.len() >= MAX_THREADS {
                                 break 'outer;
@@ -247,12 +251,17 @@ impl NFA {
                         }
                     }
                 }
+                // This thread cannot read the current symbol: finalize it so the
+                // branch still appears in the result (with its partial history).
+                if !advanced {
+                    result.push(finalize(self, (history.clone(), *state)));
+                }
             }
 
-            // No thread could read this symbol: reject, keeping the threads that
-            // were alive before this symbol (partial progress).
+            // No alive thread could read this symbol at all: nothing to do but
+            // return what has been finalized so far (partial progress).
             if next_threads.is_empty() {
-                return (to_traces(threads), false);
+                return (result, false);
             }
 
             if next_threads.len() >= MAX_THREADS {
@@ -262,10 +271,12 @@ impl NFA {
             threads = next_threads;
         }
 
+        // End of input: finalize every surviving thread.
         let accepted = threads
             .iter()
             .any(|(_, s)| is_terminal_final(self, *s));
-        (to_traces(threads), accepted)
+        result.extend(threads.into_iter().map(|t| finalize(self, t)));
+        (result, accepted)
     }
 
     fn epsilon_closure_owned(&self, state: i32) -> HashSet<i32> {

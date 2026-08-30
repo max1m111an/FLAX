@@ -1,7 +1,8 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::structs::data_models::{RunStep, Trace};
+use crate::commands::nfa_cmd::data_to_nfa;
+use crate::structs::data_models::{RunStep, StateData, Trace, TransitionData};
 use crate::structs::nfa::{EPSILON, NFA};
 
 #[test]
@@ -448,7 +449,7 @@ fn run_partial_rejected_no_path() {
     // the single (empty so far) thread remains, and the string is rejected.
     let (traces, accepted) = nfa.run_partial(&['b']);
     assert!(!accepted);
-    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
+    assert_eq!(traces, vec![        Trace { steps: vec![], isFinal: false }]);
 }
 
 #[test]
@@ -464,7 +465,7 @@ fn run_partial_rejected_empty_on_non_final() {
 
     let (traces, accepted) = nfa.run_partial(&[]);
     assert!(!accepted);
-    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
+    assert_eq!(traces, vec![        Trace { steps: vec![], isFinal: false }]);
 }
 
 #[test]
@@ -478,7 +479,7 @@ fn run_partial_full_accepts_empty_when_initial_final() {
 
     let (traces, accepted) = nfa.run_partial(&[]);
     assert!(accepted);
-    assert_eq!(traces, vec![Trace { steps: vec![], is_final: true }]);
+    assert_eq!(traces, vec![        Trace { steps: vec![], isFinal: true }]);
 }
 
 #[test]
@@ -500,7 +501,7 @@ fn run_partial_stuck_mid_string() {
         traces[0],
         Trace {
             steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
-            is_final: true,
+            isFinal: true,
         }
     );
 }
@@ -544,7 +545,7 @@ fn run_partial_with_epsilon() {
         traces[0],
         Trace {
             steps: vec![RunStep { from: 1, symbol: "a".to_string(), to: 2 }],
-            is_final: true,
+            isFinal: true,
         }
     );
 }
@@ -552,7 +553,10 @@ fn run_partial_with_epsilon() {
 #[test]
 fn run_partial_nondeterministic() {
     // q0 --a--> {q0, q1}, q1 --b--> q2 (final)
-    // input "aab": branches merge, accepted path q0->q0->q1->q2
+    // input "aab": every branch is reported:
+    //   - q0-a->q1 (dies on second 'a')         1 step
+    //   - q0-a->q0-a->q0 (dies on 'b')          2 steps
+    //   - q0-a->q0-a->q1-b->q2 (final)          3 steps
     let nfa = NFA::builder()
         .state(0).state(1).state(2)
         .set_initial(0)
@@ -566,9 +570,17 @@ fn run_partial_nondeterministic() {
 
     let (traces, accepted) = nfa.run_partial(&['a', 'a', 'b']);
     assert!(accepted);
-    assert_eq!(traces.len(), 1);
-    assert!(traces[0].is_final);
-    assert_eq!(traces[0].steps.len(), 3);
+    assert_eq!(traces.len(), 3);
+    assert!(traces.iter().any(|t| t.isFinal && t.steps.len() == 3));
+    let final_trace = traces.iter().find(|t| t.isFinal).unwrap();
+    assert_eq!(
+        final_trace.steps,
+        vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 0 },
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+            RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+        ]
+    );
 }
 
 #[test]
@@ -590,13 +602,13 @@ fn run_partial_nondeterministic_parallel() {
     assert!(traces.contains(
         &Trace {
             steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 0 }],
-            is_final: false,
+            isFinal: false,
         }
     ));
     assert!(traces.contains(
         &Trace {
             steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
-            is_final: true,
+            isFinal: true,
         }
     ));
 }
@@ -627,17 +639,90 @@ fn run_partial_converging_branches_keep_separate_histories() {
             RunStep { from: 0, symbol: "a".to_string(), to: 1 },
             RunStep { from: 1, symbol: "b".to_string(), to: 3 },
         ],
-        is_final: true,
+        isFinal: true,
     };
     let t2 = Trace {
         steps: vec![
             RunStep { from: 0, symbol: "a".to_string(), to: 2 },
             RunStep { from: 2, symbol: "b".to_string(), to: 3 },
         ],
-        is_final: true,
+        isFinal: true,
     };
     assert!(traces.contains(&t1));
     assert!(traces.contains(&t2));
+}
+
+#[test]
+fn run_partial_reports_every_branch_including_dead() {
+    // Reproduces the reported issue: splitting on identical symbols must yield a
+    // trace per branch, including ones that terminate early.
+    //   q0 -1-> {q1, q2, q3}
+    //   q2 -2-> {q4, q5}
+    //   q3 -2-> {q6}
+    //   q5 -3-> {q7(final)}
+    // Running "123" gives 4 branches:
+    //   [q0-1->q1]                    (dies on 2)
+    //   [q0-1->q3, q3-2->q6]          (dies on 3)
+    //   [q0-1->q2, q2-2->q4]          (dies on 3)
+    //   [q0-1->q2, q2-2->q5, q5-3->q7](final)
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2).state(3).state(4).state(5).state(6).state(7)
+        .set_initial(0)
+        .set_final(7)
+        .symbol('1').symbol('2').symbol('3')
+        .transition(0, '1', 1)
+        .transition(0, '1', 2)
+        .transition(0, '1', 3)
+        .transition(2, '2', 4)
+        .transition(2, '2', 5)
+        .transition(3, '2', 6)
+        .transition(5, '3', 7)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = nfa.run_partial(&['1', '2', '3']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 4);
+
+    let lens = |t: &Trace| t.steps.len();
+    assert!(traces.iter().any(|t| lens(t) == 1 && !t.isFinal));
+    assert!(traces.iter().any(|t| lens(t) == 2 && t.steps[1].to == 6 && !t.isFinal));
+    assert!(traces.iter().any(|t| lens(t) == 2 && t.steps[1].to == 4 && !t.isFinal));
+    let final_trace = traces.iter().find(|t| t.isFinal).unwrap();
+    assert_eq!(lens(final_trace), 3);
+    assert_eq!(
+        final_trace.steps,
+        vec![
+            RunStep { from: 0, symbol: "1".to_string(), to: 2 },
+            RunStep { from: 2, symbol: "2".to_string(), to: 5 },
+            RunStep { from: 5, symbol: "3".to_string(), to: 7 },
+        ]
+    );
+}
+
+#[test]
+fn data_to_nfa_ignores_orphan_transitions() {
+    // Transitions referencing states absent from the states list are dropped at
+    // build time, so they do not spawn extra branches.
+    let states = vec![
+        StateData { id: 0, label: "q0".into(), x: 0.0, y: 0.0, isInitial: true, isFinal: false },
+        StateData { id: 1, label: "q1".into(), x: 0.0, y: 0.0, isInitial: false, isFinal: true },
+    ];
+    let transitions = vec![
+        // valid: 0 -1-> 1
+        TransitionData { id: 1, from: 0, to: 1, symbol: "1".into() },
+        // orphan: 'to' 99 does not exist
+        TransitionData { id: 2, from: 0, to: 99, symbol: "1".into() },
+        // orphan: 'from' 99 does not exist
+        TransitionData { id: 3, from: 99, to: 1, symbol: "1".into() },
+    ];
+
+    let nfa = data_to_nfa(&states, &transitions, &[]).unwrap();
+    // Only the valid transition should reach final on "1".
+    let (traces, accepted) = nfa.run_partial(&['1']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 1);
+    assert_eq!(traces[0].steps, vec![RunStep { from: 0, symbol: "1".to_string(), to: 1 }]);
 }
 
 #[test]
@@ -670,7 +755,7 @@ fn run_partial_explores_all_branches() {
                 RunStep { from: 0, symbol: "a".to_string(), to: 1 },
                 RunStep { from: 1, symbol: "b".to_string(), to: 4 },
             ],
-            is_final: true,
+            isFinal: true,
         }
     ));
     assert!(traces.contains(
@@ -679,7 +764,7 @@ fn run_partial_explores_all_branches() {
                 RunStep { from: 0, symbol: "a".to_string(), to: 2 },
                 RunStep { from: 2, symbol: "b".to_string(), to: 4 },
             ],
-            is_final: true,
+            isFinal: true,
         }
     ));
     assert!(traces.contains(
@@ -688,7 +773,7 @@ fn run_partial_explores_all_branches() {
                 RunStep { from: 0, symbol: "a".to_string(), to: 3 },
                 RunStep { from: 3, symbol: "b".to_string(), to: 4 },
             ],
-            is_final: true,
+            isFinal: true,
         }
     ));
 }
@@ -707,7 +792,7 @@ fn run_partial_symbol_not_in_alphabet() {
     // 'b' not in alphabet: reading stops before it, thread has 0 steps, rejected.
     let (traces, accepted) = nfa.run_partial(&['b']);
     assert!(!accepted);
-    assert_eq!(traces, vec![Trace { steps: vec![], is_final: false }]);
+    assert_eq!(traces, vec![        Trace { steps: vec![], isFinal: false }]);
 }
 
 #[test]
@@ -735,7 +820,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
                 RunStep { from: 0, symbol: "a".to_string(), to: 1 },
                 RunStep { from: 1, symbol: "b".to_string(), to: 2 },
             ],
-            is_final: true,
+            isFinal: true,
         }
     );
 }
