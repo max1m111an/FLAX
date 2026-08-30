@@ -4,43 +4,35 @@ import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import ChevronDown from "@/assets/svg/ChevronDown.svg?react";
 import Save from "@/assets/svg/Save.svg?react";
-import { useEffect, useState } from "react";
-import { useControl } from "@/context/ControlContext.tsx";
+import { useState } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { Button } from "@/components/ui/Button/Button.tsx";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import styles from "./ModelProperties.module.scss";
-import { tab, useTabs } from "@/context/TabsContext.tsx";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addTransitionNFA, removeTransitNFA, updateTransitNFA } from "@/api/nfaAPI.ts";
 
-interface EdgePropertiesProps {
-    tab: tab;
-}
-
-export default function EdgeProperties({ tab }: EdgePropertiesProps) {
+export default function EdgeProperties() {
     const [ isOpenId, setIsOpenId ] = useState<number[]>([]);
-    const { selectedNode } = useControl();
     const [ editingValues, setEditingValues ] = useState<Record<number, string>>({});
-    const [ currentTab, setCurrentTab ] = useState<tab>(tab);
+    const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
 
     const [ isAdding, setIsAdding ] = useState(false);
     const [ newEdgeTo, setNewEdgeTo ] = useState<number | null>(null);
     const [ newEdgeSymbols, setNewEdgeSymbols ] = useState<string>("");
 
-    useEffect(() => {
-        setCurrentTab(tab);
-    }, [ tab ]);
-
-    if (selectedNode === null) {
+    if (!currentTab) return null;
+    const selectedState = currentTab.selectedState?.[0]?.id ?? null;
+    if (selectedState == null) {
         return (
             <Typography variant="label">Выберите вершину...</Typography>
         );
     }
 
-    const outTransitions = currentTab.automaton.transitions.filter((t) => t.from === selectedNode);
+    const outTransitions = currentTab.automaton.transitions.filter((t) => t.from === selectedState);
     const grouped = outTransitions.reduce((acc, t) => {
         if (!acc[t.to]) acc[t.to] = { to: t.to, ids: [], symbols: [] };
         acc[t.to].ids.push(t.id);
@@ -75,7 +67,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                     .concat(updatedTransitions),
             },
         };
-        setCurrentTab(newTabData);
+
         updateTab(newTabData);
     };
 
@@ -112,7 +104,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
 
         const res = await addTransitionNFA({
             automatonId: currentTab.id,
-            from: selectedNode,
+            from: selectedState,
             to: to,
             symbols: result.symbols,
         });
@@ -127,7 +119,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                         .concat(res.transition),
                 },
             };
-            setCurrentTab(newTabData);
+
             updateTab(newTabData);
 
             setEditingValues((prev) => {
@@ -152,7 +144,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                 transitions: currentTab.automaton.transitions.filter((t) => !group.ids.includes(t.id)),
             },
         };
-        setCurrentTab(newTabData);
+
         updateTab(newTabData);
     };
 
@@ -164,7 +156,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
 
         const res = await addTransitionNFA({
             automatonId: currentTab.id,
-            from: selectedNode,
+            from: selectedState,
             to: newEdgeTo,
             symbols: result.symbols,
         });
@@ -177,7 +169,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                     transitions: [ ...currentTab.automaton.transitions, ...res.transition ],
                 },
             };
-            setCurrentTab(newTabData);
+
             updateTab(newTabData);
             setIsAdding(false);
             setNewEdgeTo(null);
@@ -188,7 +180,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
     return (
         <>
             <Typography variant="pretitle">
-                Переходы из {currentTab.automaton.states.find((node) => node.id === selectedNode)?.label}:
+                Переходы из {currentTab.automaton.states.find((node) => node.id === selectedState)?.label}:
             </Typography>
             {currentEdges.length > 0 &&
                 currentEdges.map((edgeGroup) => (
@@ -206,7 +198,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                             {!isOpenId.includes(edgeGroup.to) ? <ChevronRight className ={ styles.icon } /> : <ChevronDown className ={ styles.icon } />}
                             <div className={ styles.nodeEdgeWrapper }>
                                 <p className={ styles.nodeToNodeTitle }>
-                                    {currentTab.automaton.states.find((node) => node.id === selectedNode)?.label}
+                                    {currentTab.automaton.states.find((node) => node.id === selectedState)?.label}
                                     <ArrowRight />
                                     {currentTab.automaton.states.find((node) => node.id === edgeGroup.to)?.label}
                                 </p>
@@ -278,7 +270,7 @@ export default function EdgeProperties({ tab }: EdgePropertiesProps) {
                     <div className={ styles.propCardEdgeWrapper } style={ { cursor: "default" } }>
                         <div className={ styles.nodeEdgeWrapper }>
                             <p className={ styles.nodeToNodeTitle }>
-                                {currentTab.automaton.states.find((node) => node.id === selectedNode)?.label}
+                                {currentTab.automaton.states.find((node) => node.id === selectedState)?.label}
                                 <ArrowRight className ={ styles.icon } />
                                 {newEdgeTo !== null ? currentTab.automaton.states.find((node) => node.id === newEdgeTo)?.label : "?"}
                             </p>

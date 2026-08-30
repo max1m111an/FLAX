@@ -1,122 +1,153 @@
 import Play from "@/assets/svg/Play.svg?react";
 import FastForward from "@/assets/svg/FastForward.svg?react";
+import Back from "@/assets/svg/Back.svg?react";
 import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import Forward from "@/assets/svg/Forward.svg?react";
 import Reset from "@/assets/svg/Reset.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
 import { useState } from "react";
-import { useControl } from "@/context/ControlContext.tsx";
 import { Button } from "@/components/ui/Button/Button.tsx";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import clsx from "clsx";
 import styles from "./SoloTesting.module.scss";
-
-interface Step {
-    id: number;
-    fromState: number;
-    toState?: number;
-    symbol: string;
-    status: string;
-}
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
+import type { TraceHighlight } from "@/context/TabsContext.tsx";
+import { RunStep, runStrNFA } from "@/api/nfaAPI.ts";
 
 export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");
     const [ isPlay, setIsPlay ] = useState(false);
-
-    const { nodes, edges, setSelectedEdge, setSelectedNode } = useControl();
-
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
     const symbols = testLine.split("");
-
-    const [ history, setHistory ] = useState<Step[]>([]);
-    const [ currentIndex, setCurrentIndex ] = useState(0);
-    const [ currentNode, setCurrentNode ] = useState<number | null>(null);
+    const [ traces, setTraces ] = useState<{ steps: RunStep[]; isFinal: boolean }[]>([]);
+    const [ currentIndex, setCurrentIndex ] = useState<number>(0);
     const [ finalStatus, setFinalStatus ] = useState<string | null>(null);
 
-    const handlePlay = () => {
+    if (!currentTab) return null;
+
+    const applyHighlights = (consumed: number, activeTraces: { steps: RunStep[]; isFinal: boolean }[]) => {
+        if (consumed <= 0) {
+            updateTab({ ...currentTab, selectedState: null, selectedTransition: null });
+            return;
+        }
+
+        const initialId = currentTab.automaton.states.find((s) => s.isInitial)?.id;
+        const states: TraceHighlight[] = [];
+        const transitions: TraceHighlight[] = [];
+
+        for (const trace of activeTraces) {
+            const steps = trace.steps || [];
+            const hasConsumedStep = steps.length >= consumed;
+            const atEnd = consumed >= symbols.length;
+
+            const stateId = hasConsumedStep
+                ? steps[consumed - 1].to
+                : steps.length > 0
+                    ? steps[steps.length - 1].to
+                    : initialId;
+
+            const status: "success" | "error" = !hasConsumedStep || (atEnd && !trace.isFinal) ? "error" : "success";
+
+            if (stateId !== undefined) {
+                const existing = states.find((s) => s.id === stateId);
+                if (existing) {
+                    if (status === "success") existing.status = "success";
+                } else {
+                    states.push({ id: stateId, status });
+                }
+            }
+
+            const step = hasConsumedStep
+                ? steps[consumed - 1]
+                : (steps.length > 0 ? steps[steps.length - 1] : undefined);
+
+            if (step) {
+                for (const transition of currentTab.automaton.transitions) {
+                    if (
+                        transition.from === step.from &&
+                        transition.to === step.to &&
+                        transition.symbol === step.symbol
+                    ) {
+                        const existing = transitions.find((t) => t.id === transition.id);
+                        if (existing) {
+                            if (status === "error") existing.status = "error";
+                        } else {
+                            transitions.push({ id: transition.id, status });
+                        }
+                    }
+                }
+            }
+        }
+
+        updateTab({
+            ...currentTab,
+            selectedState: states.length > 0 ? states : null,
+            selectedTransition: transitions.length > 0 ? transitions : null,
+        });
+    };
+
+    const handlePlay = async () => {
         if (!testLine) return;
 
-        const startNode = nodes.find((n) => n.isInitial)?.id;
+        const request = {
+            automatonId: currentTab.id,
+            input: testLine,
+        };
 
-        setCurrentNode(startNode ?? null);
+        const response = await runStrNFA(request) as any;
+
+        if ([ 200, 401, 402 ].includes(response.status)) {
+            setTraces(response.traces || []);
+            applyHighlights(0, response.traces || []);
+        } else {
+            setTraces([]);
+            applyHighlights(0, []);
+        }
+        console.log(response);
+        console.log(currentTab.automaton);
         setCurrentIndex(0);
-        setHistory([]);
         setFinalStatus(null);
         setIsPlay(true);
     };
 
     const handleStep = () => {
-        if (currentNode === null || finalStatus) return;
+        if (currentIndex < symbols.length) {
+            const nextIndex = currentIndex + 1;
+            setCurrentIndex(nextIndex);
+            applyHighlights(nextIndex, traces);
 
-        if (currentIndex >= symbols.length) {
-            const isAccepted = nodes.find((n) => n.id === currentNode)?.isFinal;
-            setFinalStatus(isAccepted ? "accepted" : "reject");
-            return;
+            if (nextIndex === symbols.length) {
+                setFinalStatus(traces.some((t) => t.isFinal) ? "accepted" : "reject");
+            }
         }
+    };
 
-        const symbol = symbols[currentIndex];
-
-        const edge = edges.find(
-            (e) =>
-                e.idStartNode === currentNode &&
-                e.state?.includes(symbol),
-        );
-
-        if (!edge) {
-            setHistory((prev) => [
-                ...prev,
-                {
-                    id: currentIndex,
-                    fromState: currentNode,
-                    toState: undefined,
-                    symbol,
-                    status: "reject",
-                },
-            ]);
-
-            setSelectedEdge(null);
-            setSelectedNode(currentNode);
-
-            setFinalStatus("reject");
-            return;
+    const handleStepBack = () => {
+        if (currentIndex > 0) {
+            const prevIndex = currentIndex - 1;
+            setCurrentIndex(prevIndex);
+            applyHighlights(prevIndex, traces);
+            setFinalStatus(null);
         }
-
-        const nextNode = edge.idEndNode;
-        setSelectedEdge(edge.id);
-        setSelectedNode(nextNode);
-        setHistory((prev) => [
-            ...prev,
-            {
-                id: currentIndex,
-                fromState: currentNode,
-                toState: nextNode,
-                symbol,
-                status: "ok",
-            },
-        ]);
-
-        setCurrentNode(nextNode);
-        setCurrentIndex((prev) => prev + 1);
     };
 
     const handleFastForward = () => {
-        let stepsGuard = 0;
-
-        while (!finalStatus && stepsGuard < 1000) {
-            stepsGuard++;
-            handleStep();
-        }
+        setCurrentIndex(symbols.length);
+        applyHighlights(symbols.length, traces);
+        setFinalStatus(traces.some((t) => t.isFinal) ? "accepted" : "reject");
     };
 
     const handleReset = () => {
         setIsPlay(false);
-        setHistory([]);
         setCurrentIndex(0);
-        setCurrentNode(null);
         setFinalStatus(null);
-        setSelectedNode(null);
-        setSelectedEdge(null);
+        setTraces([]);
+        updateTab({ ...currentTab, selectedState: null, selectedTransition: null });
     };
+
+    const displayTraces = traces.length > 0 ? traces : [ { steps: [], isFinal: false } ];
 
     return (
         <>
@@ -124,6 +155,7 @@ export default function SoloTesting() {
 
             <Textfield
                 value={ testLine }
+                disabled={ isPlay }
                 onChange={ (e: React.ChangeEvent<HTMLInputElement>) => {
                     setTestLine(e.target.value);
                 } }
@@ -139,109 +171,146 @@ export default function SoloTesting() {
             {isPlay && (
                 <>
                     <div style={ { display: "flex", flexDirection: "row", gap: "8px" } }>
-                        <Button variant="control" onClick={ handleStep }>
+                        <Button
+                            variant="control"
+                            onClick={ handleStep }
+                            disabled={ currentIndex === symbols.length }
+                        >
                             <Forward />
-                            Шаг
+                            Шаг вперед
+                        </Button>
+                        <Button variant="control" onClick={ handleStepBack } disabled={ currentIndex === 0 }>
+                            <Back />
+                            Шаг назад
                         </Button>
 
-                        <Button variant="control" onClick={ handleFastForward }>
+                    </div>
+
+                    <div style={ { display: "flex", flexDirection: "row", gap: "8px" } }>
+                        <Button variant="control" fullWidth onClick={ handleFastForward } disabled={ currentIndex === symbols.length }>
                             <FastForward />
                             До конца
                         </Button>
-                    </div>
 
-                    <div style={ { display: "flex", flexDirection: "row" } }>
                         <Button variant="control" fullWidth onClick={ handleReset }>
                             <Reset />
                             Сброс
                         </Button>
                     </div>
 
-                    <div className={ styles.wrapper }>
-                        <div className={ styles.titleStepWrapper }>
-                            <p className={ styles.positionLbl }>Позиция</p>
-                            <p className={ styles.stepLbl }>
-                                {currentIndex}/{testLine.length}
-                            </p>
-                        </div>
+                    {displayTraces.map((traceObj, i) => {
+                        const traceSteps = traceObj.steps || [];
+                        const activeIndex = Math.min(currentIndex, traceSteps.length);
 
-                        <div className={ styles.lineStateWrapper }>
-                            {symbols.map((char, index) => {
-                                const isOk = history[index]?.status === "ok";
-                                const isCurrent = !history[index] && index === currentIndex;
+                        const currentNodeId = activeIndex < traceSteps.length
+                            ? traceSteps[activeIndex]?.from
+                            : (traceSteps.length > 0
+                                ? traceSteps[traceSteps.length - 1]?.to
+                                : currentTab.automaton.states.find((s) => s.isInitial)?.id);
 
-                                return (
-                                    <div
-                                        key={ index }
-                                        className={ clsx(
-                                            styles.statesWrapper,
-                                            history[index]
-                                                ? (isOk ? styles.statesWrapperSuccess : styles.statesWrapperError)
-                                                : (isCurrent ? styles.statesWrapperCurrent : ""),
-                                        ) }
-                                    >
-                                        <p className={ clsx(
-                                            styles.state,
-                                            history[index]
-                                                ? (isOk ? styles.stateSuccess : styles.stateError)
-                                                : (isCurrent ? styles.stateCurrent : ""),
-                                        ) }>{char}</p>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                        const currentNodeLabel = currentTab.automaton.states.find((n) => n.id === currentNodeId)?.label;
+                        const historyCount = Math.min(currentIndex, traceSteps.length + 1);
 
-                        <div className={ styles.stateStatusWrapper }>
-                            <p className={ styles.stateLbl }>
-                                Состояние: {nodes.find((n) => n.id === currentNode)?.name}
-                            </p>
-
-                            <p
-                                className={ clsx(
-                                    styles.stateLbl,
-                                    finalStatus === "accepted" && styles.stateLblAccepted,
-                                    finalStatus === "reject" && styles.stateLblRejected,
-                                ) }
-                            >
-                                {finalStatus === "accepted" && "Принято"}
-                                {finalStatus === "reject" && "Отклонено"}
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className={ styles.wrapper }>
-                        <p className={ styles.positionLbl }>История</p>
-
-                        {history.map((step, index) => {
-                            const isLast = index === history.length - 1;
-                            const isSuccess = step.status === "ok";
-
-                            return (
-                                <div
-                                    key={ index }
-                                    className={ clsx(
-                                        styles.historyCard,
-                                        isLast && (isSuccess ? styles.historyCardSuccess : styles.historyCardError),
-                                    ) }
-                                >
-                                    <span className={ styles.historyActive }>{index + 1}.</span>
-
-                                    <span className={ styles.historyState }>
-                                        {nodes.find((n) => n.id === step.fromState)?.name}
-                                        <ArrowRight />
-                                        {step.toState !== undefined
-                                            ? nodes.find((n) => n.id === step.toState)?.name
-                                            : "—"}
-                                        <ArrowRightToLine />
-                                    </span>
-
-                                    <span className={ styles.historySymbol }>
-                                        {step.symbol}
-                                    </span>
+                        return (
+                            <div key={ i } className={ styles.wrapper }>
+                                <div className={ styles.titleStepWrapper }>
+                                    <p className={ styles.positionLbl }>Позиция</p>
+                                    <p className={ styles.stepLbl }>
+                                        {currentIndex}/{testLine.length}
+                                    </p>
                                 </div>
-                            );
-                        })}
-                    </div>
+
+                                <div className={ styles.lineStateWrapper }>
+                                    {symbols.map((char, index) => {
+                                        const isActiveForTrace = index <= traceSteps.length;
+                                        const isPassed = index < currentIndex && isActiveForTrace;
+                                        const isCurrent = index === currentIndex && isActiveForTrace;
+                                        const isOk = traceSteps[index] !== undefined;
+
+                                        return (
+                                            <div
+                                                key={ index }
+                                                className={ clsx(
+                                                    styles.statesWrapper,
+                                                    isPassed
+                                                        ? (isOk ? styles.statesWrapperSuccess : styles.statesWrapperError)
+                                                        : (isCurrent ? styles.statesWrapperCurrent : ""),
+                                                ) }
+                                            >
+                                                <p className={ clsx(
+                                                    styles.state,
+                                                    isPassed
+                                                        ? (isOk ? styles.stateSuccess : styles.stateError)
+                                                        : (isCurrent ? styles.stateCurrent : ""),
+                                                ) }>
+                                                    {char}
+                                                </p>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className={ styles.stateStatusWrapper }>
+                                    <p className={ styles.stateLbl }>
+                                        Состояние: {currentNodeLabel || "—"}
+                                    </p>
+                                    {finalStatus !== null && (
+                                        <p
+                                            className={ clsx(
+                                                styles.stateLbl,
+                                                traceObj.isFinal && styles.stateLblAccepted,
+                                                !traceObj.isFinal && styles.stateLblRejected,
+                                            ) }
+                                        >
+                                            {traceObj.isFinal ? "Принято" : "Отклонено"}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {historyCount > 0 && (
+                                    <div className={ styles.wrapper }>
+                                        <p className={ styles.positionLbl }>История</p>
+
+                                        {Array.from({ length: historyCount }).map((_, index) => {
+                                            const step = traceSteps[index];
+                                            const prevStep = index > 0 ? traceSteps[index - 1] : undefined;
+                                            const isOk = step !== undefined;
+
+                                            const fromNodeId = step
+                                                ? step.from
+                                                : (prevStep ? prevStep.to : currentTab.automaton.states.find((s) => s.isInitial)?.id);
+                                            const toNodeId = step ? step.to : undefined;
+
+                                            return (
+                                                <div
+                                                    key={ index }
+                                                    className={ clsx(
+                                                        styles.historyCard,
+                                                        isOk ? styles.historyCardSuccess : styles.historyCardError,
+                                                    ) }
+                                                >
+                                                    <span className={ styles.historyActive }>{index + 1}.</span>
+
+                                                    <span className={ styles.historyState }>
+                                                        {currentTab.automaton.states.find((n) => n.id === fromNodeId)?.label || "—"}
+                                                        <ArrowRight />
+                                                        {toNodeId !== undefined
+                                                            ? currentTab.automaton.states.find((n) => n.id === toNodeId)?.label
+                                                            : "—"}
+                                                        <ArrowRightToLine />
+                                                    </span>
+
+                                                    <span className={ styles.historySymbol }>
+                                                        {symbols[index]}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })}
                 </>
             )}
         </>

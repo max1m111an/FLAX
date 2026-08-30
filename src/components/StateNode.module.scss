@@ -39,6 +39,20 @@
   background-color: var(--accent-bg);
 }
 
+.traceSuccess {
+  border-color: var(--green-main);
+  background-color: var(--green-bg);
+  color: var(--green-main);
+  box-shadow: 0 0 24px var(--green-bg), 0 0 10px var(--green-bg);
+}
+
+.traceError {
+  border-color: var(--red-main);
+  background-color: var(--red-bg);
+  color: var(--red-main);
+  box-shadow: 0 0 24px var(--red-bg), 0 0 10px var(--red-bg);
+}
+
 .stateInitial {
   position: absolute;
   left: -24px;

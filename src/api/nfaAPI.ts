@@ -153,3 +153,34 @@ export const removeTransitNFA = async (params: removeTransitNFARequest): Promise
     }
 };
 
+export type RunStep = {
+    from: number;
+    symbol: string;
+    to: number;
+}
+export type Trace = {
+    steps: RunStep[];
+    isFinal: boolean;
+}
+
+type runStrNFARequest = {
+    automatonId: number;
+    input: string;
+}
+
+type runStrNFAResponse = {
+    status: number;
+    message: string;
+    traces: Trace[];
+}
+
+export const runStrNFA = async (params: runStrNFARequest): Promise<runStrNFAResponse> => {
+    try {
+        const response = await invoke<runStrNFAResponse>("nfa_run_str", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_run_str:", error);
+        throw error;
+    }
+};
+

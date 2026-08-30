@@ -1,20 +1,30 @@
 import { createContext, useContext, useState, ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { createNewNFA } from "@/api/nfaAPI.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
+
+export interface TraceHighlight {
+    id: number;
+    status?: "success" | "error";
+}
 
 export interface tab{
     id: number;
     title: string;
     model: model;
     automaton: AutomatonModel;
+    activeControl: string | null;
+    activePanel: string | null;
+    selectedState: TraceHighlight[] | null;
+    selectedTransition: TraceHighlight[] | null;
+
 }
 
 interface TabsContextProps {
     tabs: tab[];
-    addTab: (model: model, type?: string) => void;
+    addTab: (model: model, type?: string) => Promise<tab | void>;
     removeTab: (tab: tab) => void;
     updateTab: (updatedTab: tab) => void;
 }
@@ -25,7 +35,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
 
-    const addTab = async (model: model, type: string = "Без названия*"): Promise<void> => {
+    const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
         if (type === "Настройки") {
             const existingSettingsTab = tabs.find((t) => t.title === "Настройки");
             if (existingSettingsTab) {
@@ -40,6 +50,10 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 title: response.automaton.name,
                 model,
                 automaton: response.automaton,
+                activeControl: "cursor",
+                activePanel: null,
+                selectedState: null,
+                selectedTransition: null,
             };
             setTabs([ ...tabs, newTab ]);
 
@@ -48,9 +62,12 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             } else if (type == "Без названия*") {
                 navigate(`/models/${newTab.id}`);
             }
+            return newTab;
         }
     };
+
     const location = useLocation();
+
     const updateTab = (updatedTab: tab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
@@ -84,4 +101,11 @@ export const useTabs = () => {
     const context = useContext(TabsContext);
     if (!context) throw new Error("useTabs must be used within TabsProvider");
     return context;
+};
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const useCurrentTab = (): tab | undefined => {
+    const { tabs } = useTabs();
+    const { id } = useParams();
+    return tabs.find((tab) => String(tab.id) === id);
 };

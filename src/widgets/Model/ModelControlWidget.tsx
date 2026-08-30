@@ -9,27 +9,68 @@ import Image from "@/assets/svg/Image.svg?react";
 import Play from "@/assets/svg/Play.svg?react";
 import Settings from "@/assets/svg/Settings.svg?react";
 import Move from "@/assets/svg/Move.svg?react";
-import { useControl } from "@/context/ControlContext.tsx";
 import clsx from "clsx";
 import styles from "../../scenes/ModelScene.module.scss";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 
 export default function ModelControlWidget() {
-    const { activePane, changePane } = useControl();
-    const { activeControl, changeControl } = useControl();
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
+
     return (
         <div className={ styles.modelLeftControlWrapper }>
             <div className={ styles.modelTopGroup }>
-                <Cursor className={ clsx(styles.modelControlIcon, activeControl == "cursor" && styles.active) }
-                    onClick={ () => changeControl("cursor") } />
-                <Move className={ clsx(styles.modelControlIcon,
-                    activeControl == "Move" && styles.active) } onClick={ () => changeControl("Move") } />
-                <Circle className={ clsx(styles.modelControlIcon,
-                    activeControl == "node" && styles.active) } onClick={ () => changeControl("node") } />
-                <ArrowUpRight className={ clsx(styles.modelControlIcon,
-                    activeControl == "edge" && styles.active) } onClick={ () => changeControl("edge") } />
-                <Trashcan className={ clsx(styles.modelControlIcon, styles.trashcan, activeControl == "trashcan" && styles.active) }
-                    onClick={ () => changeControl("trashcan") } />
+                <Cursor
+                    className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "cursor" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            updateTab({
+                                ...currentTab,
+                                activeControl: "cursor",
+                            });
+                        }
+                    } } />
+                <Move
+                    className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "move" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            updateTab({
+                                ...currentTab,
+                                activeControl: "move",
+                            });
+                        }
+                    } } />
+                <Circle
+                    className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "node" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            updateTab({
+                                ...currentTab,
+                                activeControl: "node",
+                            });
+                        }
+                    } } />
+                <ArrowUpRight
+                    className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "edge" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            updateTab({
+                                ...currentTab,
+                                activeControl: "edge",
+                            });
+                        }
+                    } } />
+                <Trashcan
+                    className={ clsx(styles.modelControlIcon, styles.trashcan, currentTab?.activeControl == "trashcan" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            updateTab({
+                                ...currentTab,
+                                activeControl: "trashcan",
+                            });
+                        }
+                    } } />
                 <div className={ styles.modelDivider } />
             </div>
 
@@ -41,8 +82,40 @@ export default function ModelControlWidget() {
             </div>
 
             <div className={ styles.modelBottomGroup }>
-                <Settings className={ clsx(styles.modelControlIcon, activePane == "settings" && styles.active) } onClick={ () => changePane("settings") } />
-                <Play className={ clsx(styles.modelControlIcon, activePane == "play" && styles.active) } onClick={ () => changePane("play") } />
+                <Settings
+                    className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "settings" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            if (currentTab.activePanel !== "settings") {
+                                updateTab({
+                                    ...currentTab,
+                                    activePanel: "settings",
+                                });
+                            } else {
+                                updateTab({
+                                    ...currentTab,
+                                    activePanel: null,
+                                });
+                            }
+                        }
+                    } } />
+                <Play
+                    className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "play" && styles.active) }
+                    onClick={ () => {
+                        if (currentTab) {
+                            if (currentTab.activePanel !== "play") {
+                                updateTab({
+                                    ...currentTab,
+                                    activePanel: "play",
+                                });
+                            } else {
+                                updateTab({
+                                    ...currentTab,
+                                    activePanel: null,
+                                });
+                            }
+                        }
+                    } } />
             </div>
         </div>
     );

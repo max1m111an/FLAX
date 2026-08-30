@@ -6,20 +6,25 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import clsx from "clsx";
 import styles from "./ModelProperties.module.scss";
-import { tab } from "@/context/TabsContext.tsx";
+import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
-interface ModelPropertiesWidgetProps {
-    tab: tab;
-}
-
-export default function ModelPropertiesWidget({ tab } : ModelPropertiesWidgetProps) {
+export default function ModelPropertiesWidget() {
     const [ typeProp, setTypeProp ] = useState<string>("nodeType");
+    const currentTab = useCurrentTab();
+    const { updateTab } = useTabs();
 
     return (
         <div className={ styles.wrapper }>
             <div className={ styles.titleCancelWrapper }>
                 <Typography variant="title">Свойства</Typography>
-                <IconButton variant="cancel" onClick={ () => {} }>
+                <IconButton variant="cancel" onClick={ () => {
+                    if (currentTab) {
+                        updateTab({
+                            ...currentTab,
+                            activePanel: null,
+                        });
+                    }
+                } }>
                     <Cancel />
                 </IconButton>
             </div>
@@ -40,10 +45,10 @@ export default function ModelPropertiesWidget({ tab } : ModelPropertiesWidgetPro
             </div>
             <div className={ styles.propTypeWrapper }>
                 {typeProp === "nodeType" ? (
-                    <NodeProperties key={ tab.id } tab={ tab } />
+                    <NodeProperties />
                 ) :
                     (
-                        <EdgeProperties key={ tab.id } tab={ tab } />
+                        <EdgeProperties />
                     )}
             </div>
         </div>

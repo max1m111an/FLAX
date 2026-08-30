@@ -779,6 +779,41 @@ fn run_partial_explores_all_branches() {
 }
 
 #[test]
+fn run_partial_converging_branches_keep_separate_histories() {
+    // Two nearly-identical paths that converge to the same final state:
+    //   q0 -a-> q1 -b-> q3 (final)
+    //   q0 -a-> q2 -b-> q3 (final)
+    // Both reading streams must be reported separately (2 histories), not merged.
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2).state(3)
+        .set_initial(0)
+        .set_final(3)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(0, 'a', 2)
+        .transition(1, 'b', 3)
+        .transition(2, 'b', 3)
+        .build()
+        .unwrap();
+
+    let (histories, accepted) = nfa.run_partial(&['a', 'b']);
+    assert!(accepted);
+    assert_eq!(histories.len(), 2);
+    assert!(histories.contains(
+        &vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
+            RunStep { from: 1, symbol: "b".to_string(), to: 3 },
+        ]
+    ));
+    assert!(histories.contains(
+        &vec![
+            RunStep { from: 0, symbol: "a".to_string(), to: 2 },
+            RunStep { from: 2, symbol: "b".to_string(), to: 3 },
+        ]
+    ));
+}
+
+#[test]
 fn run_partial_symbol_not_in_alphabet() {
     let nfa = NFA::builder()
         .state(0).state(1)

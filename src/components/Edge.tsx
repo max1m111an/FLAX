@@ -1,6 +1,6 @@
-import { useControl } from "@/context/ControlContext.tsx";
 import clsx from "clsx";
 import styles from "./Edge.module.scss";
+import { useCurrentTab } from "@/context/TabsContext.tsx";
 
 interface EdgeProps {
     x1: number;
@@ -14,6 +14,8 @@ interface EdgeProps {
     isEditing?: boolean;
     onDeleteEdge?: (id: number) => void;
     id?: number;
+    from?: number;
+    to?: number;
 }
 
 export default function Edge(
@@ -29,24 +31,40 @@ export default function Edge(
         textX,
         textY,
         angle,
+        from,
+        to,
     }: EdgeProps) {
-    const { activeControl, selectedEdge } = useControl();
+    const currentTab = useCurrentTab();
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
 
-        if (activeControl === "trashcan") {
+        if (currentTab?.activeControl === "trashcan") {
             if (id !== undefined && onDeleteEdge) {
                 onDeleteEdge(id);
             }
         }
     };
 
+    const relatedTransitionIds = (currentTab?.automaton.transitions ?? [])
+        .filter((t) => from !== undefined && to !== undefined && t.from === from && t.to === to)
+        .map((t) => t.id);
+
+    const highlight = currentTab?.selectedTransition?.find((h) => relatedTransitionIds.includes(h.id));
+
+    const traceStatus = highlight && highlight.status
+        ? (highlight.status === "success" ? styles.traceSuccess : styles.traceError)
+        : "";
+
     return (
         <g
             onMouseDown={ handleDelete }
-            className={ clsx(styles.edge, activeControl === "trashcan" && styles.deleteMode) }
+            className={ clsx(
+                styles.edge,
+                currentTab?.activeControl === "trashcan" && styles.deleteMode,
+                traceStatus,
+            ) }
         >
             <defs>
                 <marker id={ `arrowhead-${id}` } markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">
@@ -67,8 +85,8 @@ export default function Edge(
                 x2={ x2 }
                 y2={ y2 }
                 markerEnd={ `url(#arrowhead-${id})` }
-                className={ clsx(selectedEdge === id && styles.selected) }
-                style={ { cursor: activeControl === "trashcan" ? "pointer" : "default" } }
+                className={ clsx(highlight && !highlight.status && styles.selected) }
+                style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
             />
             {!isEditing &&
                 label &&
@@ -79,9 +97,9 @@ export default function Edge(
                     x={ textX }
                     y={ textY }
                     textAnchor="middle"
-                    className={ clsx(styles.edgeLabel, selectedEdge === id && styles.selected) }
+                    className={ clsx(styles.edgeLabel, highlight && !highlight.status && styles.selected) }
                     transform={ `rotate(${angle}, ${textX}, ${textY})` }
-                    style={ { cursor: activeControl === "trashcan" ? "pointer" : "default" } }
+                    style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
                 >
                     {label}
                 </text>
