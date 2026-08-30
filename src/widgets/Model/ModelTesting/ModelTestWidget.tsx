@@ -11,6 +11,7 @@ import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 export default function ModelTestWidget() {
     const [ typeTest, setTypeTest ] = useState<string>("solo");
+    const [ testKey, setTestKey ] = useState<number>(0);
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
 
@@ -20,9 +21,13 @@ export default function ModelTestWidget() {
                 <Typography variant="title">Тестирование</Typography>
                 <IconButton variant="cancel" onClick={ () => {
                     if (currentTab) {
+                        setTestKey((k) => k + 1);
                         updateTab({
                             ...currentTab,
                             activePanel: null,
+                            selectedState: null,
+                            selectedTransition: null,
+                            selectedNodeId: null,
                         });
                     }
                 } }>
@@ -46,7 +51,7 @@ export default function ModelTestWidget() {
             </div>
             <div className={ styles.testTypeWrapper }>
                 {typeTest === "solo" && (
-                    <SoloTesting />
+                    <SoloTesting key={ testKey } />
                 )}
                 {typeTest === "multi" && (
                     <>

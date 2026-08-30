@@ -146,6 +146,7 @@ export default function ModelCanvasWidget() {
                 const connectedIds = connectedTransitions.map((t) => t.id);
                 const newTabData = {
                     ...currentTab,
+                    selectedNodeId: currentTab.selectedNodeId === id ? null : currentTab.selectedNodeId,
                     automaton: {
                         ...currentTab.automaton,
                         states: currentTab.automaton.states.filter((state) => state.id !== id),
@@ -208,7 +209,16 @@ export default function ModelCanvasWidget() {
     return (
         <div
             className={ styles.modelCanvasWrapper }
-            onClick={ currentTab.activeControl === "node" ? addNode : undefined }
+            onClick={ (e) => {
+                if (currentTab.activeControl === "cursor") {
+                    if (currentTab.selectedNodeId !== null) {
+                        e.stopPropagation();
+                        updateTab({ ...currentTab, selectedNodeId: null });
+                    }
+                } else if (currentTab.activeControl === "node") {
+                    addNode(e);
+                }
+            } }
         >
             {currentTab.automaton.states.map((state) => (
                 <State

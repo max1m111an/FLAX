@@ -50,6 +50,7 @@ export function State(
     }, [ initialX, initialY ]);
 
     const highlight = currentTab?.selectedState?.find((s) => s.id === id);
+    const isSelected = currentTab?.selectedNodeId === id;
 
     const getCursorStyle = () => {
         if (currentTab?.activeControl === "move") {
@@ -180,9 +181,13 @@ export function State(
             data-node-id={ id }
             onClick={
                 currentTab?.activeControl === "cursor"
-                    ? () => {
+                    ? (e: React.MouseEvent) => {
+                        e.stopPropagation();
                         if (currentTab) {
-                            updateTab({ ...currentTab, selectedState: [ { id } ] });
+                            updateTab({
+                                ...currentTab,
+                                selectedNodeId: currentTab.selectedNodeId === id ? null : id,
+                            });
                         }
                     }
                     : undefined
@@ -194,13 +199,15 @@ export function State(
                     styles.stateNode,
                     isFinal && styles.stateFinal,
                     currentTab?.activeControl === "trashcan" && styles.deleteMode,
-                    highlight
-                        ? (highlight.status === "success"
-                            ? styles.traceSuccess
-                            : highlight.status === "error"
-                                ? styles.traceError
-                                : styles.selected)
-                        : "",
+                    isSelected
+                        ? styles.selected
+                        : (highlight
+                            ? (highlight.status === "success"
+                                ? styles.traceSuccess
+                                : highlight.status === "error"
+                                    ? styles.traceError
+                                    : "")
+                            : ""),
                 ) }
                 onMouseDown={ onMouseDown }
             >

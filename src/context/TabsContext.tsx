@@ -19,6 +19,7 @@ export interface tab{
     activePanel: string | null;
     selectedState: TraceHighlight[] | null;
     selectedTransition: TraceHighlight[] | null;
+    selectedNodeId: number | null;
 
 }
 
@@ -54,6 +55,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 activePanel: null,
                 selectedState: null,
                 selectedTransition: null,
+                selectedNodeId: null,
             };
             setTabs([ ...tabs, newTab ]);
 

@@ -82,47 +82,72 @@ export const DebugScene = () => {
 
                     const automatonId = newTab.id;
 
-                    const statePositions = [
-                        { x: 100, y: 100 },
-                        { x: 100, y: 400 },
-                        { x: 400, y: 100 },
-                        { x: 400, y: 400 },
-                        { x: 650, y: 400 },
+                    const statesData = [
+                        { label: "q0", x: 100, y: 100, isInitial: true, isFinal: false },
+                        { label: "q1", x: 275, y: 100, isInitial: false, isFinal: false },
+                        { label: "q2", x: 450, y: 100, isInitial: false, isFinal: false },
+                        { label: "q3", x: 625, y: 100, isInitial: false, isFinal: false },
+                        { label: "q4", x: 625, y: 250, isInitial: false, isFinal: true },
+                        { label: "q5", x: 100, y: 250, isInitial: false, isFinal: false },
+                        { label: "q6", x: 100, y: 400, isInitial: false, isFinal: false },
+                        { label: "q7", x: 275, y: 250, isInitial: false, isFinal: false },
+                        { label: "q8", x: 275, y: 400, isInitial: false, isFinal: false },
+                        { label: "q9", x: 450, y: 250, isInitial: false, isFinal: false },
+                        { label: "q10", x: 450, y: 400, isInitial: false, isFinal: false },
+                        { label: "q11", x: 450, y: 550, isInitial: false, isFinal: true },
+                        { label: "q12", x: 100, y: 550, isInitial: false, isFinal: false },
+                        { label: "q13", x: 100, y: 675, isInitial: false, isFinal: false },
+                        { label: "q14", x: 275, y: 675, isInitial: false, isFinal: false },
                     ];
 
-                    // 2. Массивы для сбора данных, чтобы потом отдать их React'у
+                    const transitionsData = [
+                        { from: 0, to: 1, symbol: "1" },
+                        { from: 1, to: 2, symbol: "2" },
+                        { from: 2, to: 3, symbol: "3" },
+                        { from: 3, to: 4, symbol: "4" },
+                        { from: 0, to: 5, symbol: "1" },
+                        { from: 0, to: 5, symbol: "2" },
+                        { from: 5, to: 6, symbol: "2" },
+                        { from: 6, to: 12, symbol: "3" },
+                        { from: 12, to: 13, symbol: "4" },
+                        { from: 1, to: 7, symbol: "2" },
+                        { from: 7, to: 8, symbol: "3" },
+                        { from: 2, to: 9, symbol: "3" },
+                        { from: 9, to: 10, symbol: "4" },
+                        { from: 10, to: 11, symbol: "5" },
+                        { from: 13, to: 14, symbol: "5" },
+                        { from: 10, to: 4, symbol: "5" },
+                    ];
+
                     const addedStates = [];
                     const addedTransitions = [];
                     const stateIds: number[] = [];
 
-                    // Создаем вершины
-                    for (let i = 0; i < 5; i++) {
-                        const pos = statePositions[i];
+                    for (const data of statesData) {
                         const res = await addStateNFA({
                             automatonId,
-                            label: `q${i}`,
-                            x: pos.x,
-                            y: pos.y,
-                            isInitial: i === 0,
-                            isFinal: i === 4,
+                            label: data.label,
+                            x: data.x,
+                            y: data.y,
+                            isInitial: data.isInitial,
+                            isFinal: data.isFinal,
                         });
-                        if (res.status !== 200) throw new Error(`addState ${i} failed`);
+                        if (res.status !== 200) throw new Error(`addState ${data.label} failed`);
 
                         stateIds.push(res.state.id);
-                        addedStates.push(res.state); // Сохраняем вершину
+                        addedStates.push(res.state);
                     }
 
-                    // Создаем переходы
-                    for (let i = 0; i < 4; i++) {
+                    for (const data of transitionsData) {
                         const res = await addTransitionNFA({
                             automatonId,
-                            from: stateIds[i],
-                            to: stateIds[i + 1],
-                            symbols: [ String(i + 1) ],
+                            from: stateIds[data.from],
+                            to: stateIds[data.to],
+                            symbols: [ data.symbol ],
                         });
-                        if (res.status !== 200) throw new Error(`addTransition ${i} failed`);
+                        if (res.status !== 200) throw new Error(`addTransition ${data.symbol} failed`);
 
-                        addedTransitions.push(...res.transition); // Сохраняем переходы
+                        addedTransitions.push(...res.transition);
                     }
 
                     updateTab({

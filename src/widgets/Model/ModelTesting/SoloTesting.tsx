@@ -29,7 +29,12 @@ export default function SoloTesting() {
 
     const applyHighlights = (consumed: number, activeTraces: { steps: RunStep[]; isFinal: boolean }[]) => {
         if (consumed <= 0) {
-            updateTab({ ...currentTab, selectedState: null, selectedTransition: null });
+            updateTab({
+                ...currentTab,
+                selectedState: null,
+                selectedTransition: null,
+                selectedNodeId: null,
+            });
             return;
         }
 
@@ -85,6 +90,7 @@ export default function SoloTesting() {
             ...currentTab,
             selectedState: states.length > 0 ? states : null,
             selectedTransition: transitions.length > 0 ? transitions : null,
+            selectedNodeId: null,
         });
     };
 
@@ -144,7 +150,7 @@ export default function SoloTesting() {
         setCurrentIndex(0);
         setFinalStatus(null);
         setTraces([]);
-        updateTab({ ...currentTab, selectedState: null, selectedTransition: null });
+        updateTab({ ...currentTab, selectedState: null, selectedTransition: null, selectedNodeId: null });
     };
 
     const displayTraces = traces.length > 0 ? traces : [ { steps: [], isFinal: false } ];

@@ -16,12 +16,12 @@ export default function ModelScene() {
         <div className={ styles.modelContainer }>
             <ModelControlWidget />
             <ModelCanvasWidget key={ currentTab.id } />
-            {currentTab.activePanel == "play" && (
-                <ModelTestWidget />
-            )}
-            {currentTab.activePanel == "settings" && (
+            <div className={ currentTab.activePanel != "play" ? styles.hidden : undefined }>
+                <ModelTestWidget key={ currentTab.id } />
+            </div>
+            <div className={ currentTab.activePanel != "settings" ? styles.hidden : undefined }>
                 <ModelPropertiesWidget key={ currentTab.id } />
-            )}
+            </div>
         </div>
     );
 }

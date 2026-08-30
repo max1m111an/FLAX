@@ -11,7 +11,7 @@ export default function NodeProperties() {
 
     if (!currentTab) return null;
 
-    const selectedStateId = currentTab.selectedState?.[0]?.id ?? null;
+    const selectedStateId = currentTab.selectedNodeId;
 
     const fetchUpdateState = async (request: updateStateNFARequest) => {
         const response = await updateStateNFA(request);
