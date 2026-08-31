@@ -188,16 +188,24 @@ impl NFA {
         }
     }
 
-    /// JFLAP-style parallel run over NFA threads. Returns (traces, accepted).
-    /// Each element of the outer is one parallel reading (thread): its step
-    /// history plus whether it ended in a final state. Every distinct path is
-    /// kept as its own trace, so two branches landing in the same state produce
-    /// two separate traces.
+    /// JFLAP-style parallel run over NFA threads (JFLAP "Step with Closure").
+    /// Returns (traces, accepted). Each element of the outer is one parallel
+    /// reading (thread): its step history plus whether it ended in a final
+    /// state. Every distinct path is kept as its own trace, so branches that
+    /// land in the same state (or split on the same symbol) produce separate
+    /// traces.
+    ///
+    /// ε-closure is computed before the first symbol, after every symbol and
+    /// after the last symbol, and every `$`-transition traversed during a
+    /// closure is recorded in that branch's history as a `RunStep` with symbol
+    /// "$". Closure expands the state set without branching; nondeterminism only
+    /// branches on symbol transitions.
     ///
     /// Every branch is reported, including ones that terminate early: a thread
     /// that cannot read the current symbol is finalized (kept with its partial
-    /// history and `isFinal` from its stop state) instead of being dropped. Only
-    /// threads that consumed the whole input drive `accepted`.
+    /// history and `isFinal = false`) instead of being dropped. Only threads
+    /// that consumed the whole input, closed and landed in a final state drive
+    /// `accepted`.
     ///
     /// Semantics:
     /// - If the automaton has no final states at all, any string is rejected.
@@ -205,15 +213,14 @@ impl NFA {
     ///   not present in the alphabet stops reading right before it and rejects.
     /// - The thread count is capped to bound the worst-case (exponential) blowup.
     pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
-        let is_terminal_final = |nfa: &Self, state: i32| {
-            nfa.epsilon_closure_owned(state)
-                .iter()
-                .any(|c| nfa.final_states.contains(c))
-        };
-
-        let finalize = |nfa: &Self, thread: (Vec<RunStep>, i32)| Trace {
-            steps: thread.0,
-            isFinal: is_terminal_final(nfa, thread.1),
+        // Finalize a thread at the end of input: apply the final ε-closure
+        // (recording its `$` steps) and mark isFinal if any state is final.
+        let finalize_end = |nfa: &Self, thread: (Vec<RunStep>, i32)| -> Trace {
+            let (closure_set, closure_steps) = nfa.epsilon_closure_with_steps(thread.1);
+            let mut steps = thread.0;
+            steps.extend(closure_steps);
+            let is_final = closure_set.iter().any(|s| nfa.final_states.contains(s));
+            Trace { steps, isFinal: is_final }
         };
 
         if self.final_states.is_empty() {
@@ -227,23 +234,31 @@ impl NFA {
             // Symbol outside the alphabet: stop reading right before it and reject,
             // finalizing the threads alive so far (partial progress).
             if !self.alphabet.contains(&symbol) {
-                result.extend(threads.into_iter().map(|t| finalize(self, t)));
+                result.extend(threads.into_iter().map(|t| finalize_end(self, t)));
                 return (result, false);
             }
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
             'outer: for (history, state) in &threads {
+                // 1) ε-closure of this thread's state BEFORE the symbol; record
+                //    every `$` transition used into this branch's history.
+                let (closure_set, closure_steps) = self.epsilon_closure_with_steps(*state);
+                let mut hist = history.clone();
+                hist.extend(closure_steps);
+
+                // 2) Branch on every symbol transition from any closure state;
+                //    each target spawns a separate thread (its own history).
                 let mut advanced = false;
-                for c in self.epsilon_closure_owned(*state) {
-                    if let Some(targets) = self.transitions.get(&(c, symbol)) {
+                for from in &closure_set {
+                    if let Some(targets) = self.transitions.get(&(*from, symbol)) {
                         advanced = true;
                         for &t in targets {
                             if next_threads.len() >= MAX_THREADS {
                                 break 'outer;
                             }
-                            let mut h = history.clone();
+                            let mut h = hist.clone();
                             h.push(RunStep {
-                                from: c,
+                                from: *from,
                                 symbol: symbol.to_string(),
                                 to: t,
                             });
@@ -251,10 +266,11 @@ impl NFA {
                         }
                     }
                 }
-                // This thread cannot read the current symbol: finalize it so the
-                // branch still appears in the result (with its partial history).
+
+                // 3) This thread cannot read the current symbol: it is interrupted,
+                //    kept with its partial history and isFinal = false.
                 if !advanced {
-                    result.push(finalize(self, (history.clone(), *state)));
+                    result.push(Trace { steps: hist, isFinal: false });
                 }
             }
 
@@ -271,11 +287,15 @@ impl NFA {
             threads = next_threads;
         }
 
-        // End of input: finalize every surviving thread.
-        let accepted = threads
-            .iter()
-            .any(|(_, s)| is_terminal_final(self, *s));
-        result.extend(threads.into_iter().map(|t| finalize(self, t)));
+        // End of input: finalize every surviving thread (with final closure).
+        let mut accepted = false;
+        for thread in threads {
+            let trace = finalize_end(self, thread);
+            if trace.isFinal {
+                accepted = true;
+            }
+            result.push(trace);
+        }
         (result, accepted)
     }
 
@@ -296,6 +316,34 @@ impl NFA {
             }
         }
         closure
+    }
+
+    /// ε-closure of `state` plus the ordered list of `$`-transitions traversed
+    /// to reach every state in the closure. `$`-transitions are not branched on
+    /// (each is only recorded once per thread), matching JFLAP Step with Closure.
+    fn epsilon_closure_with_steps(&self, state: i32) -> (HashSet<i32>, Vec<RunStep>) {
+        let mut closure: HashSet<i32> = HashSet::new();
+        let mut steps: Vec<RunStep> = Vec::new();
+        let mut stack: Vec<i32> = vec![state];
+        while let Some(current) = stack.pop() {
+            if closure.contains(&current) {
+                continue;
+            }
+            closure.insert(current);
+            if let Some(next_states) = self.transitions.get(&(current, EPSILON)) {
+                for &next in next_states {
+                    if !closure.contains(&next) {
+                        steps.push(RunStep {
+                            from: current,
+                            symbol: EPSILON.to_string(),
+                            to: next,
+                        });
+                        stack.push(next);
+                    }
+                }
+            }
+        }
+        (closure, steps)
     }
 
     fn next_states_owned(&self, state: i32, symbol: char) -> HashSet<i32> {

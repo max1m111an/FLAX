@@ -25,8 +25,8 @@ npm run tauri dev
 
 Или используйте скрипт `run.bat` для запуска:
 
-```bat
-run.bat
+```bash
+.\run.bat
 ```
 
 Также в доступных [релизах](https://github.com/max1m111an/FLAX/releases) находится архив с исполняемым файлом приложения.
@@ -53,8 +53,8 @@ npm install
 npm run tauri dev
 ```
 
-Или используйте скрипт `run.dev.bat` для запуска (достаточно запустить 1 раз, чтобы установить _nightly toolchain_):
+Или используйте скрипт `run.dev.bat` для запуска:
 
-```bat
-run.dev.bat
+```bash
+.\run.dev.bat
 ```

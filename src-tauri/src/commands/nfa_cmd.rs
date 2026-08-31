@@ -360,7 +360,13 @@ pub fn nfa_run_str(
     match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(nfa) => {
             let (traces, accepted) = nfa.run_partial(&chars);
-            let processed_len = traces.iter().map(|t| t.steps.len()).max().unwrap_or(0);
+            // `$` (ε-closure) steps are part of the history; count only the
+            // symbol transitions actually consumed to derive the processed length.
+            let processed_len = traces
+                .iter()
+                .map(|t| t.steps.iter().filter(|s| s.symbol != "$").count())
+                .max()
+                .unwrap_or(0);
             let (status, message) = if accepted {
                 (200u16, format!("Цепочка '{}' принята", input))
             } else if processed_len > 0 {

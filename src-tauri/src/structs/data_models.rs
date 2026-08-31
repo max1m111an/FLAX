@@ -72,9 +72,7 @@ pub struct RunStep {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct Trace {
-    /// Шаги одного потока чтения (одной ветки NFA).
     pub steps: Vec<RunStep>,
-    /// Признак того, что этот поток остановился в финальном состоянии.
     pub isFinal: bool,
 }
 
@@ -82,6 +80,5 @@ pub struct Trace {
 pub struct RunResult {
     pub status: u16,
     pub message: String,
-    /// Трейсы параллельных чтений. Каждый элемент — один поток чтения.
     pub traces: Vec<Trace>,
 }
