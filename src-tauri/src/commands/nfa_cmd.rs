@@ -3,7 +3,7 @@ use tauri::State;
 use crate::{
     id_gen,
     structs::{
-        data_models::{AutomatonKind, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+        data_models::{AutomatonKind, MultipleRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
         nfa::{NFA, EPSILON, NFABuilder},
         store::AutomatonStore,
     },
@@ -392,6 +392,53 @@ pub fn nfa_run_str(
             traces: Vec::new(),
         },
     }
+}
+
+#[tauri::command]
+pub fn multiple_run_str(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    inputs: Vec<String>,
+) -> MultipleRunResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return MultipleRunResult {
+                status: 404,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                results: Vec::new(),
+            };
+        }
+    };
+
+    let nfa = match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
+        Ok(n) => n,
+        Err(err) => {
+            return MultipleRunResult {
+                status: 400,
+                message: format!("Некорректный автомат: {}", err),
+                results: Vec::new(),
+            };
+        }
+    };
+
+    let results: Vec<bool> = inputs
+        .iter()
+        .map(|input| verdict_for_input(&nfa, input))
+        .collect();
+
+    MultipleRunResult {
+        status: 200,
+        message: format!("Проверено {} цепочек", results.len()),
+        results,
+    }
+}
+
+/// Runs a single input string on the NFA and returns `true` if at least one
+/// thread reached a final state after consuming the whole input.
+pub(crate) fn verdict_for_input(nfa: &NFA, input: &str) -> bool {
+    let chars: Vec<char> = input.chars().collect();
+    nfa.run_partial(&chars).1
 }
 
 #[tauri::command]

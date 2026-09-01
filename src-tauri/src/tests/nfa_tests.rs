@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::commands::nfa_cmd::data_to_nfa;
+use crate::commands::nfa_cmd::{data_to_nfa, verdict_for_input};
 use crate::structs::data_models::{RunStep, StateData, Trace, TransitionData};
 use crate::structs::nfa::{EPSILON, NFA};
 
@@ -909,4 +909,22 @@ fn run_partial_rejects_all_when_no_final_state() {
     let (traces, accepted) = nfa.run_partial(&[]);
     assert!(!accepted);
     assert!(traces.is_empty());
+}
+
+#[test]
+fn verdict_for_input_returns_bool_in_order() {
+    // q0 --a--> q1 (final); accepts "a", rejects everything else.
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a')
+        .transition(0, 'a', 1)
+        .build()
+        .unwrap();
+
+    let inputs = ["a", "b", "", "aa"];
+    let verdicts: Vec<bool> = inputs.iter().map(|i| verdict_for_input(&nfa, i)).collect();
+    // Same order as the input strings, just booleans.
+    assert_eq!(verdicts, vec![true, false, false, false]);
 }

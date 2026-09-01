@@ -82,3 +82,12 @@ pub struct RunResult {
     pub message: String,
     pub traces: Vec<Trace>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultipleRunResult {
+    /// 200 if processed, 404 if the automaton was not found, 400 if invalid.
+    pub status: u16,
+    pub message: String,
+    /// `true` = Accepted, `false` = Rejected, in the same order as `inputs`.
+    pub results: Vec<bool>,
+}
