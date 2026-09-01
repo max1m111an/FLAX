@@ -35,7 +35,7 @@ pub fn run() {
             nfa_update_transition,
             nfa_remove_transition,
             nfa_run_str,
-            multiple_run_str,
+            nfa_multiple_run_str,
             nfa_remove_automaton,
             save_jff,
             load_jff,

@@ -3,7 +3,7 @@ use tauri::State;
 use crate::{
     id_gen,
     structs::{
-        data_models::{AutomatonKind, MultipleRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+        data_models::{AutomatonKind, LineTest, MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
         nfa::{NFA, EPSILON, NFABuilder},
         store::AutomatonStore,
     },
@@ -395,50 +395,61 @@ pub fn nfa_run_str(
 }
 
 #[tauri::command]
-pub fn multiple_run_str(
+pub fn nfa_multiple_run_str(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     inputs: Vec<String>,
-) -> MultipleRunResult {
+) -> MultiRunResult {
     let entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
-            return MultipleRunResult {
-                status: 404,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                results: Vec::new(),
+            return MultiRunResult {
+                success: 404,
+                traces: Vec::new(),
             };
         }
     };
 
     let nfa = match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(n) => n,
-        Err(err) => {
-            return MultipleRunResult {
-                status: 400,
-                message: format!("Некорректный автомат: {}", err),
-                results: Vec::new(),
+        Err(_) => {
+            return MultiRunResult {
+                success: 400,
+                traces: Vec::new(),
             };
         }
     };
 
-    let results: Vec<bool> = inputs
-        .iter()
-        .map(|input| verdict_for_input(&nfa, input))
+    let traces: Vec<LineTest> = inputs
+        .into_iter()
+        .map(|line| {
+            let (is_final, correct_symbols) = test_line(&nfa, &line);
+            LineTest {
+                line,
+                isFinal: is_final,
+                correctSymbols: correct_symbols,
+            }
+        })
         .collect();
 
-    MultipleRunResult {
-        status: 200,
-        message: format!("Проверено {} цепочек", results.len()),
-        results,
+    MultiRunResult {
+        success: 200,
+        traces,
     }
 }
 
-/// Runs a single input string on the NFA and returns `true` if at least one
-/// thread reached a final state after consuming the whole input.
-pub(crate) fn verdict_for_input(nfa: &NFA, input: &str) -> bool {
+/// Runs a single line on the NFA. Returns whether the whole line is accepted
+/// (`true` if at least one thread reaches a final state after consuming all of
+/// it) and how many symbols were consumed correctly (only non-`$` steps).
+pub(crate) fn test_line(nfa: &NFA, input: &str) -> (bool, usize) {
     let chars: Vec<char> = input.chars().collect();
-    nfa.run_partial(&chars).1
+    let (traces, accepted) = nfa.run_partial(&chars);
+    let correct_symbols = traces
+        .iter()
+        .map(|t| t.steps.iter().filter(|s| s.symbol != "$").count())
+        .max()
+        .unwrap_or(0);
+    (accepted, correct_symbols)
 }
 
 #[tauri::command]

@@ -84,10 +84,15 @@ pub struct RunResult {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct MultipleRunResult {
-    /// 200 if processed, 404 if the automaton was not found, 400 if invalid.
-    pub status: u16,
-    pub message: String,
-    /// `true` = Accepted, `false` = Rejected, in the same order as `inputs`.
-    pub results: Vec<bool>,
+#[allow(non_snake_case)]
+pub struct LineTest {
+    pub line: String,
+    pub isFinal: bool,
+    pub correctSymbols: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MultiRunResult {
+    pub success: u16,
+    pub traces: Vec<LineTest>,
 }

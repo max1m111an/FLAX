@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::commands::nfa_cmd::{data_to_nfa, verdict_for_input};
+use crate::commands::nfa_cmd::{data_to_nfa, test_line};
 use crate::structs::data_models::{RunStep, StateData, Trace, TransitionData};
 use crate::structs::nfa::{EPSILON, NFA};
 
@@ -912,19 +912,42 @@ fn run_partial_rejects_all_when_no_final_state() {
 }
 
 #[test]
-fn verdict_for_input_returns_bool_in_order() {
-    // q0 --a--> q1 (final); accepts "a", rejects everything else.
+fn test_line_reports_is_final_and_correct_symbols() {
+    // q0 --a--> q1 --a--> q2 (final). State q1 is not final, so "a" and "aa"
+    // consume both symbols but only "aa" ends in a final state.
     let nfa = NFA::builder()
-        .state(0).state(1)
+        .state(0).state(1).state(2)
         .set_initial(0)
-        .set_final(1)
+        .set_final(2)
         .symbol('a')
         .transition(0, 'a', 1)
+        .transition(1, 'a', 2)
         .build()
         .unwrap();
 
-    let inputs = ["a", "b", "", "aa"];
-    let verdicts: Vec<bool> = inputs.iter().map(|i| verdict_for_input(&nfa, i)).collect();
-    // Same order as the input strings, just booleans.
-    assert_eq!(verdicts, vec![true, false, false, false]);
+    // Empty line: 0 correct symbols, not accepted.
+    assert_eq!(test_line(&nfa, ""), (false, 0));
+    // "a": stopped at q1 which is not final; 1 symbol consumed.
+    assert_eq!(test_line(&nfa, "a"), (false, 1));
+    // "aa": full accept, 2 symbols.
+    assert_eq!(test_line(&nfa, "aa"), (true, 2));
+    // "aaa": all threads die; only 2 symbols are readable.
+    assert_eq!(test_line(&nfa, "aaa"), (false, 2));
+}
+
+#[test]
+fn test_line_counts_only_non_epsilon_steps() {
+    // q0 --eps--> q1 --a--> q2 (final). The `$` step is not counted as a
+    // consumed symbol, so "a" gives correctSymbols = 1 (not 2).
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a')
+        .epsilon(0, 1)
+        .transition(1, 'a', 2)
+        .build()
+        .unwrap();
+
+    assert_eq!(test_line(&nfa, "a"), (true, 1));
 }
