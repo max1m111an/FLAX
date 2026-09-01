@@ -359,7 +359,10 @@ pub fn nfa_run_str(
     let chars: Vec<char> = input.chars().collect();
     match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(nfa) => {
-            let (traces, accepted) = nfa.run_partial(&chars);
+            let (mut traces, accepted) = nfa.run_partial(&chars);
+            // Order the history so that accepted reading streams (isFinal) are
+            // listed before rejected ones.
+            traces.sort_by_key(|t| !t.isFinal);
             // `$` (ε-closure) steps are part of the history; count only the
             // symbol transitions actually consumed to derive the processed length.
             let processed_len = traces
