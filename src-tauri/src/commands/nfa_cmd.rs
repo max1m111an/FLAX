@@ -441,6 +441,23 @@ pub fn nfa_multiple_run_str(
     }
 }
 
+/// Generates an ordered set of test strings covering a wide range of NFA
+/// scenarios (empty, singles, paths to every state, transition activation,
+/// negative/dead-end cases, cyclic and long strings). Ready to paste into the
+/// Multiple Run fields.
+#[tauri::command]
+pub fn nfa_generate_inputs(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+) -> Result<Vec<String>, String> {
+    let entry = state
+        .get(automaton_id)
+        .ok_or_else(|| format!("Автомат с id {} не найден", automaton_id))?;
+    let nfa = data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet)
+        .map_err(|err| format!("Некорректный автомат: {}", err))?;
+    Ok(nfa.generate_test_inputs(50))
+}
+
 /// Runs a single line on the NFA. Returns whether the whole line is accepted
 /// (`true` if at least one thread reaches a final state after consuming all of
 /// it) and how many symbols were consumed correctly (only non-`$` steps).

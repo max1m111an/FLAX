@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
 use crate::structs::data_models::{RunStep, Trace};
@@ -360,6 +360,250 @@ impl NFA {
             result.extend(self.epsilon_closure_owned(s));
         }
         result
+    }
+
+    /// Shortest string of alphabet symbols that reaches every reachable state.
+    /// ε-transitions are traversed for free (they never add characters), so the
+    /// BFS level equals the number of consumed symbols and yields minimal strings.
+    /// States further than `max_len` symbols from the start are not expanded.
+    fn shortest_paths(&self, max_len: usize) -> HashMap<i32, String> {
+        let mut dist: HashMap<i32, String> = HashMap::new();
+        let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
+        dist.insert(self.initial_state, String::new());
+        queue.push_back((self.initial_state, String::new(), 0));
+
+        while let Some((state, path, depth)) = queue.pop_front() {
+            let closure = self.epsilon_closure_owned(state);
+            for t in &closure {
+                dist.entry(*t).or_insert_with(|| path.clone());
+            }
+            if depth >= max_len {
+                continue;
+            }
+            let mut moves: Vec<(char, i32)> = Vec::new();
+            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+                for c in &closure {
+                    if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                        for &t in targets {
+                            moves.push((ch, t));
+                        }
+                    }
+                }
+            }
+            for (ch, t) in moves {
+                if !dist.contains_key(&t) {
+                    let mut next_path = path.clone();
+                    next_path.push(ch);
+                    let next_depth = depth + 1;
+                    dist.insert(t, next_path.clone());
+                    queue.push_back((t, next_path, next_depth));
+                }
+            }
+        }
+        dist
+    }
+
+    /// Characters that are not in the alphabet (digits, then a letter, then `$`),
+    /// used for negative test cases. Returns up to two distinct symbols.
+    fn outside_alphabet_symbols(&self) -> Vec<char> {
+        let mut out: Vec<char> = Vec::new();
+        let preferred: Vec<char> = (b'0'..=b'9')
+            .chain(b'a'..=b'z')
+            .chain(b'A'..=b'Z')
+            .map(|b| b as char)
+            .collect();
+        let mut candidates: Vec<char> = vec!['0', '4', EPSILON];
+        candidates.extend(preferred);
+        for c in candidates {
+            if !self.alphabet.contains(&c) && !out.contains(&c) {
+                out.push(c);
+                if out.len() == 2 {
+                    break;
+                }
+            }
+        }
+        out
+    }
+
+    /// Shortest cycle string (>= 1 symbol) that leaves `start` and returns to it.
+    fn shortest_cycle_for(&self, start: i32, max_len: usize) -> Option<String> {
+        let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
+        let mut visited: HashSet<i32> = HashSet::new();
+
+        let closure = self.epsilon_closure_owned(start);
+        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            for c in &closure {
+                if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                    for &t in targets {
+                        if t == start {
+                            return Some(ch.to_string());
+                        }
+                        if !visited.contains(&t) {
+                            visited.insert(t);
+                            queue.push_back((t, ch.to_string(), 1));
+                        }
+                    }
+                }
+            }
+        }
+
+        while let Some((state, path, depth)) = queue.pop_front() {
+            if depth >= max_len {
+                continue;
+            }
+            let cl = self.epsilon_closure_owned(state);
+            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+                for c in &cl {
+                    if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                        for &t in targets {
+                            if t == start {
+                                let mut cycle = path.clone();
+                                cycle.push(ch);
+                                return Some(cycle);
+                            }
+                            if !visited.contains(&t) {
+                                visited.insert(t);
+                                let mut next_path = path.clone();
+                                next_path.push(ch);
+                                queue.push_back((t, next_path, depth + 1));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Finds any cycle in the automaton: a state from which a non-empty string
+    /// returns to itself. Returns the state and the cycle string.
+    fn find_cycle(&self, max_len: usize) -> Option<(i32, String)> {
+        for &s in &self.states {
+            if let Some(cycle) = self.shortest_cycle_for(s, max_len) {
+                return Some((s, cycle));
+            }
+        }
+        None
+    }
+
+    /// Strings that are valid up to the last symbol but then hit a dead end
+    /// (no alphabet transition available from the reached state's closure).
+    fn out_of_bounds_strings(&self, dist: &HashMap<i32, String>, result: &mut HashSet<String>) {
+        let mut states: Vec<i32> = dist.keys().copied().collect();
+        states.sort_by_key(|s| dist[s].len());
+        states.truncate(8);
+        for state in states {
+            let closure = self.epsilon_closure_owned(state);
+            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+                let has_transition = closure
+                    .iter()
+                    .any(|c| self.transitions.contains_key(&(*c, ch)));
+                if !has_transition {
+                    result.insert(format!("{}{}", dist[&state], ch));
+                }
+            }
+        }
+    }
+
+    /// Generates an ordered, de-duplicated set of test strings that covers a wide
+    /// range of NFA scenarios: empty input, single symbols, shortest paths to every
+    /// state, each transition activation, negative cases (symbols outside the
+    /// alphabet, dead ends, strings ending in non-final states) and cyclic/long
+    /// strings. Results are sorted by length and limited to `cap` entries.
+    pub fn generate_test_inputs(&self, cap: usize) -> Vec<String> {
+        const MAX_DEPTH: usize = 10;
+
+        let mut result: HashSet<String> = HashSet::new();
+
+        result.insert(String::new());
+        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            result.insert(ch.to_string());
+        }
+
+        let dist = self.shortest_paths(MAX_DEPTH);
+
+        let mut paths: Vec<(&i32, &String)> = dist.iter().collect();
+        paths.sort_by_key(|(_, p)| p.len());
+        for &(_, path) in &paths {
+            result.insert(path.clone());
+        }
+
+        for ((from, symbol), _targets) in &self.transitions {
+            if let Some(path) = dist.get(from) {
+                if *symbol == EPSILON {
+                    result.insert(path.clone());
+                } else {
+                    let mut activated = path.clone();
+                    activated.push(*symbol);
+                    result.insert(activated);
+                }
+            }
+        }
+
+        self.out_of_bounds_strings(&dist, &mut result);
+
+        let outside = self.outside_alphabet_symbols();
+        let mut bases: Vec<String> = Vec::new();
+        for &s in &self.final_states {
+            if let Some(p) = dist.get(&s) {
+                bases.push(p.clone());
+            }
+        }
+        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            bases.push(ch.to_string());
+        }
+        bases.sort();
+        bases.dedup();
+        bases.sort_by(|a, b| a.len().cmp(&b.len()));
+        bases.truncate(4);
+
+        for o in &outside {
+            let outside_str = o.to_string();
+            result.insert(outside_str.clone());
+            for base in &bases {
+                result.insert(format!("{}{}", outside_str, base));
+                result.insert(format!("{}{}", base, outside_str));
+                let mid = base.len() / 2;
+                let (left, right) = base.split_at(mid);
+                result.insert(format!("{}{}{}", left, outside_str, right));
+            }
+        }
+
+        if let Some((entry, cycle)) = self.find_cycle(MAX_DEPTH) {
+            let prefix = dist.get(&entry).cloned().unwrap_or_default();
+            result.insert(format!("{}{}", prefix, cycle));
+            result.insert(format!("{}{}{}", prefix, cycle, cycle));
+            result.insert(format!("{}{}{}{}", prefix, cycle, cycle, cycle));
+        }
+
+        let longest = dist
+            .values()
+            .max_by_key(|p| p.len())
+            .cloned()
+            .unwrap_or_default();
+        let mut long = longest.clone();
+        if let Some((entry, cycle)) = self.find_cycle(MAX_DEPTH) {
+            let prefix = dist.get(&entry).cloned().unwrap_or_default();
+            let mut walk = prefix;
+            while walk.len() < 20 {
+                walk.push_str(&cycle);
+                if cycle.is_empty() {
+                    break;
+                }
+            }
+            walk.truncate(20);
+            if walk.len() > long.len() {
+                long = walk;
+            }
+        }
+        if long.len() >= 12 {
+            result.insert(long);
+        }
+
+        let mut sorted: Vec<String> = result.into_iter().collect();
+        sorted.sort_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)));
+        sorted.truncate(cap);
+        sorted
     }
 }
 

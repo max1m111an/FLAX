@@ -951,3 +951,73 @@ fn test_line_counts_only_non_epsilon_steps() {
 
     assert_eq!(test_line(&nfa, "a"), (true, 1));
 }
+
+#[test]
+fn generate_test_inputs_empty_singles_and_sorted() {
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 1)
+        .transition(1, 'b', 2)
+        .build()
+        .unwrap();
+
+    let inputs = nfa.generate_test_inputs(50);
+    assert!(inputs.contains(&"".to_string()));
+    assert!(inputs.contains(&"a".to_string()));
+    assert!(inputs.contains(&"b".to_string()));
+    // minimal path to the final state (through the intermediate state)
+    assert!(inputs.contains(&"ab".to_string()));
+    assert!(inputs.len() <= 50);
+    // sorted by length ascending
+    assert!(inputs.windows(2).all(|w| w[0].len() <= w[1].len()));
+    // de-duplicated
+    let mut uniq = inputs.clone();
+    uniq.dedup();
+    assert_eq!(uniq, inputs);
+    // at least one negative case with a symbol outside the alphabet
+    assert!(inputs.iter().any(|s| s.chars().any(|c| !nfa.alphabet().contains(&c))));
+}
+
+#[test]
+fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
+    // q0 --a--> q0 (self-loop cycle), q0 --b--> q1 (final)
+    let nfa = NFA::builder()
+        .state(0).state(1)
+        .set_initial(0)
+        .set_final(1)
+        .symbol('a').symbol('b')
+        .transition(0, 'a', 0)
+        .transition(0, 'b', 1)
+        .build()
+        .unwrap();
+
+    let inputs = nfa.generate_test_inputs(50);
+    // the "a" cycle repeated 2 and 3 times
+    assert!(inputs.contains(&"aa".to_string()));
+    assert!(inputs.contains(&"aaa".to_string()));
+    // a long (>= 12 chars) string covering the cycle
+    assert!(inputs.iter().any(|s| s.len() >= 12));
+}
+
+#[test]
+fn generate_test_inputs_handles_epsilon_automaton() {
+    // q0 --eps--> q1 --a--> q2 (final): shortest path to q2 is "a", not "$a"
+    let nfa = NFA::builder()
+        .state(0).state(1).state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a')
+        .epsilon(0, 1)
+        .transition(1, 'a', 2)
+        .build()
+        .unwrap();
+
+    let inputs = nfa.generate_test_inputs(50);
+    assert!(inputs.contains(&"a".to_string()));
+    assert!(inputs.contains(&"".to_string()));
+    // epsilon symbol is not emitted as a learned path character
+    assert!(inputs.iter().all(|s| !s.contains('$')));
+}
