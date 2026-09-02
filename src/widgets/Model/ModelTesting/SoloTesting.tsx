@@ -5,7 +5,7 @@ import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import Forward from "@/assets/svg/Forward.svg?react";
 import Reset from "@/assets/svg/Reset.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button/Button.tsx";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
@@ -24,6 +24,29 @@ export default function SoloTesting() {
     const [ traces, setTraces ] = useState<{ steps: RunStep[]; isFinal: boolean }[]>([]);
     const [ currentIndex, setCurrentIndex ] = useState<number>(0);
     const [ finalStatus, setFinalStatus ] = useState<string | null>(null);
+    const initializedRef = useRef(false);
+
+    useEffect(() => {
+        if (initializedRef.current || !currentTab) return;
+        initializedRef.current = true;
+
+        if (currentTab.pendingTestLine && currentTab.pendingTraces && currentTab.pendingTraces.length > 0) {
+            setTestLine(currentTab.pendingTestLine.split("\n")[0]);
+            setTraces(currentTab.pendingTraces);
+            setCurrentIndex(0);
+            setFinalStatus(currentTab.pendingTraces.some((t) => t.isFinal) ? "accepted" : "reject");
+            setIsPlay(true);
+            applyHighlights(0, currentTab.pendingTraces);
+            updateTab({
+                ...currentTab,
+                pendingTestLine: null,
+                pendingTraces: null,
+            });
+        } else if (currentTab.testInput) {
+            setTestLine(currentTab.testInput.split("\n")[0]);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [ currentTab ]);
 
     if (!currentTab) return null;
 
@@ -111,8 +134,6 @@ export default function SoloTesting() {
             setTraces([]);
             applyHighlights(0, []);
         }
-        console.log(response);
-        console.log(currentTab.automaton);
         setCurrentIndex(0);
         setFinalStatus(null);
         setIsPlay(true);

@@ -184,3 +184,28 @@ export const runStrNFA = async (params: runStrNFARequest): Promise<runStrNFAResp
     }
 };
 
+export type lineTest = {
+    line: string;
+    isFinal: boolean;
+    correctSymbols: number;
+}
+
+type multiRunStrNFARequest = {
+    automatonId: number;
+    inputs: string[];
+}
+
+type multiRunStrNFAResponse = {
+    status: number;
+    traces: lineTest[];
+}
+
+export const multiRunStrNFA = async (params: multiRunStrNFARequest): Promise<multiRunStrNFAResponse> => {
+    try {
+        const response = await invoke<multiRunStrNFAResponse>("nfa_multiple_run_str", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_multi_run_str:", error);
+        throw error;
+    }
+};
