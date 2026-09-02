@@ -510,9 +510,7 @@ impl NFA {
     /// state, each transition activation, negative cases (symbols outside the
     /// alphabet, dead ends, strings ending in non-final states) and cyclic/long
     /// strings. Results are sorted by length and limited to `cap` entries.
-    pub fn generate_test_inputs(&self, cap: usize) -> Vec<String> {
-        const MAX_DEPTH: usize = 10;
-
+    pub fn generate_test_inputs(&self, cap: usize, depth: usize) -> Vec<String> {
         let mut result: HashSet<String> = HashSet::new();
 
         result.insert(String::new());
@@ -520,7 +518,7 @@ impl NFA {
             result.insert(ch.to_string());
         }
 
-        let dist = self.shortest_paths(MAX_DEPTH);
+        let dist = self.shortest_paths(depth);
 
         let mut paths: Vec<(&i32, &String)> = dist.iter().collect();
         paths.sort_by_key(|(_, p)| p.len());
@@ -569,7 +567,7 @@ impl NFA {
             }
         }
 
-        if let Some((entry, cycle)) = self.find_cycle(MAX_DEPTH) {
+        if let Some((entry, cycle)) = self.find_cycle(depth) {
             let prefix = dist.get(&entry).cloned().unwrap_or_default();
             result.insert(format!("{}{}", prefix, cycle));
             result.insert(format!("{}{}{}", prefix, cycle, cycle));
@@ -582,7 +580,7 @@ impl NFA {
             .cloned()
             .unwrap_or_default();
         let mut long = longest.clone();
-        if let Some((entry, cycle)) = self.find_cycle(MAX_DEPTH) {
+        if let Some((entry, cycle)) = self.find_cycle(depth) {
             let prefix = dist.get(&entry).cloned().unwrap_or_default();
             let mut walk = prefix;
             while walk.len() < 20 {

@@ -964,7 +964,7 @@ fn generate_test_inputs_empty_singles_and_sorted() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50);
+    let inputs = nfa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"".to_string()));
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"b".to_string()));
@@ -994,7 +994,7 @@ fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50);
+    let inputs = nfa.generate_test_inputs(50, 15);
     // the "a" cycle repeated 2 and 3 times
     assert!(inputs.contains(&"aa".to_string()));
     assert!(inputs.contains(&"aaa".to_string()));
@@ -1015,7 +1015,7 @@ fn generate_test_inputs_handles_epsilon_automaton() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50);
+    let inputs = nfa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"".to_string()));
     // epsilon symbol is not emitted as a learned path character

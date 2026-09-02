@@ -3,7 +3,7 @@ use tauri::State;
 use crate::{
     id_gen,
     structs::{
-        data_models::{AutomatonKind, LineTest, MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult},
+        data_models::{AutomatonKind, LineTest, MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult, GenerateInputsResult},
         nfa::{NFA, EPSILON, NFABuilder},
         store::AutomatonStore,
     },
@@ -408,6 +408,7 @@ pub fn nfa_multiple_run_str(
         None => {
             return MultiRunResult {
                 status: 404,
+                message: format!("Автомат с id {} не найден", automaton_id),
                 traces: Vec::new(),
             };
         }
@@ -418,6 +419,7 @@ pub fn nfa_multiple_run_str(
         Err(_) => {
             return MultiRunResult {
                 status: 400,
+                message: format!("Некорректный автомат"),
                 traces: Vec::new(),
             };
         }
@@ -437,6 +439,7 @@ pub fn nfa_multiple_run_str(
 
     MultiRunResult {
         status: 200,
+        message: format!(""),
         traces,
     }
 }
@@ -449,13 +452,36 @@ pub fn nfa_multiple_run_str(
 pub fn nfa_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-) -> Result<Vec<String>, String> {
-    let entry = state
-        .get(automaton_id)
-        .ok_or_else(|| format!("Автомат с id {} не найден", automaton_id))?;
-    let nfa = data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet)
-        .map_err(|err| format!("Некорректный автомат: {}", err))?;
-    Ok(nfa.generate_test_inputs(50))
+) -> GenerateInputsResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return GenerateInputsResult {
+                status: 404,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                inputs: Vec::new(),
+            };
+        }
+    };
+    
+    let nfa = match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
+        Ok(n) => n,
+        Err(_) => {
+            return GenerateInputsResult {
+                status: 400,
+                message: format!("Некорректный автомат"),
+                inputs: Vec::new(),
+            };
+        }
+    };
+
+    let resp_vec: Vec<String> = nfa.generate_test_inputs(50, 15);
+    
+    GenerateInputsResult {
+        status: 200,
+        message: format!("Сгенерировано {} тестовых входов", resp_vec.len()),
+        inputs: resp_vec,
+    }
 }
 
 /// Runs a single line on the NFA. Returns whether the whole line is accepted

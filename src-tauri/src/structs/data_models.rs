@@ -94,5 +94,13 @@ pub struct LineTest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiRunResult {
     pub status: u16,
+    pub message: String,
     pub traces: Vec<LineTest>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GenerateInputsResult {
+    pub status: u16,
+    pub message: String,
+    pub inputs: Vec<String>,
 }
