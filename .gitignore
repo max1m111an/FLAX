@@ -74,6 +74,8 @@ src-tauri/gen/schemas/
 
 # max1m111an api file
 api.md
+AGENTS.md
+tz.md
 
 # zed
 .zed
