@@ -100,15 +100,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  position: relative;
+  flex: 1;
   padding: 8px 12px;
   font-weight: 600;
   font-size: 14px;
-  gap: 4px;
   color: var(--text-primary);
   background: transparent;
   border: var(--border-base) solid 1px;
   border-radius: 12px;
   cursor: pointer;
+
+  svg {
+    position: absolute;
+    left: 12px;
+    width: 16px;
+    height: 16px;
+  }
 
   &:hover {
     filter: brightness(1.1);
@@ -189,4 +197,149 @@
 .resetBtnWrapper {
   display: flex;
   flex-direction: row;
+}
+
+.multiTable {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--border-base);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tableHead {
+  background: var(--bg-surface);
+
+  tr {
+    display: grid;
+    grid-template-columns: 1fr 80px 36px;
+    align-items: center;
+    height: 36px;
+  }
+
+  .tableHeaderCell {
+    height: 36px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    text-align: left;
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border-base);
+  }
+}
+
+.tableBody {
+  display: block;
+}
+
+.tableRow {
+  display: grid;
+  grid-template-columns: 1fr 80px 36px;
+  align-items: center;
+  border-bottom: 1px solid var(--border-base);
+  background: var(--bg-base);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &.rowAccepted {
+    background: var(--green-bg);
+  }
+
+  &.rowRejected {
+    background: var(--red-bg);
+  }
+}
+
+.charCell {
+  line-height: 1.4;
+  width: 100%;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  padding: 6px 12px 6px 8px;
+}
+
+.tableCell {
+  padding: 0;
+  vertical-align: middle;
+}
+
+.resultChar {
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+  color: var(--text-primary);
+
+  &.charSuccess {
+    color: var(--green-main);
+  }
+
+  &.charError {
+    color: var(--red-main);
+  }
+}
+
+.statusAccepted {
+  color: var(--green-main);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  padding: 6px 4px;
+}
+
+.statusRejected {
+  color: var(--red-main);
+  font-weight: 600;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  padding: 6px 4px;
+}
+
+.openSoloBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  color: var(--text-primary);
+  background: var(--accent-bg);
+  border: 1px solid var(--accent-primary);
+  border-radius: 6px;
+  cursor: pointer;
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:hover {
+    filter: brightness(1.1);
+  }
+}
+
+.stepHeaderCell {
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.stepHeaderCell svg {
+  width: 16px;
+  height: 16px;
+}
+
+.stepCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }

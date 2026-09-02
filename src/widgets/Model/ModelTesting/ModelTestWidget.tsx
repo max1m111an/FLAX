@@ -1,7 +1,5 @@
 import Cancel from "@/assets/svg/Cancel.svg?react";
-import { useState } from "react";
 import SoloTesting from "./SoloTesting.tsx";
-import FileTesting from "./FileTesting.tsx";
 import MultiTesting from "./MultiTesting.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
@@ -10,40 +8,49 @@ import styles from "./ModelTestWidget.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 
 export default function ModelTestWidget() {
-    const [ typeTest, setTypeTest ] = useState<string>("solo");
-    const [ testKey, setTestKey ] = useState<number>(0);
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
+
+    const typeTest = currentTab?.testMode ?? "solo";
+
+    const switchType = (type: string) => {
+        if (currentTab) {
+            updateTab({ ...currentTab, testMode: type });
+        }
+    };
+
+    const closePanel = () => {
+        if (currentTab) {
+            updateTab({
+                ...currentTab,
+                activePanel: null,
+                selectedState: null,
+                selectedTransition: null,
+                selectedNodeId: null,
+                pendingTestLine: null,
+                pendingTraces: null,
+            });
+        }
+    };
 
     return (
         <div className={ styles.wrapper }>
             <div className={ styles.titleCancelWrapper }>
                 <Typography variant="title">Тестирование</Typography>
-                <IconButton variant="cancel" onClick={ () => {
-                    if (currentTab) {
-                        setTestKey((k) => k + 1);
-                        updateTab({
-                            ...currentTab,
-                            activePanel: null,
-                            selectedState: null,
-                            selectedTransition: null,
-                            selectedNodeId: null,
-                        });
-                    }
-                } }>
+                <IconButton variant="cancel" onClick={ closePanel }>
                     <Cancel />
                 </IconButton>
             </div>
             <div className={ styles.switchWrapper }>
                 <div className={ clsx(styles.switchIndicator, styles[typeTest]) } />
                 <button
-                    onClick={ () => setTypeTest("solo") }
+                    onClick={ () => switchType("solo") }
                     className={ clsx(styles.switchBtn, typeTest === "solo" && styles.active) }
                 >
                     Единичный
                 </button>
                 <button
-                    onClick={ () => setTypeTest("multi") }
+                    onClick={ () => switchType("multi") }
                     className={ clsx(styles.switchBtn, typeTest === "multi" && styles.active) }
                 >
                     Мульти
@@ -51,13 +58,10 @@ export default function ModelTestWidget() {
             </div>
             <div className={ styles.testTypeWrapper }>
                 {typeTest === "solo" && (
-                    <SoloTesting key={ testKey } />
+                    <SoloTesting />
                 )}
                 {typeTest === "multi" && (
-                    <>
-                        <MultiTesting />
-                        <FileTesting />
-                    </>
+                    <MultiTesting />
                 )}
             </div>
         </div>

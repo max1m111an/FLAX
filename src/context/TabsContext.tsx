@@ -4,6 +4,7 @@ import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { createNewNFA } from "@/api/nfaAPI.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
+import type { Trace } from "@/api/nfaAPI.ts";
 
 export interface TraceHighlight {
     id: number;
@@ -20,6 +21,10 @@ export interface tab{
     selectedState: TraceHighlight[] | null;
     selectedTransition: TraceHighlight[] | null;
     selectedNodeId: number | null;
+    testMode: string;
+    testInput: string;
+    pendingTestLine: string | null;
+    pendingTraces: Trace[] | null;
 
 }
 
@@ -56,6 +61,10 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 selectedState: null,
                 selectedTransition: null,
                 selectedNodeId: null,
+                testMode: "solo",
+                testInput: "",
+                pendingTestLine: null,
+                pendingTraces: null,
             };
             setTabs([ ...tabs, newTab ]);
 
