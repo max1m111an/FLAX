@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+﻿use std::collections::{HashMap, HashSet};
 
 use crate::structs::automata::{Automaton, NondeterministicAutomaton};
 use crate::commands::nfa_cmd::{data_to_nfa, test_line};
@@ -315,11 +315,11 @@ fn run_returns_trace_for_simple_nfa() {
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
-        RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        RunStep { from: 0, symbol: 'a', to: 1 }
     );
     assert_eq!(
         trace[1],
-        RunStep { from: 1, symbol: "b".to_string(), to: 2 }
+        RunStep { from: 1, symbol: 'b', to: 2 }
     );
 }
 
@@ -339,11 +339,11 @@ fn run_tracks_epsilon_steps() {
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
-        RunStep { from: 0, symbol: "$".to_string(), to: 1 }
+        RunStep { from: 0, symbol: EPSILON, to: 1 }
     );
     assert_eq!(
         trace[1],
-        RunStep { from: 1, symbol: "a".to_string(), to: 2 }
+        RunStep { from: 1, symbol: 'a', to: 2 }
     );
 }
 
@@ -365,15 +365,15 @@ fn run_finds_accepting_branch() {
     assert_eq!(trace.len(), 3);
     assert_eq!(
         trace[0],
-        RunStep { from: 0, symbol: "a".to_string(), to: 0 }
+        RunStep { from: 0, symbol: 'a', to: 0 }
     );
     assert_eq!(
         trace[1],
-        RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        RunStep { from: 0, symbol: 'a', to: 1 }
     );
     assert_eq!(
         trace[2],
-        RunStep { from: 1, symbol: "b".to_string(), to: 2 }
+        RunStep { from: 1, symbol: 'b', to: 2 }
     );
 }
 
@@ -426,8 +426,8 @@ fn run_partial_full_acceptance() {
         traces[0],
         Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+                RunStep { from: 0, symbol: 'a', to: 1 },
+                RunStep { from: 1, symbol: 'b', to: 2 },
             ],
             isFinal: true,
         }
@@ -502,7 +502,7 @@ fn run_partial_stuck_mid_string() {
     assert_eq!(
         traces[0],
         Trace {
-            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
+            steps: vec![RunStep { from: 0, symbol: 'a', to: 1 }],
             isFinal: false,
         }
     );
@@ -549,8 +549,8 @@ fn run_partial_with_epsilon() {
         traces[0],
         Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "$".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "a".to_string(), to: 2 },
+                RunStep { from: 0, symbol: '$', to: 1 },
+                RunStep { from: 1, symbol: 'a', to: 2 },
             ],
             isFinal: true,
         }
@@ -578,8 +578,8 @@ fn run_partial_closes_after_last_symbol() {
         traces[0],
         Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "$".to_string(), to: 2 },
+                RunStep { from: 0, symbol: 'a', to: 1 },
+                RunStep { from: 1, symbol: '$', to: 2 },
             ],
             isFinal: true,
         }
@@ -606,8 +606,8 @@ fn run_partial_transitive_epsilon_closure_recorded() {
         traces[0],
         Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "$".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "$".to_string(), to: 2 },
+                RunStep { from: 0, symbol: '$', to: 1 },
+                RunStep { from: 1, symbol: '$', to: 2 },
             ],
             isFinal: true,
         }
@@ -640,9 +640,9 @@ fn run_partial_nondeterministic() {
     assert_eq!(
         final_trace.steps,
         vec![
-            RunStep { from: 0, symbol: "a".to_string(), to: 0 },
-            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-            RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+            RunStep { from: 0, symbol: 'a', to: 0 },
+            RunStep { from: 0, symbol: 'a', to: 1 },
+            RunStep { from: 1, symbol: 'b', to: 2 },
         ]
     );
 }
@@ -665,13 +665,13 @@ fn run_partial_nondeterministic_parallel() {
     assert_eq!(traces.len(), 2);
     assert!(traces.contains(
         &Trace {
-            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 0 }],
+            steps: vec![RunStep { from: 0, symbol: 'a', to: 0 }],
             isFinal: false,
         }
     ));
     assert!(traces.contains(
         &Trace {
-            steps: vec![RunStep { from: 0, symbol: "a".to_string(), to: 1 }],
+            steps: vec![RunStep { from: 0, symbol: 'a', to: 1 }],
             isFinal: true,
         }
     ));
@@ -700,15 +700,15 @@ fn run_partial_converging_branches_keep_separate_histories() {
     assert_eq!(traces.len(), 2);
     let t1 = Trace {
         steps: vec![
-            RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-            RunStep { from: 1, symbol: "b".to_string(), to: 3 },
+            RunStep { from: 0, symbol: 'a', to: 1 },
+            RunStep { from: 1, symbol: 'b', to: 3 },
         ],
         isFinal: true,
     };
     let t2 = Trace {
         steps: vec![
-            RunStep { from: 0, symbol: "a".to_string(), to: 2 },
-            RunStep { from: 2, symbol: "b".to_string(), to: 3 },
+            RunStep { from: 0, symbol: 'a', to: 2 },
+            RunStep { from: 2, symbol: 'b', to: 3 },
         ],
         isFinal: true,
     };
@@ -757,9 +757,9 @@ fn run_partial_reports_every_branch_including_dead() {
     assert_eq!(
         final_trace.steps,
         vec![
-            RunStep { from: 0, symbol: "1".to_string(), to: 2 },
-            RunStep { from: 2, symbol: "2".to_string(), to: 5 },
-            RunStep { from: 5, symbol: "3".to_string(), to: 7 },
+            RunStep { from: 0, symbol: '1', to: 2 },
+            RunStep { from: 2, symbol: '2', to: 5 },
+            RunStep { from: 5, symbol: '3', to: 7 },
         ]
     );
 }
@@ -774,11 +774,11 @@ fn data_to_nfa_ignores_orphan_transitions() {
     ];
     let transitions = vec![
         // valid: 0 -1-> 1
-        TransitionData { id: 1, from: 0, to: 1, symbol: "1".into() },
+        TransitionData { id: 1, from: 0, to: 1, symbol: '1' },
         // orphan: 'to' 99 does not exist
-        TransitionData { id: 2, from: 0, to: 99, symbol: "1".into() },
+        TransitionData { id: 2, from: 0, to: 99, symbol: '1' },
         // orphan: 'from' 99 does not exist
-        TransitionData { id: 3, from: 99, to: 1, symbol: "1".into() },
+        TransitionData { id: 3, from: 99, to: 1, symbol: '1' },
     ];
 
     let nfa = data_to_nfa(&states, &transitions, &[]).unwrap();
@@ -786,7 +786,7 @@ fn data_to_nfa_ignores_orphan_transitions() {
     let (traces, accepted) = nfa.run_partial(&['1']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
-    assert_eq!(traces[0].steps, vec![RunStep { from: 0, symbol: "1".to_string(), to: 1 }]);
+    assert_eq!(traces[0].steps, vec![RunStep { from: 0, symbol: '1', to: 1 }]);
 }
 
 #[test]
@@ -816,8 +816,8 @@ fn run_partial_explores_all_branches() {
     assert!(traces.contains(
         &Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "b".to_string(), to: 4 },
+                RunStep { from: 0, symbol: 'a', to: 1 },
+                RunStep { from: 1, symbol: 'b', to: 4 },
             ],
             isFinal: true,
         }
@@ -825,8 +825,8 @@ fn run_partial_explores_all_branches() {
     assert!(traces.contains(
         &Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 2 },
-                RunStep { from: 2, symbol: "b".to_string(), to: 4 },
+                RunStep { from: 0, symbol: 'a', to: 2 },
+                RunStep { from: 2, symbol: 'b', to: 4 },
             ],
             isFinal: true,
         }
@@ -834,8 +834,8 @@ fn run_partial_explores_all_branches() {
     assert!(traces.contains(
         &Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 3 },
-                RunStep { from: 3, symbol: "b".to_string(), to: 4 },
+                RunStep { from: 0, symbol: 'a', to: 3 },
+                RunStep { from: 3, symbol: 'b', to: 4 },
             ],
             isFinal: true,
         }
@@ -881,8 +881,8 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
         traces[0],
         Trace {
             steps: vec![
-                RunStep { from: 0, symbol: "a".to_string(), to: 1 },
-                RunStep { from: 1, symbol: "b".to_string(), to: 2 },
+                RunStep { from: 0, symbol: 'a', to: 1 },
+                RunStep { from: 1, symbol: 'b', to: 2 },
             ],
             isFinal: true,
         }

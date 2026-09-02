@@ -137,7 +137,7 @@ impl NFA {
                     for &next in next_states {
                         steps.push(RunStep {
                             from: state,
-                            symbol: EPSILON.to_string(),
+                            symbol: EPSILON,
                             to: next,
                         });
                         if explore(nfa, next, pos, input, steps, visited) {
@@ -153,7 +153,7 @@ impl NFA {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
-                        symbol: EPSILON.to_string(),
+                        symbol: EPSILON,
                         to: next,
                     });
                     if explore(nfa, next, pos, input, steps, visited) {
@@ -168,7 +168,7 @@ impl NFA {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
-                        symbol: symbol.to_string(),
+                        symbol: symbol,
                         to: next,
                     });
                     if explore(nfa, next, pos + 1, input, steps, visited) {
@@ -259,7 +259,7 @@ impl NFA {
                             let mut h = hist.clone();
                             h.push(RunStep {
                                 from: *from,
-                                symbol: symbol.to_string(),
+                                symbol: symbol,
                                 to: t,
                             });
                             next_threads.push((h, t));
@@ -335,7 +335,7 @@ impl NFA {
                     if !closure.contains(&next) {
                         steps.push(RunStep {
                             from: current,
-                            symbol: EPSILON.to_string(),
+                            symbol: EPSILON,
                             to: next,
                         });
                         stack.push(next);

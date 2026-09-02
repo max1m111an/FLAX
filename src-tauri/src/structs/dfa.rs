@@ -123,7 +123,7 @@ impl DFA {
                 Some(&next) => {
                     steps.push(RunStep {
                         from: current,
-                        symbol: symbol.to_string(),
+                        symbol: symbol,
                         to: next,
                     });
                     current = next;

@@ -66,10 +66,10 @@ fn even_a_data() -> AutomatonData {
             },
         ],
         transitions: vec![
-            TransitionData { id: 1, from: 0, to: 1, symbol: "a".to_string() },
-            TransitionData { id: 2, from: 1, to: 0, symbol: "a".to_string() },
-            TransitionData { id: 3, from: 0, to: 0, symbol: "b".to_string() },
-            TransitionData { id: 4, from: 1, to: 1, symbol: "b".to_string() },
+            TransitionData { id: 1, from: 0, to: 1, symbol: 'a' },
+            TransitionData { id: 2, from: 1, to: 0, symbol: 'a' },
+            TransitionData { id: 3, from: 0, to: 0, symbol: 'b' },
+            TransitionData { id: 4, from: 1, to: 1, symbol: 'b' },
         ],
         alphabet: vec!['a', 'b'],
     }
@@ -132,7 +132,7 @@ fn epsilon_transition_written_as_empty_read() {
         id: 5,
         from: 0,
         to: 1,
-        symbol: "$".to_string(),
+        symbol: '$',
     });
 
     let xml = to_jff(&data);
@@ -144,11 +144,11 @@ fn epsilon_transition_written_as_empty_read() {
 fn escapes_special_characters() {
     let mut data = even_a_data();
     data.states[0].label = "q&<0>\"'".to_string();
-    data.transitions[0].symbol = "<&>".to_string();
+    data.transitions[0].symbol = '&';
 
     let xml = to_jff(&data);
     assert!(xml.contains("name=\"q&amp;&lt;0&gt;&quot;&apos;\""));
-    assert!(xml.contains("<read>&lt;&amp;&gt;</read>"));
+    assert!(xml.contains("<read>&amp;</read>"));
 }
 
 #[test]
@@ -191,7 +191,7 @@ fn writes_example_files_to_target() {
         id: 5,
         from: 0,
         to: 1,
-        symbol: "$".to_string(),
+        symbol: '$',
     });
     let nfa = to_jff(&nfa_data);
 
@@ -231,9 +231,9 @@ fn parses_even_a_jff() {
         parsed
             .transitions
             .iter()
-            .map(|t| (t.from, t.to, t.symbol.as_str()))
+            .map(|t| (t.from, t.to, t.symbol))
             .collect::<Vec<_>>(),
-        vec![(0, 1, "a"), (1, 0, "a"), (0, 0, "b"), (1, 1, "b")]
+        vec![(0, 1, 'a'), (1, 0, 'a'), (0, 0, 'b'), (1, 1, 'b')]
     );
 
     assert_eq!(parsed.alphabet, vec!['a', 'b']);
@@ -253,8 +253,8 @@ fn parses_epsilon_transition_as_dollar() {
 
     let parsed = parse_jff(xml).unwrap();
     assert_eq!(parsed.transitions.len(), 2);
-    assert_eq!(parsed.transitions[0].symbol, "$");
-    assert_eq!(parsed.transitions[1].symbol, "a");
+    assert_eq!(parsed.transitions[0].symbol, '$');
+    assert_eq!(parsed.transitions[1].symbol, 'a');
     assert_eq!(parsed.alphabet, vec!['a']);
 }
 
@@ -269,7 +269,7 @@ fn missing_read_is_epsilon() {
     </structure>"#;
 
     let parsed = parse_jff(xml).unwrap();
-    assert_eq!(parsed.transitions[0].symbol, "$");
+    assert_eq!(parsed.transitions[0].symbol, '$');
 }
 
 #[test]
@@ -300,7 +300,7 @@ fn decodes_xml_entities_in_name_and_read() {
 
     let parsed = parse_jff(xml).unwrap();
     assert_eq!(parsed.states[0].label, "q&<1>");
-    assert_eq!(parsed.transitions[0].symbol, "&");
+    assert_eq!(parsed.transitions[0].symbol, '&');
     assert_eq!(parsed.alphabet, vec!['&']);
 }
 

@@ -254,11 +254,11 @@ fn run_returns_trace_for_accepted_string() {
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
-        RunStep { from: 0, symbol: "a".to_string(), to: 1 }
+        RunStep { from: 0, symbol: 'a', to: 1 }
     );
     assert_eq!(
         trace[1],
-        RunStep { from: 1, symbol: "a".to_string(), to: 0 }
+        RunStep { from: 1, symbol: 'a', to: 0 }
     );
 }
 

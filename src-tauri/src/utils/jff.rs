@@ -52,10 +52,10 @@ pub fn to_jff(data: &AutomatonData) -> String {
         s.push_str("\t\t<transition>\n");
         s.push_str(&format!("\t\t\t<from>{}</from>\n", t.from));
         s.push_str(&format!("\t\t\t<to>{}</to>\n", t.to));
-        if t.symbol == EPSILON.to_string() {
+        if t.symbol == EPSILON {
             s.push_str("\t\t\t<read></read>\n");
         } else {
-            s.push_str(&format!("\t\t\t<read>{}</read>\n", escape(&t.symbol)));
+            s.push_str(&format!("\t\t\t<read>{}</read>\n", escape(&t.symbol.to_string())));
         }
         s.push_str("\t\t</transition>\n");
     }
@@ -176,22 +176,20 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
 
     for (from, to, read) in transitions {
         let symbol = if read.is_empty() {
-            EPSILON.to_string()
+            EPSILON
         } else {
-            read
-        };
-
-        if symbol != EPSILON.to_string() {
-            let chars: Vec<char> = symbol.chars().collect();
-            if chars.len() != 1 {
+            if read.chars().count() != 1 {
                 return Err(format!(
                     "Символ перехода '{}' должен быть одним символом",
-                    symbol
+                    read
                 ));
             }
-            let c = chars[0];
-            if !alphabet.contains(&c) {
-                alphabet.push(c);
+            read.chars().next().unwrap()
+        };
+
+        if symbol != EPSILON {
+            if !alphabet.contains(&symbol) {
+                alphabet.push(symbol);
             }
         }
 
@@ -217,9 +215,9 @@ pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) ->
     if states.iter().filter(|s| s.isInitial).count() != 1 {
         return false;
     }
-    let mut seen: HashSet<(i32, String)> = HashSet::new();
+    let mut seen: HashSet<(i32, char)> = HashSet::new();
     for t in transitions {
-        if t.symbol == EPSILON.to_string() {
+        if t.symbol == EPSILON {
             return false;
         }
         if !seen.insert((t.from, t.symbol.clone())) {

@@ -24,6 +24,7 @@ bun.lockb
 debug/
 target/
 Cargo.lock
+.cargo
 
 # examples /gen directory
 /examples/**/src-tauri/gen/

@@ -22,7 +22,7 @@ pub struct TransitionData {
     pub id: i32,
     pub from: i32,
     pub to: i32,
-    pub symbol: String,
+    pub symbol: char,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,7 +65,7 @@ pub struct TransitionResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunStep {
     pub from: i32,
-    pub symbol: String,
+    pub symbol: char,
     pub to: i32,
 }
 

@@ -216,7 +216,7 @@ pub fn nfa_add_transition(
     let mut count = 0u32;
     let mut added: Vec<TransitionData> = Vec::new();
     for &symbol in &symbols {
-        let sym_str = symbol.to_string();
+        let sym_str = symbol;
         let already_exists = entry
             .transitions
             .iter()
@@ -293,7 +293,7 @@ pub fn nfa_update_transition(
         entry.transitions[idx].to = t;
     }
     if let Some(s) = new_symbol {
-        entry.transitions[idx].symbol = s.to_string();
+        entry.transitions[idx].symbol = s;
     }
 
     state.update(entry.clone());
@@ -367,7 +367,7 @@ pub fn nfa_run_str(
             // symbol transitions actually consumed to derive the processed length.
             let processed_len = traces
                 .iter()
-                .map(|t| t.steps.iter().filter(|s| s.symbol != "$").count())
+                .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
                 .max()
                 .unwrap_or(0);
             let (status, message) = if accepted {
@@ -492,7 +492,7 @@ pub(crate) fn test_line(nfa: &NFA, input: &str) -> (bool, usize) {
     let (traces, accepted) = nfa.run_partial(&chars);
     let correct_symbols = traces
         .iter()
-        .map(|t| t.steps.iter().filter(|s| s.symbol != "$").count())
+        .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
         .max()
         .unwrap_or(0);
     (accepted, correct_symbols)
@@ -543,10 +543,10 @@ pub(crate) fn data_to_nfa(
         if !state_ids.contains(&trans.from) || !state_ids.contains(&trans.to) {
             continue;
         }
-        if trans.symbol == EPSILON.to_string() {
+        if trans.symbol == EPSILON {
             builder = builder.epsilon(trans.from, trans.to);
-        } else if let Some(symbol) = trans.symbol.chars().next() {
-            builder = builder.transition(trans.from, symbol, trans.to);
+        } else {
+            builder = builder.transition(trans.from, trans.symbol, trans.to);
         }
     }
 
