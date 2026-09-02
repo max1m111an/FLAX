@@ -407,7 +407,7 @@ pub fn nfa_multiple_run_str(
         Some(e) => e,
         None => {
             return MultiRunResult {
-                success: 404,
+                status: 404,
                 traces: Vec::new(),
             };
         }
@@ -417,7 +417,7 @@ pub fn nfa_multiple_run_str(
         Ok(n) => n,
         Err(_) => {
             return MultiRunResult {
-                success: 400,
+                status: 400,
                 traces: Vec::new(),
             };
         }
@@ -436,7 +436,7 @@ pub fn nfa_multiple_run_str(
         .collect();
 
     MultiRunResult {
-        success: 200,
+        status: 200,
         traces,
     }
 }

@@ -93,6 +93,6 @@ pub struct LineTest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiRunResult {
-    pub success: u16,
+    pub status: u16,
     pub traces: Vec<LineTest>,
 }
