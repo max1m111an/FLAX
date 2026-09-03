@@ -21,7 +21,7 @@ export default function TabsWidget() {
                 Главная
             </NavLink>
             {tabs.map((tab) => {
-                return tab.title === "Без названия*" ? (
+                return tab.title !== "Настройки*" ? (
                     <NavLink key={ tab.id } to={ `/models/${tab.id}` } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
                         <tab.model.icon />
                         {tab.title}
