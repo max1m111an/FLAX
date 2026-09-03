@@ -3,17 +3,17 @@ use tauri::State;
 use crate::{
     id_gen,
     structs::{
-        data_models::{AutomatonKind, LineTest, MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult, GenerateInputsResult},
-        nfa::{NFA, EPSILON, NFABuilder},
+        data_models::{
+            AutomatonKind, GenerateInputsResult, LineTest, MultiRunResult, OperationResult,
+            RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+        },
+        nfa::{EPSILON, NFA, NFABuilder},
         store::AutomatonStore,
     },
 };
 
 #[tauri::command]
-pub fn create_new_nfa(
-    state: State<'_, AutomatonStore>,
-    name: Option<String>,
-) -> OperationResult {
+pub fn create_new_nfa(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
     let entry = state.create(
         name.unwrap_or_else(|| "NFA".to_string()),
         AutomatonKind::NFA,
@@ -170,7 +170,9 @@ pub fn nfa_remove_state(
     }
 
     entry.states.retain(|s| s.id != state_id);
-    entry.transitions.retain(|t| t.from != state_id && t.to != state_id);
+    entry
+        .transitions
+        .retain(|t| t.from != state_id && t.to != state_id);
 
     state.update(entry.clone());
     StatusResult {
@@ -321,9 +323,7 @@ pub fn nfa_remove_transition(
     };
 
     let original_count = entry.transitions.len();
-    entry
-        .transitions
-        .retain(|t| t.id != transition_id);
+    entry.transitions.retain(|t| t.id != transition_id);
     let removed = original_count - entry.transitions.len();
 
     let (code, msg) = if removed > 0 {
@@ -377,7 +377,9 @@ pub fn nfa_run_str(
                     401,
                     format!(
                         "Цепочка '{}' принята частично (обработано {} из {} символов)",
-                        input, processed_len, chars.len()
+                        input,
+                        processed_len,
+                        chars.len()
                     ),
                 )
             } else {
@@ -463,7 +465,7 @@ pub fn nfa_generate_inputs(
             };
         }
     };
-    
+
     let nfa = match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(n) => n,
         Err(_) => {
@@ -476,7 +478,7 @@ pub fn nfa_generate_inputs(
     };
 
     let resp_vec: Vec<String> = nfa.generate_test_inputs(50, 15);
-    
+
     GenerateInputsResult {
         status: 200,
         message: format!("Сгенерировано {} тестовых входов", resp_vec.len()),
@@ -499,10 +501,7 @@ pub(crate) fn test_line(nfa: &NFA, input: &str) -> (bool, usize) {
 }
 
 #[tauri::command]
-pub fn nfa_remove_automaton(
-    state: State<'_, AutomatonStore>,
-    automaton_id: i32,
-) -> StatusResult {
+pub fn nfa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     match state.remove(automaton_id) {
         Some(_) => StatusResult {
             status: 200,

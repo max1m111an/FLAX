@@ -55,7 +55,10 @@ pub fn to_jff(data: &AutomatonData) -> String {
         if t.symbol == EPSILON {
             s.push_str("\t\t\t<read></read>\n");
         } else {
-            s.push_str(&format!("\t\t\t<read>{}</read>\n", escape(&t.symbol.to_string())));
+            s.push_str(&format!(
+                "\t\t\t<read>{}</read>\n",
+                escape(&t.symbol.to_string())
+            ));
         }
         s.push_str("\t\t</transition>\n");
     }
@@ -90,8 +93,7 @@ fn parse_attr_i32(node: Node, attr: &str) -> Result<i32, String> {
 }
 
 pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
-    let doc = roxmltree::Document::parse(xml)
-        .map_err(|e| format!("Некорректный XML: {}", e))?;
+    let doc = roxmltree::Document::parse(xml).map_err(|e| format!("Некорректный XML: {}", e))?;
     let root = doc.root_element();
     if root.tag_name().name() != "structure" {
         return Err("Ожидался корневой элемент <structure>".to_string());

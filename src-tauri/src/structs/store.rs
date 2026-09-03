@@ -16,12 +16,7 @@ impl AutomatonStore {
         }
     }
 
-    pub fn create(
-        &self,
-        name: String,
-        kind: AutomatonKind,
-        initial_label: &str,
-    ) -> AutomatonData {
+    pub fn create(&self, name: String, kind: AutomatonKind, initial_label: &str) -> AutomatonData {
         let entry = AutomatonData {
             id: 0,
             name,

@@ -1,5 +1,5 @@
-pub mod structs;
 mod commands;
+pub mod structs;
 
 #[path = "utils/id_gen.rs"]
 mod id_gen;
@@ -10,8 +10,8 @@ mod jff;
 #[cfg(test)]
 mod tests;
 
-use crate::commands::nfa_cmd::*;
 use crate::commands::file_cmd::*;
+use crate::commands::nfa_cmd::*;
 use crate::structs::store::AutomatonStore;
 
 #[tauri::command]
@@ -22,6 +22,7 @@ fn greet(name: &str) -> String {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AutomatonStore::new())
         .invoke_handler(tauri::generate_handler![
