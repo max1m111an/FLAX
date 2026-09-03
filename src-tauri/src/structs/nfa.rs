@@ -87,7 +87,11 @@ impl NFA {
                 continue;
             }
             reachable.insert(current);
-            for symbol in self.alphabet.iter().copied().chain(std::iter::once(EPSILON))
+            for symbol in self
+                .alphabet
+                .iter()
+                .copied()
+                .chain(std::iter::once(EPSILON))
             {
                 if let Some(next_states) = self.transitions.get(&(current, symbol)) {
                     for next in next_states {
@@ -220,7 +224,10 @@ impl NFA {
             let mut steps = thread.0;
             steps.extend(closure_steps);
             let is_final = closure_set.iter().any(|s| nfa.final_states.contains(s));
-            Trace { steps, isFinal: is_final }
+            Trace {
+                steps,
+                isFinal: is_final,
+            }
         };
 
         if self.final_states.is_empty() {
@@ -270,7 +277,10 @@ impl NFA {
                 // 3) This thread cannot read the current symbol: it is interrupted,
                 //    kept with its partial history and isFinal = false.
                 if !advanced {
-                    result.push(Trace { steps: hist, isFinal: false });
+                    result.push(Trace {
+                        steps: hist,
+                        isFinal: false,
+                    });
                 }
             }
 
@@ -743,9 +753,7 @@ impl NFABuilder {
     }
 
     pub fn build(self) -> Result<NFA, String> {
-        let initial_state = self
-            .initial_state
-            .ok_or("Не указано начальное состояние")?;
+        let initial_state = self.initial_state.ok_or("Не указано начальное состояние")?;
         NFA::new(
             self.states,
             self.alphabet,

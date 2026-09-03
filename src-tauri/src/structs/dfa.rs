@@ -249,9 +249,7 @@ impl DFABuilder {
     }
 
     pub fn build(self) -> Result<DFA, String> {
-        let initial_state = self
-            .initial_state
-            .ok_or("Не указано начальное состояние")?;
+        let initial_state = self.initial_state.ok_or("Не указано начальное состояние")?;
         DFA::new(
             self.states,
             self.alphabet,

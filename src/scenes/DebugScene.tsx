@@ -1,4 +1,4 @@
-import { addStateNFA, addTransitionNFA, createNewNFA, removeStateNFA, updateStateNFA } from "@/api/nfaAPI.ts";
+import { addStateNFA, addTransitionNFA } from "@/api/nfaAPI.ts";
 import styles from "@/scenes/MainScene.module.scss";
 import { useState } from "react";
 import { useTabs } from "@/context/TabsContext.tsx";
@@ -9,66 +9,6 @@ export const DebugScene = () => {
     const { addTab, updateTab } = useTabs();
     return (
         <div>
-            <button className={ styles.controlButton } onClick={ async () => {
-                try {
-                    const res = await createNewNFA("Test");
-                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
-                } catch (e) {
-                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
-                }
-            } }>create_new_nfa</button>
-            <button className={ styles.controlButton } onClick={ async () => {
-                try {
-                    const res = await addStateNFA({
-                        automatonId: 2,
-                        label: "q0",
-                        x: 5455,
-                        y: 555,
-                        isInitial: false,
-                        isFinal: false,
-                    });
-                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
-                } catch (e) {
-                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
-                }
-            } }>nfa_add_state</button>
-            <button className={ styles.controlButton } onClick={ async () => {
-                try {
-                    const res = await removeStateNFA({
-                        automatonId: 2,
-                        stateId: 8335576,
-                    });
-                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
-                } catch (e) {
-                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
-                }
-            } }>nfa_delete_state</button>
-            <button className={ styles.controlButton } onClick={ async () => {
-                try {
-                    const res = await updateStateNFA({
-                        automatonId: 2,
-                        stateId: 3159668,
-                        label: "q4",
-                        isFinal: true,
-                    });
-                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
-                } catch (e) {
-                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
-                }
-            } }>nfa_update_state</button>
-            <button className={ styles.controlButton } onClick={ async () => {
-                try {
-                    const res = await addTransitionNFA({
-                        automatonId: 2,
-                        from: 3370849,
-                        to: 5793196,
-                        symbols: [ "d", "e", "f" ],
-                    });
-                    setResponse(`Успех:\n${JSON.stringify(res, null, 4)}`);
-                } catch (e) {
-                    setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
-                }
-            } }>nfa_add_transition</button>
             <button className={ styles.controlButton } onClick={ async () => {
                 try {
                     const newTab = await addTab({

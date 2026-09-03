@@ -11,7 +11,6 @@ import { TransitionModel } from "@/types/Automaton.ts";
 export default function ModelCanvasWidget() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
-
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
         to: { x: number; y: number };

@@ -1,14 +1,17 @@
 import FolderOpen from "@/assets/svg/FolderOpen.svg?react";
 import Settings from "@/assets/svg/Settings.svg?react";
 import Documentation from "@/assets/svg/Documentation.svg?react";
-import { model } from "@/data/models.ts";
+import { model, models } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
 import { NavLink } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
+import { open } from "@tauri-apps/plugin-dialog";
+import { loadJFF } from "@/api/jffAPI.ts";
+
 
 export default function MainControlWidget() {
-    const { addTab } = useTabs();
+    const { addTab, loadTab } = useTabs();
     const isDebugEnabled = import.meta.env.VITE_ENABLE_DEBUG === "true";
     const settingsModel: model = {
         id: 4,
@@ -16,9 +19,38 @@ export default function MainControlWidget() {
         icon: Settings,
         description: "",
     };
+    const selectFile = async () => {
+        try {
+            const filePath = await open({
+                multiple: false,
+                directory: false,
+                title: "Выберите файл",
+                filters: [
+                    {
+                        name: "Файлы .jff",
+                        extensions: [ "jff" ],
+                    },
+                ],
+            });
+            if (!filePath) {
+                return;
+            }
+
+            const response = await loadJFF({ path: filePath });
+
+            if (response.status === 200) {
+                console.log(response);
+                if (response.automaton) {
+                    loadTab(response.automaton, models[0]); //todo change to dynamic type of automaton
+                }
+            }
+        } catch (error) {
+            console.error("Ошибка при выборе файла:", error);
+        }
+    };
     return (
         <div className={ styles.controlWrapper }>
-            <button className={ styles.openFileButton }>
+            <button className={ styles.openFileButton } onClick={ selectFile }>
                 <FolderOpen />
                 Открыть файл (.jff)
             </button>

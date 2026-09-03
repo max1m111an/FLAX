@@ -33,6 +33,7 @@ interface TabsContextProps {
     addTab: (model: model, type?: string) => Promise<tab | void>;
     removeTab: (tab: tab) => void;
     updateTab: (updatedTab: tab) => void;
+    loadTab: (automaton: AutomatonModel, model: model) => void;
 }
 
 const TabsContext = createContext<TabsContextProps | undefined>(undefined);
@@ -79,6 +80,26 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
 
     const location = useLocation();
 
+    const loadTab = (automaton: AutomatonModel, model: model) => {
+        const newTab: tab = {
+            id: automaton.id,
+            title: automaton.name,
+            model,
+            automaton: automaton,
+            activeControl: "cursor",
+            activePanel: null,
+            selectedState: null,
+            selectedTransition: null,
+            selectedNodeId: null,
+            testMode: "solo",
+            testInput: "",
+            pendingTestLine: null,
+            pendingTraces: null,
+        };
+        setTabs([ ...tabs, newTab ]);
+        navigate(`/models/${newTab.id}`);
+    };
+
     const updateTab = (updatedTab: tab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
@@ -102,7 +123,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab } }>
+        <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab, loadTab } }>
             {children}
         </TabsContext.Provider>
     );

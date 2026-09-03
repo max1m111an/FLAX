@@ -66,10 +66,30 @@ fn even_a_data() -> AutomatonData {
             },
         ],
         transitions: vec![
-            TransitionData { id: 1, from: 0, to: 1, symbol: 'a' },
-            TransitionData { id: 2, from: 1, to: 0, symbol: 'a' },
-            TransitionData { id: 3, from: 0, to: 0, symbol: 'b' },
-            TransitionData { id: 4, from: 1, to: 1, symbol: 'b' },
+            TransitionData {
+                id: 1,
+                from: 0,
+                to: 1,
+                symbol: 'a',
+            },
+            TransitionData {
+                id: 2,
+                from: 1,
+                to: 0,
+                symbol: 'a',
+            },
+            TransitionData {
+                id: 3,
+                from: 0,
+                to: 0,
+                symbol: 'b',
+            },
+            TransitionData {
+                id: 4,
+                from: 1,
+                to: 1,
+                symbol: 'b',
+            },
         ],
         alphabet: vec!['a', 'b'],
     }
@@ -207,7 +227,10 @@ fn writes_example_files_to_target() {
     assert_eq!(parsed.states.len(), 2);
     assert!(parsed.states[0].isInitial);
     assert_eq!(parsed.transitions.len(), 4);
-    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::DFA);
+    assert_eq!(
+        infer_kind(&parsed.states, &parsed.transitions),
+        AutomatonKind::DFA
+    );
 }
 
 #[test]
@@ -363,7 +386,10 @@ fn roundtrip_to_jff_then_parse() {
 fn infer_kind_for_even_a_is_dfa() {
     let parsed = parse_jff(EVEN_A_JFF).unwrap();
     assert!(is_deterministic(&parsed.states, &parsed.transitions));
-    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::DFA);
+    assert_eq!(
+        infer_kind(&parsed.states, &parsed.transitions),
+        AutomatonKind::DFA
+    );
 }
 
 #[test]
@@ -379,7 +405,10 @@ fn infer_kind_with_epsilon_is_nfa() {
 
     let parsed = parse_jff(xml).unwrap();
     assert!(!is_deterministic(&parsed.states, &parsed.transitions));
-    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::NFA);
+    assert_eq!(
+        infer_kind(&parsed.states, &parsed.transitions),
+        AutomatonKind::NFA
+    );
 }
 
 #[test]
@@ -396,5 +425,8 @@ fn infer_kind_nondeterministic_is_nfa() {
 
     let parsed = parse_jff(xml).unwrap();
     assert!(!is_deterministic(&parsed.states, &parsed.transitions));
-    assert_eq!(infer_kind(&parsed.states, &parsed.transitions), AutomatonKind::NFA);
+    assert_eq!(
+        infer_kind(&parsed.states, &parsed.transitions),
+        AutomatonKind::NFA
+    );
 }

@@ -12,11 +12,7 @@ use crate::{
 };
 
 #[tauri::command]
-pub fn save_jff(
-    state: State<'_, AutomatonStore>,
-    automaton_id: i32,
-    path: String,
-) -> StatusResult {
+pub fn save_jff(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {
     let entry = match state.get(automaton_id) {
         Some(e) => e,
         None => {
