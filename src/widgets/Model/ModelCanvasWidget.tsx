@@ -8,6 +8,7 @@ import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addStateNFA, addTransitionNFA, removeStateNFA, removeTransitNFA, updateStateNFA } from "@/api/nfaAPI.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 
+
 export default function ModelCanvasWidget() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
@@ -58,11 +59,11 @@ export default function ModelCanvasWidget() {
     };
 
     const addEdge = async (startState: number, endState: number, symbolStr: string) => {
-        setDraftEdge(null); // Закрываем инпут
+        setDraftEdge(null);
 
         let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
         if (symbols.length === 0) {
-            symbols = [ "λ" ];
+            symbols = [ "$" ];
         }
 
         const newTransition = {
@@ -71,6 +72,7 @@ export default function ModelCanvasWidget() {
             to: endState,
             symbols,
         };
+        console.log(newTransition);
 
         const response = await addTransitionNFA(newTransition);
         if (response.status == 200) {

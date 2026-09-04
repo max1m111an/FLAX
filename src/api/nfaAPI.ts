@@ -209,3 +209,22 @@ export const multiRunStrNFA = async (params: multiRunStrNFARequest): Promise<mul
         throw error;
     }
 };
+type generateInputsRequest = {
+    automatonId: number;
+}
+
+type generateInputsResponse = {
+    status: number;
+    message: string;
+    inputs: string[];
+}
+
+export const generateInputs = async (params: generateInputsRequest): Promise<generateInputsResponse> => {
+    try {
+        const response = await invoke<generateInputsResponse>("nfa_generate_inputs", params);
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_generate_test_inputs:", error);
+        throw error;
+    }
+};
