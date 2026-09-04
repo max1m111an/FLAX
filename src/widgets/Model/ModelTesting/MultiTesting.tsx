@@ -1,4 +1,5 @@
 import Play from "@/assets/svg/Play.svg?react";
+import ListVideo from "@/assets/svg/ListVideo.svg?react";
 import FileDown from "@/assets/svg/FileDown.svg?react";
 import Uploud from "@/assets/svg/Uploud.svg?react";
 import { Button } from "@/components/ui/Button/Button.tsx";
@@ -6,7 +7,7 @@ import { TextArea } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelTestWidget.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { lineTest, multiRunStrNFA, runStrNFA } from "@/api/nfaAPI.ts";
+import { generateInputs, lineTest, multiRunStrNFA, runStrNFA } from "@/api/nfaAPI.ts";
 import Steps from "@/assets/svg/Steps.svg?react";
 import clsx from "clsx";
 import { useState } from "react";
@@ -59,6 +60,14 @@ export default function MultiTesting() {
     const handleReset = () => {
         setIsPlay(false);
     };
+    const handleGenerate = async () => {
+        const response = await generateInputs({ automatonId: currentTab!.id });
+        console.log(response);
+        if (response.status == 200) {
+            setTestInput(response.inputs.join("\n"));
+        }
+    };
+
     return (
         <>
             <Typography variant="pretitle">Входные строки</Typography>
@@ -87,6 +96,10 @@ export default function MultiTesting() {
                                 Импорт
                             </Button>
                         </div>
+                        <Button variant="control" fullWidth onClick={ handleGenerate }>
+                            <ListVideo />
+                            Сгенерировать
+                        </Button>
                     </>
                 ) : (
                     <Button variant="control" fullWidth onClick={ handleReset }>
