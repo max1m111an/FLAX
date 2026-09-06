@@ -7,7 +7,7 @@ import styles from "../../scenes/MainScene.module.scss";
 import { NavLink } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { open } from "@tauri-apps/plugin-dialog";
-import { loadJFF } from "@/api/jffAPI.ts";
+import { loadJff } from "@/services/jffService.ts";
 
 
 export default function MainControlWidget() {
@@ -36,13 +36,9 @@ export default function MainControlWidget() {
                 return;
             }
 
-            const response = await loadJFF({ path: filePath });
-
-            if (response.status === 200) {
-                console.log(response);
-                if (response.automaton) {
-                    loadTab(response.automaton, models[0]); //todo change to dynamic type of automaton
-                }
+            const response = await loadJff({ path: filePath });
+            if (response.automaton) {
+                loadTab(response.automaton, models[0], filePath);
             }
         } catch (error) {
             console.error("Ошибка при выборе файла:", error);
