@@ -13,7 +13,7 @@ import clsx from "clsx";
 import styles from "./SoloTesting.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import type { TraceHighlight } from "@/context/TabsContext.tsx";
-import { RunStep, runStrNFA } from "@/api/nfaAPI.ts";
+import { RunStep, runString } from "@/services/nfaService.ts";
 
 export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");
@@ -125,12 +125,11 @@ export default function SoloTesting() {
             input: testLine,
         };
 
-        const response = await runStrNFA(request) as any;
-
-        if ([ 200, 401, 402 ].includes(response.status)) {
-            setTraces(response.traces || []);
-            applyHighlights(0, response.traces || []);
-        } else {
+        try {
+            const response = await runString(request);
+            setTraces(response.traces);
+            applyHighlights(0, response.traces);
+        } catch {
             setTraces([]);
             applyHighlights(0, []);
         }

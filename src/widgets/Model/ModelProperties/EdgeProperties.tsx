@@ -12,7 +12,7 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import styles from "./ModelProperties.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { addTransitionNFA, removeTransitNFA, updateTransitNFA } from "@/api/nfaAPI.ts";
+import { addTransition, removeTransition, updateTransition } from "@/services/nfaService.ts";
 
 export default function EdgeProperties() {
     const [ isOpenId, setIsOpenId ] = useState<number[]>([]);
@@ -45,30 +45,32 @@ export default function EdgeProperties() {
     const handleEndStateChange = async (oldTo: number, newTo: number) => {
         if (oldTo === newTo) return;
         const group = grouped[oldTo];
-        const updatedTransitions = [];
+        try {
+            const updatedTransitions = [];
 
-        for (const id of group.ids) {
-            const res = await updateTransitNFA({
-                automatonId: currentTab.id,
-                transitionId: id,
-                new_to: newTo,
-            });
-            if (res.status === 200) {
-                updatedTransitions.push(...res.transition);
+            for (const id of group.ids) {
+                const response = await updateTransition({
+                    automatonId: currentTab.id,
+                    transitionId: id,
+                    new_to: newTo,
+                });
+                updatedTransitions.push(...response.transition);
             }
+
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    transitions: currentTab.automaton.transitions
+                        .filter((t) => !group.ids.includes(t.id))
+                        .concat(updatedTransitions),
+                },
+            };
+
+            updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при изменении конца ребра:", error);
         }
-
-        const newTabData = {
-            ...currentTab,
-            automaton: {
-                ...currentTab.automaton,
-                transitions: currentTab.automaton.transitions
-                    .filter((t) => !group.ids.includes(t.id))
-                    .concat(updatedTransitions),
-            },
-        };
-
-        updateTab(newTabData);
     };
 
     function validateAndParse(value: string): { valid: boolean; symbols: string[] } {
@@ -96,27 +98,27 @@ export default function EdgeProperties() {
 
         if (!result.valid) return;
 
-        const group = grouped[to];
+        try {
+            const group = grouped[to];
 
-        for (const id of group.ids) {
-            await removeTransitNFA({ automatonId: currentTab.id, transitionId: id });
-        }
+            for (const id of group.ids) {
+                await removeTransition({ automatonId: currentTab.id, transitionId: id });
+            }
 
-        const res = await addTransitionNFA({
-            automatonId: currentTab.id,
-            from: selectedState,
-            to: to,
-            symbols: result.symbols,
-        });
+            const response = await addTransition({
+                automatonId: currentTab.id,
+                from: selectedState,
+                to: to,
+                symbols: result.symbols,
+            });
 
-        if (res.status === 200) {
             const newTabData = {
                 ...currentTab,
                 automaton: {
                     ...currentTab.automaton,
                     transitions: currentTab.automaton.transitions
                         .filter((t) => !group.ids.includes(t.id))
-                        .concat(res.transition),
+                        .concat(response.transition),
                 },
             };
 
@@ -127,25 +129,31 @@ export default function EdgeProperties() {
                 delete copy[to];
                 return copy;
             });
+        } catch (error) {
+            console.error("Ошибка при сохранении перехода:", error);
         }
     };
 
     const handleDeleteGroup = async (to: number, e: React.MouseEvent) => {
         e.stopPropagation();
-        const group = grouped[to];
-        for (const id of group.ids) {
-            await removeTransitNFA({ automatonId: currentTab.id, transitionId: id });
+        try {
+            const group = grouped[to];
+            for (const id of group.ids) {
+                await removeTransition({ automatonId: currentTab.id, transitionId: id });
+            }
+
+            const newTabData = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    transitions: currentTab.automaton.transitions.filter((t) => !group.ids.includes(t.id)),
+                },
+            };
+
+            updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при удалении группы переходов:", error);
         }
-
-        const newTabData = {
-            ...currentTab,
-            automaton: {
-                ...currentTab.automaton,
-                transitions: currentTab.automaton.transitions.filter((t) => !group.ids.includes(t.id)),
-            },
-        };
-
-        updateTab(newTabData);
     };
 
     const confirmAddEdge = async () => {
@@ -154,19 +162,19 @@ export default function EdgeProperties() {
         const result = validateAndParse(newEdgeSymbols);
         if (!result.valid) return;
 
-        const res = await addTransitionNFA({
-            automatonId: currentTab.id,
-            from: selectedState,
-            to: newEdgeTo,
-            symbols: result.symbols,
-        });
+        try {
+            const response = await addTransition({
+                automatonId: currentTab.id,
+                from: selectedState,
+                to: newEdgeTo,
+                symbols: result.symbols,
+            });
 
-        if (res.status === 200) {
             const newTabData = {
                 ...currentTab,
                 automaton: {
                     ...currentTab.automaton,
-                    transitions: [ ...currentTab.automaton.transitions, ...res.transition ],
+                    transitions: [ ...currentTab.automaton.transitions, ...response.transition ],
                 },
             };
 
@@ -174,6 +182,8 @@ export default function EdgeProperties() {
             setIsAdding(false);
             setNewEdgeTo(null);
             setNewEdgeSymbols("");
+        } catch (error) {
+            console.error("Ошибка при добавлении перехода:", error);
         }
     };
 

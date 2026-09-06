@@ -67,11 +67,36 @@
   margin-bottom: 16px;
 }
 
+.dropdownIcon{
+  color: var(--text-secondary);
+  margin: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 10px;
+  flex-shrink: 0;
+  box-sizing: content-box;
+  cursor: pointer;
+  background: transparent;
+  border-color: transparent;
+
+  &:hover {
+    color: var(--accent-primary);
+    background: var(--accent-bg);
+    border-radius: 12px;
+  }
+
+  &.active {
+    color: var(--accent-primary);
+    background: var(--accent-bg);
+    border-radius: 12px;
+    border: var(--accent-primary) solid 1px;
+  }
+}
 .modelControlIcon {
   color: var(--text-secondary);
   margin: 6px;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   padding: 10px;
   flex-shrink: 0;
   box-sizing: content-box;
@@ -81,20 +106,6 @@
     color: var(--accent-primary);
     background: var(--accent-bg);
     border-radius: 12px;
-  }
-
-  &.trashcan {
-    &:hover {
-      color: var(--red-main);
-      background: var(--bg-base);
-    }
-
-    &.active {
-      color: var(--red-main);
-      background: var(--accent-bg);
-      border-radius: 12px;
-      border: var(--red-main) solid 1px;
-    }
   }
 
   &.active {
@@ -112,3 +123,32 @@
   margin: 12px 0;
   flex-shrink: 0;
 }
+
+.dropdown {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  color: var(--text-secondary);
+  border-radius: 10px;
+  padding: 6px 0;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  margin-top: 4px;
+  z-index: 999;
+}
+
+.item {
+  display: flex;
+  flex-direction: row;
+  font-size: 14px;
+  gap: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  z-index: 1;
+  align-items: center;
+
+  &:hover {
+    background: rgba(249, 115, 22, 0.1);
+    color: #fb923c;
+  }
+}
+

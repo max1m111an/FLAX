@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/Switch/Switch.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelProperties.module.scss";
 import { tab, useCurrentTab, useTabs } from "@/context/TabsContext";
-import { updateStateNFA, updateStateNFARequest } from "@/api/nfaAPI.ts";
+import { updateState, updateStateNFARequest } from "@/services/nfaService.ts";
 
 export default function NodeProperties() {
     const currentTab = useCurrentTab();
@@ -14,18 +14,20 @@ export default function NodeProperties() {
     const selectedStateId = currentTab.selectedNodeId;
 
     const fetchUpdateState = async (request: updateStateNFARequest) => {
-        const response = await updateStateNFA(request);
-        if (response.status == 200) {
+        try {
+            const response = await updateState(request);
             const newTabData: tab = {
                 ...currentTab,
                 automaton: {
                     ...currentTab.automaton,
-                    states: currentTab.automaton.states.map((state) =>
-                        state.id === selectedStateId ? response.state : state,
+                    states: currentTab.automaton.states.map((s) =>
+                        s.id === selectedStateId ? response.state : s,
                     ),
                 },
             };
             updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при обновлении состояния:", error);
         }
     };
 
