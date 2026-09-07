@@ -12,12 +12,60 @@ import Move from "@/assets/svg/Move.svg?react";
 import clsx from "clsx";
 import styles from "../../scenes/ModelScene.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { save } from "@tauri-apps/plugin-dialog";
+import { saveJff } from "@/services/jffService.ts";
+import { isDirty } from "@/services/dirtyState.ts";
+import { basename } from "@tauri-apps/api/path";
 
 
 export default function ModelControlWidget() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
 
+    const fetchSave = async (): Promise<boolean> => {
+        try {
+            const filePath = await save({
+                defaultPath: `${currentTab?.title}.jff`,
+                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
+            });
+
+            if (!filePath || currentTab === undefined) return false;
+
+            const fileName = await basename(filePath);
+            const nameWithoutExt = fileName.replace(/\.jff$/i, "");
+
+            await saveJff({
+                automatonId: currentTab.id,
+                path: filePath,
+            });
+
+            updateTab({
+                ...currentTab,
+                title: nameWithoutExt,
+                isSaved: true,
+                savedPath: filePath,
+            });
+            return true;
+        } catch (error) {
+            console.error("Ошибка при сохранении файла:", error);
+            return false;
+        }
+    };
+    const handleSaveJFF = async () => {
+        if (currentTab?.isSaved && !isDirty(currentTab.id)) {
+            return;
+        }
+        const filePath = currentTab?.savedPath;
+        if (filePath) {
+            await saveJff({ automatonId: currentTab.id, path: filePath });
+            return;
+        }
+        fetchSave();
+    };
+    const handleSaveAsJFF = async () => {
+        fetchSave();
+    };
     return (
         <div className={ styles.modelLeftControlWrapper }>
             <div className={ styles.modelTopGroup }>
@@ -75,7 +123,23 @@ export default function ModelControlWidget() {
             </div>
 
             <div className={ styles.modelMiddleGroup }>
-                <Save className={ styles.modelControlIcon } />
+                <DropdownMenu.Root>
+                    <DropdownMenu.Trigger className={ styles.modelControlIcon }
+                        asChild>
+                        <Save />
+                    </DropdownMenu.Trigger>
+
+                    <DropdownMenu.Content className={ styles.dropdown }>
+                        <DropdownMenu.Group>
+                            <DropdownMenu.Item className={ styles.item } onClick={ handleSaveJFF }>
+                                Сохранить
+                            </DropdownMenu.Item>
+                            <DropdownMenu.Item className={ styles.item } onClick={ handleSaveAsJFF }>
+                                Сохранить как
+                            </DropdownMenu.Item>
+                        </DropdownMenu.Group>
+                    </DropdownMenu.Content>
+                </DropdownMenu.Root>
                 <PenLine className={ styles.modelControlIcon } />
                 <Wrench className={ styles.modelControlIcon } />
                 <Image className={ styles.modelControlIcon } />

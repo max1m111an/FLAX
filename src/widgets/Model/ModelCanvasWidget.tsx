@@ -5,7 +5,7 @@ import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { addStateNFA, addTransitionNFA, removeStateNFA, removeTransitNFA, updateStateNFA } from "@/api/nfaAPI.ts";
+import { addState, addTransition, removeState as removeStateRequest, removeTransition as removeTransitionRequest, updateState } from "@/services/nfaService.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 
 
@@ -36,8 +36,8 @@ export default function ModelCanvasWidget() {
             isInitial: false,
             isFinal: false,
         };
-        const response = await addStateNFA(newNode);
-        if (response.status == 200) {
+        try {
+            const response = await addState(newNode);
             const newTabData: tab = {
                 ...currentTab,
                 automaton: {
@@ -46,6 +46,8 @@ export default function ModelCanvasWidget() {
                 },
             };
             updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при добавлении вершины:", error);
         }
     };
 
@@ -74,8 +76,8 @@ export default function ModelCanvasWidget() {
         };
         console.log(newTransition);
 
-        const response = await addTransitionNFA(newTransition);
-        if (response.status == 200) {
+        try {
+            const response = await addTransition(newTransition);
             const newTabData: tab = {
                 ...currentTab,
                 automaton: {
@@ -84,6 +86,8 @@ export default function ModelCanvasWidget() {
                 },
             };
             updateTab(newTabData);
+        } catch (error) {
+            console.error("Ошибка при добавлении перехода:", error);
         }
     };
 
@@ -108,19 +112,17 @@ export default function ModelCanvasWidget() {
         };
 
         try {
-            const response = await updateStateNFA(request);
-            if (response.status === 200) {
-                const newTabData: tab = {
-                    ...currentTab,
-                    automaton: {
-                        ...currentTab.automaton,
-                        states: currentTab.automaton.states.map((state) =>
-                            state.id === id ? response.state : state,
-                        ),
-                    },
-                };
-                updateTab(newTabData);
-            }
+            const response = await updateState(request);
+            const newTabData: tab = {
+                ...currentTab,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: currentTab.automaton.states.map((state) =>
+                        state.id === id ? response.state : state,
+                    ),
+                },
+            };
+            updateTab(newTabData);
         } catch (error) {
             console.error("Ошибка при сохранении позиции вершины:", error);
         }
@@ -134,7 +136,7 @@ export default function ModelCanvasWidget() {
         try {
             await Promise.all(
                 connectedTransitions.map((t) =>
-                    removeTransitNFA({ automatonId: currentTab.id, transitionId: t.id }),
+                    removeTransitionRequest({ automatonId: currentTab.id, transitionId: t.id }),
                 ),
             );
 
@@ -142,22 +144,20 @@ export default function ModelCanvasWidget() {
                 automatonId: currentTab.id,
                 stateId: id,
             };
-            const response = await removeStateNFA(request);
-            if (response.status == 200) {
-                const connectedIds = connectedTransitions.map((t) => t.id);
-                const newTabData = {
-                    ...currentTab,
-                    selectedNodeId: currentTab.selectedNodeId === id ? null : currentTab.selectedNodeId,
-                    automaton: {
-                        ...currentTab.automaton,
-                        states: currentTab.automaton.states.filter((state) => state.id !== id),
-                        transitions: currentTab.automaton.transitions.filter(
-                            (t) => !connectedIds.includes(t.id),
-                        ),
-                    },
-                };
-                updateTab(newTabData);
-            }
+            await removeStateRequest(request);
+            const connectedIds = connectedTransitions.map((t) => t.id);
+            const newTabData = {
+                ...currentTab,
+                selectedNodeId: currentTab.selectedNodeId === id ? null : currentTab.selectedNodeId,
+                automaton: {
+                    ...currentTab.automaton,
+                    states: currentTab.automaton.states.filter((state) => state.id !== id),
+                    transitions: currentTab.automaton.transitions.filter(
+                        (t) => !connectedIds.includes(t.id),
+                    ),
+                },
+            };
+            updateTab(newTabData);
         } catch (error) {
             console.error("Ошибка при удалении состояния:", error);
         }
@@ -186,7 +186,7 @@ export default function ModelCanvasWidget() {
         try {
             await Promise.all(
                 transitionsToDelete.map((t) =>
-                    removeTransitNFA({ automatonId: currentTab.id, transitionId: t.id }),
+                    removeTransitionRequest({ automatonId: currentTab.id, transitionId: t.id }),
                 ),
             );
 

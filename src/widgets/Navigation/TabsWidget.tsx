@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { NavLink } from "react-router-dom";
 import HomeIcon from "@/assets/svg/Home.svg?react";
@@ -6,12 +7,20 @@ import Plus from "@/assets/svg/Plus.svg?react";
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import { models } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
+import type { tab } from "@/context/TabsContext.tsx";
+import { isDirty, stripDirtyStar, subscribeDirty, getDirtySnapshot } from "@/services/dirtyState.ts";
 import clsx from "clsx";
 import styles from "./TabsWidget.module.scss";
 
 
 export default function TabsWidget() {
     const { tabs, addTab, removeTab } = useTabs();
+    useSyncExternalStore(subscribeDirty, getDirtySnapshot, getDirtySnapshot);
+
+    const displayTitle = (tab: tab) => {
+        const base = stripDirtyStar(tab.title);
+        return isDirty(tab.id) ? `${base}*` : base;
+    };
 
 
     return (
@@ -24,7 +33,7 @@ export default function TabsWidget() {
                 return tab.title !== "Настройки*" ? (
                     <NavLink key={ tab.id } to={ `/models/${tab.id}` } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
                         <tab.model.icon />
-                        {tab.title}
+                        {displayTitle(tab)}
                         <Cancel
                             className={ styles.cancelIcon }
                             onClick={ (e) => {

@@ -7,7 +7,7 @@ import { TextArea } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelTestWidget.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { generateInputs, lineTest, multiRunStrNFA, runStrNFA } from "@/api/nfaAPI.ts";
+import { generateTestInputs, lineTest, runMultipleStrings, runString } from "@/services/nfaService.ts";
 import Steps from "@/assets/svg/Steps.svg?react";
 import clsx from "clsx";
 import { useState } from "react";
@@ -29,31 +29,34 @@ export default function MultiTesting() {
     if (!currentTab) return null;
 
     const handleOpenStep = async (line: string) => {
-        const res = await runStrNFA({
-            automatonId: currentTab!.id,
-            input: line,
-        });
-
-        if ([ 200, 401, 402 ].includes(res.status)) {
+        try {
+            const response = await runString({
+                automatonId: currentTab.id,
+                input: line,
+            });
             updateTab({
-                ...currentTab!,
+                ...currentTab,
                 testMode: "solo",
                 pendingTestLine: line,
-                pendingTraces: res.traces || [],
+                pendingTraces: response.traces,
             });
+        } catch (error) {
+            console.error("Ошибка при запуске пошагового теста:", error);
         }
     };
 
     const handleMultiRun = async () => {
         setIsLoading(true);
-        const request = {
-            automatonId: currentTab?.id,
-            inputs: testLine?.split(/\r?\n/) || [],
-        };
-        const response = await multiRunStrNFA(request);
-        if (response.status == 200) {
+        try {
+            const request = {
+                automatonId: currentTab.id,
+                inputs: testLine?.split(/\r?\n/) || [],
+            };
+            const response = await runMultipleStrings(request);
             setTraces(response.traces);
             setIsPlay(true);
+        } catch (error) {
+            console.error("Ошибка при запуске мульти-теста:", error);
         }
         setIsLoading(false);
     };
@@ -61,10 +64,11 @@ export default function MultiTesting() {
         setIsPlay(false);
     };
     const handleGenerate = async () => {
-        const response = await generateInputs({ automatonId: currentTab!.id });
-        console.log(response);
-        if (response.status == 200) {
+        try {
+            const response = await generateTestInputs({ automatonId: currentTab.id });
             setTestInput(response.inputs.join("\n"));
+        } catch (error) {
+            console.error("Ошибка при генерации тестовых входов:", error);
         }
     };
 

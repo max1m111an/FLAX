@@ -2,9 +2,9 @@ import { createContext, useContext, useState, ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
-import { createNewNFA } from "@/api/nfaAPI.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
-import type { Trace } from "@/api/nfaAPI.ts";
+import { createNFA } from "@/services/nfaService.ts";
+import type { Trace } from "@/services/nfaService.ts";
 
 export interface TraceHighlight {
     id: number;
@@ -25,7 +25,8 @@ export interface tab{
     testInput: string;
     pendingTestLine: string | null;
     pendingTraces: Trace[] | null;
-
+    isSaved: boolean;
+    savedPath: string | null;
 }
 
 interface TabsContextProps {
@@ -33,7 +34,7 @@ interface TabsContextProps {
     addTab: (model: model, type?: string) => Promise<tab | void>;
     removeTab: (tab: tab) => void;
     updateTab: (updatedTab: tab) => void;
-    loadTab: (automaton: AutomatonModel, model: model) => void;
+    loadTab: (automaton: AutomatonModel, model: model, path: string) => void;
 }
 
 const TabsContext = createContext<TabsContextProps | undefined>(undefined);
@@ -41,6 +42,7 @@ const TabsContext = createContext<TabsContextProps | undefined>(undefined);
 export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
         if (type === "Настройки") {
@@ -50,8 +52,8 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 return;
             }
         }
-        const response = await createNewNFA("Без названия*");
-        if (response.status == 200) {
+        try {
+            const response = await createNFA("Без названия*");
             const newTab: tab = {
                 id: response.automaton.id,
                 title: response.automaton.name,
@@ -66,6 +68,8 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 testInput: "",
                 pendingTestLine: null,
                 pendingTraces: null,
+                isSaved: false,
+                savedPath: null,
             };
             setTabs([ ...tabs, newTab ]);
 
@@ -75,17 +79,17 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 navigate(`/models/${newTab.id}`);
             }
             return newTab;
+        } catch (error) {
+            console.error("Ошибка при создании автомата:", error);
         }
     };
 
-    const location = useLocation();
-
-    const loadTab = (automaton: AutomatonModel, model: model) => {
+    const loadTab = (automaton: AutomatonModel, model: model, path: string) => {
         const newTab: tab = {
             id: automaton.id,
             title: automaton.name,
             model,
-            automaton: automaton,
+            automaton,
             activeControl: "cursor",
             activePanel: null,
             selectedState: null,
@@ -95,6 +99,8 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             testInput: "",
             pendingTestLine: null,
             pendingTraces: null,
+            isSaved: true,
+            savedPath: path,
         };
         setTabs([ ...tabs, newTab ]);
         navigate(`/models/${newTab.id}`);

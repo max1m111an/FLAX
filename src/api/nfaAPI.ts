@@ -1,7 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
 
-type createNewNFAResponse = {
+export type createNewNFAResponse = {
     status: number;
     message: string;
     automaton: AutomatonModel
@@ -17,7 +17,7 @@ export const createNewNFA = async (name: string): Promise<createNewNFAResponse> 
     }
 };
 
-type addStateNFARequest = {
+export type addStateNFARequest = {
     automatonId: number;
     label: string;
     x: number;
@@ -25,7 +25,7 @@ type addStateNFARequest = {
     isInitial: boolean;
     isFinal: boolean;
 }
-type addStateNFAResponse = {
+export type addStateNFAResponse = {
     status: number;
     message: string;
     state: StateModel;
@@ -41,11 +41,11 @@ export const addStateNFA = async (params: addStateNFARequest): Promise<addStateN
     }
 };
 
-type deleteStateNFARequest = {
+export type deleteStateNFARequest = {
     automatonId: number;
     stateId: number;
 }
-type deleteStateNFAResponse = {
+export type deleteStateNFAResponse = {
     status: number;
     message: string;
 }
@@ -69,7 +69,7 @@ export type updateStateNFARequest = {
     isInitial?: boolean;
     isFinal?: boolean;
 }
-type updateStateNFAResponse = {
+export type updateStateNFAResponse = {
     status: number;
     message: string;
     state: StateModel;
@@ -85,14 +85,14 @@ export const updateStateNFA = async (params: updateStateNFARequest): Promise<upd
     }
 };
 
-type addTransitNFARequest = {
+export type addTransitNFARequest = {
     automatonId: number;
     from: number;
     to: number;
     symbols: string[];
 }
 
-type addTransitNFAResponse = {
+export type addTransitNFAResponse = {
     status: number;
     message: string;
     transition: TransitionModel[];
@@ -108,7 +108,7 @@ export const addTransitionNFA = async (params: addTransitNFARequest): Promise<ad
     }
 };
 
-type updateTransitNFARequest = {
+export type updateTransitNFARequest = {
     automatonId: number;
     transitionId: number;
     new_from?: number;
@@ -117,7 +117,7 @@ type updateTransitNFARequest = {
     new_label?: string | null;
 }
 
-type updateTransitNFAResponse = {
+export type updateTransitNFAResponse = {
     status: number;
     message: string;
     transition: TransitionModel[];
@@ -133,12 +133,12 @@ export const updateTransitNFA = async (params: updateTransitNFARequest): Promise
     }
 };
 
-type removeTransitNFARequest = {
+export type removeTransitNFARequest = {
     automatonId: number;
     transitionId: number;
 }
 
-type removeTransitNFAResponse = {
+export type removeTransitNFAResponse = {
     status: number;
     message: string;
 }
@@ -163,12 +163,12 @@ export type Trace = {
     isFinal: boolean;
 }
 
-type runStrNFARequest = {
+export type runStrNFARequest = {
     automatonId: number;
     input: string;
 }
 
-type runStrNFAResponse = {
+export type runStrNFAResponse = {
     status: number;
     message: string;
     traces: Trace[];
@@ -190,12 +190,12 @@ export type lineTest = {
     correctSymbols: number;
 }
 
-type multiRunStrNFARequest = {
+export type multiRunStrNFARequest = {
     automatonId: number;
     inputs: string[];
 }
 
-type multiRunStrNFAResponse = {
+export type multiRunStrNFAResponse = {
     status: number;
     traces: lineTest[];
 }
@@ -209,11 +209,11 @@ export const multiRunStrNFA = async (params: multiRunStrNFARequest): Promise<mul
         throw error;
     }
 };
-type generateInputsRequest = {
+export type generateInputsRequest = {
     automatonId: number;
 }
 
-type generateInputsResponse = {
+export type generateInputsResponse = {
     status: number;
     message: string;
     inputs: string[];

@@ -1,4 +1,4 @@
-import { addStateNFA, addTransitionNFA } from "@/api/nfaAPI.ts";
+import { addState, addTransition } from "@/services/nfaService.ts";
 import styles from "@/scenes/MainScene.module.scss";
 import { useState } from "react";
 import { useTabs } from "@/context/TabsContext.tsx";
@@ -64,7 +64,7 @@ export const DebugScene = () => {
                     const stateIds: number[] = [];
 
                     for (const data of statesData) {
-                        const res = await addStateNFA({
+                        const res = await addState({
                             automatonId,
                             label: data.label,
                             x: data.x,
@@ -72,20 +72,18 @@ export const DebugScene = () => {
                             isInitial: data.isInitial,
                             isFinal: data.isFinal,
                         });
-                        if (res.status !== 200) throw new Error(`addState ${data.label} failed`);
 
                         stateIds.push(res.state.id);
                         addedStates.push(res.state);
                     }
 
                     for (const data of transitionsData) {
-                        const res = await addTransitionNFA({
+                        const res = await addTransition({
                             automatonId,
                             from: stateIds[data.from],
                             to: stateIds[data.to],
                             symbols: [ data.symbol ],
                         });
-                        if (res.status !== 200) throw new Error(`addTransition ${data.symbol} failed`);
 
                         addedTransitions.push(...res.transition);
                     }
