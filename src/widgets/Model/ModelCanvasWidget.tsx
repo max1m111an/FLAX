@@ -175,6 +175,15 @@ export default function ModelCanvasWidget() {
         }, {} as Record<string, TransitionModel & { allSymbols: string[] }>),
     );
 
+    const directedKeys = new Set(
+        currentTab.automaton.transitions.map((t) => `${t.from}-${t.to}`),
+    );
+
+    const CURVE = 40;
+
+    const hasReverse = (from: number, to: number): boolean =>
+        from !== to && directedKeys.has(`${to}-${from}`);
+
     const removeEdge = async (id: number) => {
         const targetTransition = currentTab.automaton.transitions.find((t) => t.id === id);
         if (!targetTransition) return;
@@ -243,7 +252,9 @@ export default function ModelCanvasWidget() {
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
 
                 {groupedTransitions.map((edgeGroup) => {
-                    const points = calculatePoints(edgeGroup, currentTab.automaton.states);
+                    const reverse = hasReverse(edgeGroup.from, edgeGroup.to);
+                    const bend = reverse ? -CURVE : 0;
+                    const points = calculatePoints(edgeGroup, currentTab.automaton.states, bend);
                     if (!points) return null;
 
                     return (
@@ -256,6 +267,9 @@ export default function ModelCanvasWidget() {
                             y1={ points.y1 }
                             x2={ points.x2 }
                             y2={ points.y2 }
+                            cx={ points.cx }
+                            cy={ points.cy }
+                            curved={ points.curved }
                             textX={ points.textX }
                             textY={ points.textY }
                             angle={ points.angle }

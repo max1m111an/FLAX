@@ -4,9 +4,12 @@ import { useCurrentTab } from "@/context/TabsContext.tsx";
 
 interface EdgeProps {
     x1: number;
-    x2: number;
     y1: number;
+    x2: number;
     y2: number;
+    cx?: number;
+    cy?: number;
+    curved?: boolean;
     textX?: number;
     textY?: number;
     angle?: number;
@@ -24,6 +27,9 @@ export default function Edge(
         y1,
         x2,
         y2,
+        cx,
+        cy,
+        curved,
         label,
         isEditing,
         onDeleteEdge,
@@ -72,22 +78,39 @@ export default function Edge(
                     <line x1="2" y1="11" x2="12" y2="7" />
                 </marker>
             </defs>
-            <line
-                x1={ x1 }
-                y1={ y1 }
-                x2={ x2 }
-                y2={ y2 }
-                className={ styles.delete }
-            />
-            <line
-                x1={ x1 }
-                y1={ y1 }
-                x2={ x2 }
-                y2={ y2 }
-                markerEnd={ `url(#arrowhead-${id})` }
-                className={ clsx(highlight && !highlight.status && styles.selected) }
-                style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
-            />
+            {curved && cx !== undefined && cy !== undefined ? (
+                <>
+                    <path
+                        d={ `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}` }
+                        className={ styles.delete }
+                    />
+                    <path
+                        d={ `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}` }
+                        markerEnd={ `url(#arrowhead-${id})` }
+                        className={ clsx(highlight && !highlight.status && styles.selected) }
+                        style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
+                    />
+                </>
+            ) : (
+                <>
+                    <line
+                        x1={ x1 }
+                        y1={ y1 }
+                        x2={ x2 }
+                        y2={ y2 }
+                        className={ styles.delete }
+                    />
+                    <line
+                        x1={ x1 }
+                        y1={ y1 }
+                        x2={ x2 }
+                        y2={ y2 }
+                        markerEnd={ `url(#arrowhead-${id})` }
+                        className={ clsx(highlight && !highlight.status && styles.selected) }
+                        style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
+                    />
+                </>
+            )}
             {!isEditing &&
                 label &&
                 textX !== undefined &&
