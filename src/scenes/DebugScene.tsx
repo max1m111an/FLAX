@@ -97,7 +97,6 @@ export const DebugScene = () => {
                         },
                     });
 
-                    console.log(`Успех: создан автомат #${automatonId} с состояниями ${stateIds.join(", ")}`);
                 } catch (e) {
                     setResponse(`Ошибка:\n${JSON.stringify(e, null, 4)}`);
                 }

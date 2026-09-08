@@ -5,9 +5,11 @@
   width: 100%;
   height: 100%;
 
-  line {
+  line,
+  path {
     stroke: var(--accent-primary);
     stroke-width: 1.5;
+    fill: none;
     pointer-events: stroke;
 
     &.selected {
@@ -28,7 +30,8 @@
   &.traceSuccess {
     filter: drop-shadow(0 0 3px var(--green-main)) drop-shadow(0 0 6px var(--green-bg));
 
-    line:not(.delete) {
+    line:not(.delete),
+    path:not(.delete) {
       stroke: var(--green-main);
     }
 
@@ -40,7 +43,8 @@
   &.traceError {
     filter: drop-shadow(0 0 3px var(--red-main)) drop-shadow(0 0 6px var(--red-bg));
 
-    line:not(.delete) {
+    line:not(.delete),
+    path:not(.delete) {
       stroke: var(--red-main);
     }
 
@@ -62,7 +66,8 @@
 }
 
 .deleteMode:hover {
-  line:not(.delete) {
+  line:not(.delete),
+  path:not(.delete) {
     stroke: var(--red-main);
   }
   .edgeLabel {
