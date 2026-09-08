@@ -12,6 +12,7 @@ import Move from "@/assets/svg/Move.svg?react";
 import clsx from "clsx";
 import styles from "../../scenes/ModelScene.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
+import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { save } from "@tauri-apps/plugin-dialog";
 import { saveJff } from "@/services/jffService.ts";
@@ -22,6 +23,7 @@ import { basename } from "@tauri-apps/api/path";
 export default function ModelControlWidget() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
+    const { addFile } = useRecentFiles();
 
     const fetchSave = async (): Promise<boolean> => {
         try {
@@ -46,6 +48,7 @@ export default function ModelControlWidget() {
                 isSaved: true,
                 savedPath: filePath,
             });
+            addFile(filePath);
             return true;
         } catch (error) {
             console.error("Ошибка при сохранении файла:", error);
@@ -59,6 +62,7 @@ export default function ModelControlWidget() {
         const filePath = currentTab?.savedPath;
         if (filePath) {
             await saveJff({ automatonId: currentTab.id, path: filePath });
+            addFile(filePath);
             return;
         }
         fetchSave();
