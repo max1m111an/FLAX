@@ -55,7 +55,6 @@ export default function ModelCanvasWidget() {
         setTempEdge(null);
 
         if (endState === undefined) return;
-        if (startState === endState) return;
 
         setDraftEdge({ from: startState, to: endState });
     };
@@ -74,7 +73,6 @@ export default function ModelCanvasWidget() {
             to: endState,
             symbols,
         };
-        console.log(newTransition);
 
         try {
             const response = await addTransition(newTransition);
@@ -184,6 +182,34 @@ export default function ModelCanvasWidget() {
     const hasReverse = (from: number, to: number): boolean =>
         from !== to && directedKeys.has(`${to}-${from}`);
 
+    const buildSelfLoop = (stateId: number) => {
+        const state = currentTab.automaton.states.find((s) => s.id === stateId);
+        if (!state) return null;
+
+        const stateX = state.x;
+        const stateY = state.y;
+        const cx = stateX + 32;
+        const cy = stateY + 32;
+        const r = 32;
+
+        const attachX = 18;
+        const attachY = cy - Math.sqrt(r * r - attachX * attachX);
+
+        const startX = cx - attachX;
+        const endX = cx + attachX;
+
+        const c1x = startX + 2;
+        const c2x = endX - 2;
+        const ctrlY = attachY - 96;
+
+        const d = `M ${startX} ${attachY} C ${c1x} ${ctrlY}, ${c2x} ${ctrlY}, ${endX} ${attachY}`;
+
+        const textX = cx;
+        const textY = attachY - 84;
+
+        return { d, textX, textY };
+    };
+
     const removeEdge = async (id: number) => {
         const targetTransition = currentTab.automaton.transitions.find((t) => t.id === id);
         if (!targetTransition) return;
@@ -252,6 +278,30 @@ export default function ModelCanvasWidget() {
             <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
 
                 {groupedTransitions.map((edgeGroup) => {
+                    if (edgeGroup.from === edgeGroup.to) {
+                        const loop = buildSelfLoop(edgeGroup.from);
+                        if (!loop) return null;
+
+                        return (
+                            <Edge
+                                key={ edgeGroup.id }
+                                id={ edgeGroup.id }
+                                from={ edgeGroup.from }
+                                to={ edgeGroup.to }
+                                x1={ loop.textX }
+                                y1={ loop.textY }
+                                x2={ loop.textX }
+                                y2={ loop.textY }
+                                loopD={ loop.d }
+                                textX={ loop.textX }
+                                textY={ loop.textY }
+                                angle={ 0 }
+                                label={ edgeGroup.allSymbols.join(", ") }
+                                onDeleteEdge={ removeEdge }
+                            />
+                        );
+                    }
+
                     const reverse = hasReverse(edgeGroup.from, edgeGroup.to);
                     const bend = reverse ? -CURVE : 0;
                     const points = calculatePoints(edgeGroup, currentTab.automaton.states, bend);
@@ -280,6 +330,20 @@ export default function ModelCanvasWidget() {
                 })}
 
                 {draftEdge && (() => {
+                    if (draftEdge.from === draftEdge.to) {
+                        const loop = buildSelfLoop(draftEdge.from);
+                        if (!loop) return null;
+                        return (
+                            <Edge
+                                x1={ loop.textX }
+                                y1={ loop.textY }
+                                x2={ loop.textX }
+                                y2={ loop.textY }
+                                loopD={ loop.d }
+                            />
+                        );
+                    }
+
                     const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
                     const points = calculatePoints(fakeEdge, currentTab.automaton.states);
 
@@ -305,6 +369,41 @@ export default function ModelCanvasWidget() {
             </svg>
 
             {draftEdge && (() => {
+                if (draftEdge.from === draftEdge.to) {
+                    const loop = buildSelfLoop(draftEdge.from);
+                    if (loop) {
+                        return (
+                            <Textfield
+                                key="draft-edge-input"
+                                autoFocus
+                                onEdge
+                                style={ {
+                                    position: "fixed",
+                                    left: loop.textX,
+                                    top: loop.textY,
+                                    transform: "translate(-50%, -50%)",
+                                    zIndex: 1000,
+                                } }
+                                onKeyDown={ (e) => {
+                                    if (e.key === "Enter") {
+                                        addEdge(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
+                                    } else if (e.key === "Escape") {
+                                        setDraftEdge(null);
+                                    }
+                                } }
+                                onBlur={ (e) => {
+                                    const val = (e.target as HTMLInputElement).value;
+                                    if (val.trim()) {
+                                        addEdge(draftEdge.from, draftEdge.to, val);
+                                    } else {
+                                        setDraftEdge(null);
+                                    }
+                                } }
+                            />
+                        );
+                    }
+                }
+
                 const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
                 const points = calculatePoints(fakeEdge, currentTab.automaton.states);
 

@@ -10,6 +10,7 @@ interface EdgeProps {
     cx?: number;
     cy?: number;
     curved?: boolean;
+    loopD?: string;
     textX?: number;
     textY?: number;
     angle?: number;
@@ -30,6 +31,7 @@ export default function Edge(
         cx,
         cy,
         curved,
+        loopD,
         label,
         isEditing,
         onDeleteEdge,
@@ -78,7 +80,20 @@ export default function Edge(
                     <line x1="2" y1="11" x2="12" y2="7" />
                 </marker>
             </defs>
-            {curved && cx !== undefined && cy !== undefined ? (
+            {loopD ? (
+                <>
+                    <path
+                        d={ loopD }
+                        className={ styles.delete }
+                    />
+                    <path
+                        d={ loopD }
+                        markerEnd={ `url(#arrowhead-${id})` }
+                        className={ clsx(highlight && !highlight.status && styles.selected) }
+                        style={ { cursor: currentTab?.activeControl === "trashcan" ? "pointer" : "default" } }
+                    />
+                </>
+            ) : curved && cx !== undefined && cy !== undefined ? (
                 <>
                     <path
                         d={ `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}` }
