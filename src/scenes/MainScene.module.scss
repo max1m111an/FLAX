@@ -136,10 +136,13 @@
 }
 
 .cleanText {
+  font-size: 14px;
   color: var(--text-secondary);
-  font-size: 16px;
-  line-height: 1.5;
-  font-weight: 400;
+  line-height: 1.6;
+
+  &:hover {
+    color: var(--text-primary);
+  }
 }
 
 .recentCardsWrapper {
@@ -147,7 +150,8 @@
   flex-direction: column;
   gap: 8px;
   overflow-y: auto;
-  padding-right: 4px;
+  padding: 4px 4px 2px 0;
+  margin-top: -4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-base) transparent;
   
