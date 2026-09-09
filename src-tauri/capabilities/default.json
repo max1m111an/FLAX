@@ -8,6 +8,12 @@
   "permissions": [
     "core:default",
     "opener:default",
-    "dialog:default"
+    "dialog:default",
+    "fs:default",
+    "fs:allow-write-text-file",
+    "fs:allow-read-text-file",
+    "fs:allow-desktop-write",
+    "fs:allow-document-write",
+    "fs:allow-download-write"
   ]
 }

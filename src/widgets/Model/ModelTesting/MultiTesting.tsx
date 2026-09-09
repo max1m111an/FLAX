@@ -10,8 +10,10 @@ import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { generateTestInputs, lineTest, runMultipleStrings, runString } from "@/services/nfaService.ts";
 import Steps from "@/assets/svg/Steps.svg?react";
 import clsx from "clsx";
-import { useState } from "react";
+import React, { useState } from "react";
 import Reset from "@/assets/svg/Reset.svg?react";
+import { open, save } from "@tauri-apps/plugin-dialog";
+import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 
 export default function MultiTesting() {
     const currentTab = useCurrentTab();
@@ -71,7 +73,54 @@ export default function MultiTesting() {
             console.error("Ошибка при генерации тестовых входов:", error);
         }
     };
+    const handleExport = async () => {
+        try {
+            const filePath = await save({
+                title: "Экспорт тестовых строк",
+                defaultPath: "test_inputs.txt",
+                filters: [
+                    {
+                        name: "Текстовые файлы",
+                        extensions: [ "txt" ],
+                    },
+                ],
+            });
 
+            if (!filePath || typeof filePath !== "string") {
+                return;
+            }
+
+            const content = testLine || "";
+            await writeTextFile(filePath, content);
+        } catch (error) {
+            console.error("Ошибка при экспорте:", error);
+        }
+    };
+
+    const handleImport = async () => {
+        try {
+            const filePath = await open({
+                multiple: false,
+                directory: false,
+                title: "Импорт тестовых строк",
+                filters: [
+                    {
+                        name: "Текстовые файлы",
+                        extensions: [ "txt" ],
+                    },
+                ],
+            });
+
+            if (!filePath || typeof filePath !== "string") {
+                return;
+            }
+
+            const content = await readTextFile(filePath);
+            setTestInput(content);
+        } catch (error) {
+            console.error("Ошибка при импорте:", error);
+        }
+    };
     return (
         <>
             <Typography variant="pretitle">Входные строки</Typography>
@@ -91,11 +140,11 @@ export default function MultiTesting() {
                             Запустить все
                         </Button>
                         <div className={ styles.playExportWrapper }>
-                            <Button variant="control" fullWidth>
+                            <Button variant="control" fullWidth onClick={ handleExport }>
                                 <FileDown />
                                 Экспорт
                             </Button>
-                            <Button variant="control" fullWidth>
+                            <Button variant="control" fullWidth onClick={ handleImport }>
                                 <Uploud />
                                 Импорт
                             </Button>
