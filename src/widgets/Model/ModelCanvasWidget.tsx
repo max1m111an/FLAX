@@ -5,7 +5,7 @@ import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { addState, addTransition, removeState as removeStateRequest, removeTransition as removeTransitionRequest, updateState } from "@/services/nfaService.ts";
+import { addState, addTransition, removeState as removeStateRequest, removeTransitionService as removeTransitionRequest, updateState } from "@/services/nfaService.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 
 

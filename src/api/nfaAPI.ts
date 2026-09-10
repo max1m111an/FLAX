@@ -17,6 +17,21 @@ export const createNewNFA = async (name: string): Promise<createNewNFAResponse> 
     }
 };
 
+export type deleteNFAResponse = {
+    status: number;
+    message: string;
+}
+
+export const deleteNFAApi = async (automatonId: number): Promise<deleteNFAResponse> => {
+    try {
+        const response = await invoke<deleteNFAResponse>("nfa_remove_automaton", { automatonId });
+        return response;
+    } catch (error) {
+        console.error("Ошибка при вызове nfa_remove_automaton:", error);
+        throw error;
+    }
+};
+
 export type addStateNFARequest = {
     automatonId: number;
     label: string;

@@ -3,8 +3,12 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
-import { createNFA } from "@/services/nfaService.ts";
+import { createNFA, deleteNFAService } from "@/services/nfaService.ts";
 import type { Trace } from "@/services/nfaService.ts";
+import { ask, save } from "@tauri-apps/plugin-dialog";
+import { basename } from "@tauri-apps/api/path";
+import { saveJff } from "@/services/jffService.ts";
+import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 
 export interface TraceHighlight {
     id: number;
@@ -43,6 +47,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
     const navigate = useNavigate();
     const location = useLocation();
+    const { addFile } = useRecentFiles();
 
     const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
         if (type === "Настройки") {
@@ -109,7 +114,51 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const updateTab = (updatedTab: tab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
-    const removeTab = (self_tab: tab): void => {
+    const fetchSave = async (currentTab: tab): Promise<boolean> => {
+        try {
+            const filePath = await save({
+                defaultPath: `${currentTab?.title}.jff`,
+                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
+            });
+
+            if (!filePath || currentTab === undefined) return false;
+
+            const fileName = await basename(filePath);
+            const nameWithoutExt = fileName.replace(/\.jff$/i, "");
+
+            await saveJff({
+                automatonId: currentTab.id,
+                path: filePath,
+            });
+
+            updateTab({
+                ...currentTab,
+                title: nameWithoutExt,
+                isSaved: true,
+                savedPath: filePath,
+            });
+            addFile(filePath);
+            return true;
+        } catch (error) {
+            console.error("Ошибка при сохранении файла:", error);
+            return false;
+        }
+    };
+    const removeTab = async (self_tab: tab): Promise<void> => {
+        if (!self_tab.isSaved) {
+            const ok = await ask("Файл не сохранён. Сохранить перед закрытием?", {
+                title: "Несохранённые изменения",
+                kind: "warning",
+                okLabel: "Сохранить",
+                cancelLabel: "Не сохранять",
+            }); console.log(ok);
+            if (ok) {
+                await fetchSave(self_tab);
+            }
+        }
+        const response = deleteNFAService(self_tab.id);
+        if (!response) {return;}
+
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);
 
         const tabPath = self_tab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${self_tab.id}`;
