@@ -1,0 +1,90 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.saveBtn,
+.discardBtn,
+.cancelBtn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.saveBtn {
+  color: var(--accent-primary);
+  background: transparent;
+  border: 1px solid var(--accent-primary);
+
+  &:hover {
+    filter: brightness(1.1);
+    background-color: var(--accent-bg);
+  }
+}
+
+.discardBtn {
+  color: var(--red-main);
+  background: transparent;
+  border: 1px solid var(--red-main);
+
+  &:hover {
+    filter: brightness(1.1);
+    background-color: var(--red-bg);
+  }
+}
+
+.cancelBtn {
+  color: var(--text-primary);
+  background: var(--bg-base);
+  border: 1px solid var(--border-base);
+
+  &:hover {
+    filter: brightness(1.1);
+    background-color: var(--bg-surface-alt);
+  }
+}

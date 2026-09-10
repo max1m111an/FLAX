@@ -1,7 +1,7 @@
 import {
     addStateNFA,
     addTransitionNFA,
-    createNewNFA,
+    createNewNFA, deleteNFAApi, deleteNFAResponse,
     generateInputs,
     multiRunStrNFA,
     removeStateNFA,
@@ -67,6 +67,14 @@ export const createNFA = async (name: string): Promise<createNewNFAResponse> => 
     return response;
 };
 
+export const deleteNFAService = async (automaton_id: number): Promise<deleteNFAResponse> => {
+    const response = await deleteNFAApi(automaton_id);
+    if (response.status !== 200) {
+        throw new Error(`deleteNFA: status ${response.status}`);
+    }
+    return response;
+};
+
 export const addState = async (params: addStateNFARequest): Promise<addStateNFAResponse> => {
     const response = await addStateNFA(params);
     if (response.status !== 200) {
@@ -112,7 +120,7 @@ export const updateTransition = async (params: updateTransitNFARequest): Promise
     return response;
 };
 
-export const removeTransition = async (params: removeTransitNFARequest): Promise<removeTransitNFAResponse> => {
+export const removeTransitionService = async (params: removeTransitNFARequest): Promise<removeTransitNFAResponse> => {
     const response = await removeTransitNFA(params);
     if (response.status !== 200) {
         throw new Error(`removeTransition: status ${response.status}`);
