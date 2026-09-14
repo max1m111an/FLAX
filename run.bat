@@ -52,6 +52,16 @@ if not exist "src-tauri" (
     exit /b 1
 )
 
+rem --- Use stable toolchain ---
+echo [INFO] Using stable Rust toolchain
+rustup which cargo --toolchain stable >nul 2>nul
+if errorlevel 1 (
+    echo [WARN] Stable toolchain not installed. Installing...
+    rustup toolchain install stable
+    if errorlevel 1 goto :stable_failed
+)
+set "RUSTUP_TOOLCHAIN=stable"
+
 if "%UPD%"=="false" (
     echo.
     echo [WARN] Fast startup - updates skipped
@@ -103,6 +113,10 @@ exit /b 1
 
 :no_rustup
 echo [ERROR] rustup not found! Install Rust
+exit /b 1
+
+:stable_failed
+echo [ERROR] Failed to install stable toolchain
 exit /b 1
 
 :upd_failed

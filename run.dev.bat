@@ -5,12 +5,13 @@ rem ============================================================
 rem Script for running Tauri project with nightly and Cranelift
 rem Usage: run.dev.bat [--upd] [--clean] [--help]
 rem File should be saved in CP866 (OEM) encoding
+rem Note: nightly-only settings are passed via env vars
+rem       (RUSTUP_TOOLCHAIN, RUSTFLAGS), Cargo.toml stays stable-compatible.
 rem ============================================================
 
 set "UPD=false"
 set "CLEAN=false"
 set "SHOW_HELP=false"
-set "ORIGINAL_TOOLCHAIN="
 set "CRANELIFT_INSTALLED=false"
 
 :parse_args
@@ -60,9 +61,14 @@ if not exist "package.json" (
     exit /b 1
 )
 
-rem --- Save current toolchain for restoration ---
-for /f "tokens=1" %%a in ('rustup default 2^>nul') do set "ORIGINAL_TOOLCHAIN=%%a"
-echo [INFO] Current toolchain: %ORIGINAL_TOOLCHAIN%
+rem --- Ensure nightly toolchain is installed ---
+echo [INFO] Checking nightly toolchain
+rustup which cargo --toolchain nightly >nul 2>nul
+if errorlevel 1 (
+    echo [INFO] Nightly not installed. Installing...
+    rustup toolchain install nightly
+    if errorlevel 1 goto :err_install_nightly
+)
 
 if "%UPD%"=="false" (
     echo.
@@ -88,7 +94,7 @@ rem Check if Cranelift is already installed
 rustup component list --toolchain nightly 2>nul | findstr /R /C:"rustc-codegen-cranelift-preview.*installed" >nul
 if errorlevel 1 (
     echo [INFO] Cranelift component not installed. Trying to install...
-    
+
     rem Try to install Cranelift via rustup
     rustup component add rustc-codegen-cranelift-preview --toolchain nightly 2>nul
     if errorlevel 1 (
@@ -109,7 +115,7 @@ rem --- Alternative installation via cargo (if rustup failed) ---
 if "%CRANELIFT_INSTALLED%"=="false" (
     echo.
     echo [INFO] Trying to install Cranelift via cargo...
-    
+
     rem Check if cargo-clif is available
     where cargo-clif >nul 2>nul
     if errorlevel 1 (
@@ -140,7 +146,7 @@ rem --- 4. Clean project in src-tauri (if --clean specified) ---
 if "%CLEAN%"=="false" (
     echo.
     echo [WARN] Skipping project clean - use --clean to clean
-    goto :set_default_toolchain
+    goto :config_env
 )
 
 echo.
@@ -151,38 +157,28 @@ if errorlevel 1 echo [WARN] Clean failed - continuing...
 popd
 echo [OK] Clean completed
 
-:set_default_toolchain
-rem --- 5. Set nightly as default toolchain ---
-echo.
-echo === Setting nightly as default toolchain ===
-rustup default nightly
-if errorlevel 1 goto :err_set_default
-echo [OK] Nightly set as default toolchain
-
-rem --- 6. Run Tauri dev ---
-echo.
-echo === Running Tauri dev with nightly + Cranelift ===
-echo =========================================
-
-rem --- Check if Cranelift is installed and configure flags ---
-set "RUSTFLAGS="
+:config_env
+rem --- 5. Configure nightly via env (no default switch) ---
+set "RUSTUP_TOOLCHAIN=nightly"
+set "RUSTFLAGS=-Z threads=8"
 
 if "%CRANELIFT_INSTALLED%"=="true" (
     echo [INFO] Using Cranelift for faster compilation
-    
+
     rem Check that component is actually installed via rustup
     rustup component list --toolchain nightly 2>nul | findstr /R /C:"rustc-codegen-cranelift-preview.*installed" >nul
     if not errorlevel 1 (
-        set "RUSTFLAGS=-Z codegen-backend=cranelift"
+        set "RUSTFLAGS=%RUSTFLAGS% -Z codegen-backend=cranelift"
         echo [INFO] Cranelift activated via RUSTFLAGS
     ) else (
         rem Check for cargo-clif
         where cargo-clif >nul 2>nul
         if not errorlevel 1 (
             echo [INFO] Using cargo-clif instead of cargo
-            call cargo-clif tauri dev
+            call npm run tauri dev
             if errorlevel 1 goto :err_dev
-            goto :success
+            echo.
+            exit /b 0
         ) else (
             echo [WARN] Cranelift not found, using standard backend
         )
@@ -191,20 +187,17 @@ if "%CRANELIFT_INSTALLED%"=="true" (
     echo [WARN] Cranelift not installed, using standard backend
 )
 
-rem --- Run Tauri with configured flags ---
-if defined RUSTFLAGS (
-    echo [INFO] RUSTFLAGS=%RUSTFLAGS%
-    set "RUSTFLAGS=%RUSTFLAGS%"
-) else (
-    echo [INFO] Using standard build without Cranelift
-)
+echo [INFO] RUSTFLAGS=%RUSTFLAGS%
+echo [INFO] RUSTUP_TOOLCHAIN=nightly
+
+rem --- 6. Run Tauri dev ---
+echo.
+echo === Running Tauri dev with nightly + Cranelift ===
+echo =========================================
 
 call npm run tauri dev
 if errorlevel 1 goto :err_dev
-
-:success
 echo.
-call :restore_toolchain
 exit /b 0
 
 :show_help
@@ -224,13 +217,6 @@ echo.
 echo Note: Script automatically tries to install Cranelift if not found.
 exit /b 0
 
-:restore_toolchain
-if defined ORIGINAL_TOOLCHAIN (
-    echo [INFO] Restoring original toolchain: %ORIGINAL_TOOLCHAIN%
-    rustup default %ORIGINAL_TOOLCHAIN% >nul 2>nul
-)
-goto :eof
-
 :no_rustup
 echo [ERROR] rustup not found! Install Rust: https://rustup.rs/
 exit /b 1
@@ -239,28 +225,23 @@ exit /b 1
 echo [ERROR] npm not found! Install Node.js: https://nodejs.org/
 exit /b 1
 
+:err_install_nightly
+echo [ERROR] Failed to install nightly
+exit /b 1
+
 :err_upd_nightly
 echo [ERROR] Failed to update nightly
-call :restore_toolchain
 exit /b 1
 
 :err_npm_install
 echo [ERROR] Failed to install npm dependencies
-call :restore_toolchain
 exit /b 1
 
 :err_cd_tauri
 echo [ERROR] Failed to change to src-tauri folder
-call :restore_toolchain
-exit /b 1
-
-:err_set_default
-echo [ERROR] Failed to set nightly as default
-call :restore_toolchain
 exit /b 1
 
 :err_dev
 echo.
 echo [ERROR] Failed to run Tauri
-call :restore_toolchain
 exit /b 1

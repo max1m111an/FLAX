@@ -17,16 +17,18 @@
 ## Процесс сборки
 Для сборки проекта используется пакетный менеджер [`npm`](https://www.npmjs.com/) и менеджер зависимостей [`rustup`](https://rustup.rs/).
 
+Сборка выполняется на **stable** Rust toolchain (`RUSTUP_TOOLCHAIN=stable`).
+
 ```bash
 rustup update
 npm install
 npm run tauri dev
 ```
 
-Или используйте скрипт `run.bat` для запуска:
+Или используйте скрипт `run.sh` / `run.bat` для запуска (они принудительно используют stable):
 
 ```bash
-.\run.bat
+./run.sh
 ```
 
 Также в доступных [релизах](https://github.com/max1m111an/FLAX/releases) находится архив с исполняемым файлом приложения.
@@ -37,9 +39,9 @@ npm run tauri dev
 3. `serde_json` - фреймворк для сериализации и десериализации данных в JSON формат;
 
 ## Dev запуск (nightly)
-Оптимзированная версия для ускорения сборки. Изменен `Cargo` манифест:
-- `cranelift` генератор кода вместо `LLVM`;
-- `nightly` Rust toolchain для ускорения сборки (несколько потоков на компиляцию);
+Оптимизированная версия для ускорения сборки. `Cargo` манифест остаётся совместимым со stable, а nightly-настройки передаются через переменные окружения:
+- `RUSTUP_TOOLCHAIN=nightly` - nightly Rust toolchain;
+- `RUSTFLAGS="-Z codegen-backend=cranelift -Z threads=8"` - `cranelift` генератор кода вместо `LLVM` и многопоточная компиляция;
 - упрощен `debugger` (отображение только индексов строк кода с кодом ошибки).
 
  ```bash
@@ -48,12 +50,13 @@ rustup component add rustc-codegen-cranelift-preview --toolchain nightly
 cd .\src-tauri\
 cargo +nightly clean
 cd ..
-rustup default nightly
+set RUSTUP_TOOLCHAIN=nightly
+set RUSTFLAGS=-Z codegen-backend=cranelift -Z threads=8
 npm install
 npm run tauri dev
 ```
 
-Или используйте скрипт `run.dev.bat` для запуска:
+Или используйте скрипт `run.dev.bat` / `run.dev.sh` для запуска:
 
 ```bash
 .\run.dev.bat

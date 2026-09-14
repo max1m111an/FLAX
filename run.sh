@@ -62,6 +62,17 @@ if [ ! -d "src-tauri" ]; then
     exit 1
 fi
 
+# --- Use stable toolchain ---
+echo "[INFO] Using stable Rust toolchain"
+if ! rustup which cargo --toolchain stable >/dev/null 2>&1; then
+    echo "[WARN] Stable toolchain not installed. Installing..."
+    if ! rustup toolchain install stable; then
+        echo "[ERROR] Failed to install stable toolchain"
+        exit 1
+    fi
+fi
+export RUSTUP_TOOLCHAIN="stable"
+
 if [ "$UPD" = false ]; then
     echo
     echo "[WARN] Fast startup - updates skipped"

@@ -4,12 +4,13 @@ set -euo pipefail
 # ============================================================
 # Script for running Tauri project with nightly and Cranelift
 # Usage: run.dev.sh [--upd] [--clean] [--help]
+# Note: nightly-only settings are passed via env vars
+#       (RUSTUP_TOOLCHAIN, RUSTFLAGS), Cargo.toml stays stable-compatible.
 # ============================================================
 
 UPD=false
 CLEAN=false
 SHOW_HELP=false
-ORIGINAL_TOOLCHAIN=""
 CRANELIFT_INSTALLED=false
 
 usage() {
@@ -28,13 +29,6 @@ usage() {
     echo
     echo "Note: Script automatically tries to install Cranelift if not found."
     exit 0
-}
-
-restore_toolchain() {
-    if [ -n "$ORIGINAL_TOOLCHAIN" ]; then
-        echo "[INFO] Restoring original toolchain: $ORIGINAL_TOOLCHAIN"
-        rustup default "$ORIGINAL_TOOLCHAIN" >/dev/null 2>&1 || true
-    fi
 }
 
 for arg in "$@"; do
@@ -78,15 +72,17 @@ if [ ! -f "package.json" ]; then
     exit 1
 fi
 
-# --- Save current toolchain for restoration ---
-ORIGINAL_TOOLCHAIN="$(rustup default 2>/dev/null | awk '{print $1}')"
-echo "[INFO] Current toolchain: $ORIGINAL_TOOLCHAIN"
+# --- Ensure nightly toolchain is installed ---
+echo "[INFO] Checking nightly toolchain"
+if ! rustup which cargo --toolchain nightly >/dev/null 2>&1; then
+    echo "[INFO] Nightly not installed. Installing..."
+    if ! rustup toolchain install nightly; then
+        echo "[ERROR] Failed to install nightly"
+        exit 1
+    fi
+fi
 
-if [ "$UPD" = false ]; then
-    echo
-    echo "[WARN] Fast startup - updates skipped"
-    echo "[INFO] Use --upd to update dependencies"
-else
+if [ "$UPD" = true ]; then
     echo "[INFO] Running with dependency updates"
 
     # --- 1. Update nightly ---
@@ -94,7 +90,6 @@ else
     echo "=== Updating nightly Rust ==="
     if ! rustup update nightly; then
         echo "[ERROR] Failed to update nightly"
-        restore_toolchain
         exit 1
     fi
     echo "[OK] Nightly successfully updated"
@@ -145,50 +140,40 @@ else
     echo "=== Installing npm dependencies ==="
     if ! npm install; then
         echo "[ERROR] Failed to install npm dependencies"
-        restore_toolchain
         exit 1
     fi
     echo "[OK] npm dependencies installed"
+else
+    echo
+    echo "[WARN] Fast startup - updates skipped"
+    echo "[INFO] Use --upd to update dependencies"
 fi
 
 # --- 4. Clean project in src-tauri (if --clean specified) ---
-if [ "$CLEAN" = false ]; then
-    echo
-    echo "[WARN] Skipping project clean - use --clean to clean"
-else
+if [ "$CLEAN" = true ]; then
     echo
     echo "=== Cleaning project in src-tauri ==="
     (cd src-tauri && cargo +nightly clean) || echo "[WARN] Clean failed - continuing..."
     echo "[OK] Clean completed"
+else
+    echo
+    echo "[WARN] Skipping project clean - use --clean to clean"
 fi
 
-# --- 5. Set nightly as default toolchain ---
-echo
-echo "=== Setting nightly as default toolchain ==="
-if ! rustup default nightly; then
-    echo "[ERROR] Failed to set nightly as default"
-    restore_toolchain
-    exit 1
-fi
-echo "[OK] Nightly set as default toolchain"
+# --- 5. Configure nightly via env (no default switch, no restore needed) ---
+export RUSTUP_TOOLCHAIN="nightly"
 
-# --- 6. Run Tauri dev ---
-echo
-echo "=== Running Tauri dev with nightly + Cranelift ==="
-echo "========================================="
-
-RUSTFLAGS=""
+RUSTFLAGS="-Z threads=8"
 
 if [ "$CRANELIFT_INSTALLED" = true ]; then
     echo "[INFO] Using Cranelift for faster compilation"
 
     if rustup component list --toolchain nightly 2>/dev/null | grep -q "rustc-codegen-cranelift-preview.*installed"; then
-        RUSTFLAGS="-Z codegen-backend=cranelift"
+        RUSTFLAGS="$RUSTFLAGS -Z codegen-backend=cranelift"
         echo "[INFO] Cranelift activated via RUSTFLAGS"
     elif command -v cargo-clif >/dev/null 2>&1; then
         echo "[INFO] Using cargo-clif instead of cargo"
-        cargo-clif tauri dev || { echo; echo "[ERROR] Failed to run Tauri"; restore_toolchain; exit 1; }
-        restore_toolchain
+        npm run tauri dev || { echo; echo "[ERROR] Failed to run Tauri"; exit 1; }
         exit 0
     else
         echo "[WARN] Cranelift not found, using standard backend"
@@ -197,19 +182,19 @@ else
     echo "[WARN] Cranelift not installed, using standard backend"
 fi
 
-if [ -n "$RUSTFLAGS" ]; then
-    echo "[INFO] RUSTFLAGS=$RUSTFLAGS"
-    export RUSTFLAGS="$RUSTFLAGS"
-else
-    echo "[INFO] Using standard build without Cranelift"
-fi
+export RUSTFLAGS="$RUSTFLAGS"
+echo "[INFO] RUSTFLAGS=$RUSTFLAGS"
+echo "[INFO] RUSTUP_TOOLCHAIN=nightly"
+
+# --- 6. Run Tauri dev ---
+echo
+echo "=== Running Tauri dev with nightly + Cranelift ==="
+echo "========================================="
 
 if ! npm run tauri dev; then
     echo
     echo "[ERROR] Failed to run Tauri"
-    restore_toolchain
     exit 1
 fi
 
 echo
-restore_toolchain
