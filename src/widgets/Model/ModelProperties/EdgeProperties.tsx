@@ -12,7 +12,7 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
 import styles from "./ModelProperties.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { addTransition, removeTransition, updateTransition } from "@/services/nfaService.ts";
+import { addTransition, removeTransitionService, updateTransition } from "@/services/nfaService.ts";
 
 export default function EdgeProperties() {
     const [ isOpenId, setIsOpenId ] = useState<number[]>([]);
@@ -102,7 +102,7 @@ export default function EdgeProperties() {
             const group = grouped[to];
 
             for (const id of group.ids) {
-                await removeTransition({ automatonId: currentTab.id, transitionId: id });
+                await removeTransitionService({ automatonId: currentTab.id, transitionId: id });
             }
 
             const response = await addTransition({
@@ -139,7 +139,7 @@ export default function EdgeProperties() {
         try {
             const group = grouped[to];
             for (const id of group.ids) {
-                await removeTransition({ automatonId: currentTab.id, transitionId: id });
+                await removeTransitionService({ automatonId: currentTab.id, transitionId: id });
             }
 
             const newTabData = {

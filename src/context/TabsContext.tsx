@@ -3,8 +3,13 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
-import { createNFA } from "@/services/nfaService.ts";
+import { createNFA, deleteNFAService } from "@/services/nfaService.ts";
 import type { Trace } from "@/services/nfaService.ts";
+import { save } from "@tauri-apps/plugin-dialog";
+import { basename } from "@tauri-apps/api/path";
+import { saveJff } from "@/services/jffService.ts";
+import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
+import { ConfirmCloseModal } from "@/components/ConfirmCloseModal/ConfirmCloseModal.tsx";
 
 export interface TraceHighlight {
     id: number;
@@ -41,8 +46,10 @@ const TabsContext = createContext<TabsContextProps | undefined>(undefined);
 
 export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const [ tabs, setTabs ] = useState<tab[]>([]);
+    const [ pendingCloseTab, setPendingCloseTab ] = useState<tab | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
+    const { addFile } = useRecentFiles();
 
     const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
         if (type === "Настройки") {
@@ -109,7 +116,40 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const updateTab = (updatedTab: tab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
-    const removeTab = (self_tab: tab): void => {
+    const fetchSave = async (currentTab: tab): Promise<boolean> => {
+        try {
+            const filePath = await save({
+                defaultPath: `${currentTab?.title}.jff`,
+                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
+            });
+
+            if (!filePath || currentTab === undefined) return false;
+
+            const fileName = await basename(filePath);
+            const nameWithoutExt = fileName.replace(/\.jff$/i, "");
+
+            await saveJff({
+                automatonId: currentTab.id,
+                path: filePath,
+            });
+
+            updateTab({
+                ...currentTab,
+                title: nameWithoutExt,
+                isSaved: true,
+                savedPath: filePath,
+            });
+            addFile(filePath);
+            return true;
+        } catch (error) {
+            console.error("Ошибка при сохранении файла:", error);
+            return false;
+        }
+    };
+    const closeTab = async (self_tab: tab): Promise<void> => {
+        const response = deleteNFAService(self_tab.id);
+        if (!response) {return;}
+
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);
 
         const tabPath = self_tab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${self_tab.id}`;
@@ -128,9 +168,45 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const removeTab = (self_tab: tab): void => {
+        if (!self_tab.isSaved) {
+            setPendingCloseTab(self_tab);
+            return;
+        }
+        closeTab(self_tab);
+    };
+
+    const handleConfirmSave = async (): Promise<void> => {
+        if (!pendingCloseTab) return;
+        const saved = await fetchSave(pendingCloseTab);
+        if (saved) {
+            await closeTab(pendingCloseTab);
+        }
+        setPendingCloseTab(null);
+    };
+
+    const handleConfirmDiscard = (): void => {
+        if (!pendingCloseTab) return;
+        closeTab(pendingCloseTab);
+        setPendingCloseTab(null);
+    };
+
+    const handleCancelClose = (): void => {
+        setPendingCloseTab(null);
+    };
+
     return (
         <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab, loadTab } }>
             {children}
+            {pendingCloseTab && (
+                <ConfirmCloseModal
+                    title="Несохранённые изменения"
+                    message="Файл не сохранён. Сохранить перед закрытием?"
+                    onSave={ handleConfirmSave }
+                    onDiscard={ handleConfirmDiscard }
+                    onCancel={ handleCancelClose }
+                />
+            )}
         </TabsContext.Provider>
     );
 };
