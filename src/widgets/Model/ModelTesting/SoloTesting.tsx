@@ -13,7 +13,7 @@ import clsx from "clsx";
 import styles from "./SoloTesting.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import type { TraceHighlight } from "@/context/TabsContext.tsx";
-import { RunStep, runString } from "@/services/nfaService.ts";
+import { RunStep, runString } from "@/services/faService.ts";
 
 export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");

@@ -1,4 +1,4 @@
-import { addState, addTransition } from "@/services/nfaService.ts";
+import { addState, addTransition } from "@/services/faService.ts";
 import styles from "@/scenes/MainScene.module.scss";
 import { useState } from "react";
 import { useTabs } from "@/context/TabsContext.tsx";

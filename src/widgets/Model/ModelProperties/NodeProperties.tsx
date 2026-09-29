@@ -3,7 +3,7 @@ import { Switch } from "@/components/ui/Switch/Switch.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelProperties.module.scss";
 import { tab, useCurrentTab, useTabs } from "@/context/TabsContext";
-import { updateState, updateStateNFARequest } from "@/services/nfaService.ts";
+import { updateState, updateStateFARequest } from "@/services/faService.ts";
 
 export default function NodeProperties() {
     const currentTab = useCurrentTab();
@@ -13,7 +13,7 @@ export default function NodeProperties() {
 
     const selectedStateId = currentTab.selectedNodeId;
 
-    const fetchUpdateState = async (request: updateStateNFARequest) => {
+    const fetchUpdateState = async (request: updateStateFARequest) => {
         try {
             const response = await updateState(request);
             const newTabData: tab = {
@@ -33,7 +33,7 @@ export default function NodeProperties() {
 
     const handleNameChange = async (name: string) => {
         if (selectedStateId === null) return;
-        const request: updateStateNFARequest = {
+        const request: updateStateFARequest = {
             automatonId: currentTab.id,
             stateId: selectedStateId,
             label: name,
@@ -46,7 +46,7 @@ export default function NodeProperties() {
 
         if (selectedStateId === null) return;
 
-        const request: updateStateNFARequest = {
+        const request: updateStateFARequest = {
             automatonId: currentTab.id,
             stateId: selectedStateId,
             isInitial: newValue,
@@ -60,7 +60,7 @@ export default function NodeProperties() {
 
         if (selectedStateId === null) return;
 
-        const request: updateStateNFARequest = {
+        const request: updateStateFARequest = {
             automatonId: currentTab.id,
             stateId: selectedStateId,
             isFinal: newValue,
@@ -74,7 +74,7 @@ export default function NodeProperties() {
 
         if (selectedStateId === null) return;
 
-        const request: updateStateNFARequest = {
+        const request: updateStateFARequest = {
             automatonId: currentTab.id,
             stateId: selectedStateId,
             x: newValue,
@@ -87,7 +87,7 @@ export default function NodeProperties() {
 
         if (selectedStateId === null) return;
 
-        const request: updateStateNFARequest = {
+        const request: updateStateFARequest = {
             automatonId: currentTab.id,
             stateId: selectedStateId,
             y: newValue,

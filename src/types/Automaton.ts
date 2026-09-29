@@ -1,7 +1,6 @@
 export interface AutomatonModel {
     id: number;
     name: string;
-    kind: string;
     states: StateModel[]
     transitions: TransitionModel[];
     alphabet: string[];
