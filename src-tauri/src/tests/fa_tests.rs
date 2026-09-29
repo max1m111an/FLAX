@@ -2,16 +2,15 @@ use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::Path;
 
-use crate::api::fa::{data_to_nfa, test_line};
+use crate::api::fa::{data_to_fa, test_line};
 use crate::jff::{is_deterministic, parse_jff, to_jff};
-use crate::structs::automata::{Automaton, DeterministicAutomaton, NondeterministicAutomaton};
+use crate::structs::automata::{Automaton, NondeterministicAutomaton};
 use crate::structs::data_models::{AutomatonData, RunStep, StateData, Trace, TransitionData};
-use crate::structs::dfa::{DFA, DFABuilder};
-use crate::structs::nfa::{EPSILON, NFA};
+use crate::structs::fa::{EPSILON, FA};
 
 #[test]
-fn builder_creates_valid_nfa() {
-    let nfa = NFA::builder()
+fn builder_creates_valid_fa() {
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -22,16 +21,16 @@ fn builder_creates_valid_nfa() {
         .transition(0, 'a', 1)
         .transition(1, 'b', 2)
         .build();
-    assert!(nfa.is_ok());
-    let nfa = nfa.unwrap();
-    assert_eq!(nfa.states().len(), 3);
-    assert_eq!(nfa.initial_state(), &0);
-    assert!(nfa.final_states().contains(&2));
+    assert!(fa.is_ok());
+    let fa = fa.unwrap();
+    assert_eq!(fa.states().len(), 3);
+    assert_eq!(fa.initial_state(), &0);
+    assert!(fa.final_states().contains(&2));
 }
 
 #[test]
 fn builder_fails_without_initial() {
-    let result = NFA::builder()
+    let result = FA::builder()
         .state(0)
         .state(1)
         .set_final(1)
@@ -45,7 +44,7 @@ fn builder_fails_without_initial() {
 fn new_fails_with_invalid_accepting() {
     let states = HashSet::from([0]);
     let final_states = HashSet::from([99]);
-    let result = NFA::new(states, HashSet::new(), HashMap::new(), 0, final_states);
+    let result = FA::new(states, HashSet::new(), HashMap::new(), 0, final_states);
     assert!(result.is_err());
 }
 
@@ -54,13 +53,13 @@ fn new_fails_with_invalid_transition_state() {
     let states = HashSet::from([0]);
     let mut transitions: HashMap<(i32, char), HashSet<i32>> = HashMap::new();
     transitions.insert((0, 'a'), HashSet::from([99]));
-    let result = NFA::new(states, HashSet::from(['a']), transitions, 0, HashSet::new());
+    let result = FA::new(states, HashSet::from(['a']), transitions, 0, HashSet::new());
     assert!(result.is_err());
 }
 
 #[test]
 fn accepts_simple_string() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -73,17 +72,17 @@ fn accepts_simple_string() {
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&['a', 'b']));
-    assert!(!nfa.accepts(&['a']));
-    assert!(!nfa.accepts(&['b']));
-    assert!(!nfa.accepts(&['a', 'b', 'a']));
-    assert!(!nfa.accepts(&[]));
+    assert!(fa.accepts(&['a', 'b']));
+    assert!(!fa.accepts(&['a']));
+    assert!(!fa.accepts(&['b']));
+    assert!(!fa.accepts(&['a', 'b', 'a']));
+    assert!(!fa.accepts(&[]));
 }
 
 #[test]
 fn accepts_with_epsilon_transition() {
     // q0 --eps--> q1 --a--> q2 (accepting)
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -95,16 +94,16 @@ fn accepts_with_epsilon_transition() {
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&['a']));
-    assert!(!nfa.accepts(&['b']));
-    assert!(!nfa.accepts(&[]));
+    assert!(fa.accepts(&['a']));
+    assert!(!fa.accepts(&['b']));
+    assert!(!fa.accepts(&[]));
 }
 
 #[test]
 fn accepts_with_nondeterminism() {
     // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting)
     // accepts a*b
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -118,19 +117,19 @@ fn accepts_with_nondeterminism() {
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&['a', 'b']));
-    assert!(nfa.accepts(&['a', 'a', 'b']));
-    assert!(nfa.accepts(&['a', 'a', 'a', 'b']));
-    assert!(!nfa.accepts(&['b']));
-    assert!(!nfa.accepts(&['a']));
-    assert!(!nfa.accepts(&['a', 'b', 'a']));
-    assert!(!nfa.accepts(&['b', 'a']));
+    assert!(fa.accepts(&['a', 'b']));
+    assert!(fa.accepts(&['a', 'a', 'b']));
+    assert!(fa.accepts(&['a', 'a', 'a', 'b']));
+    assert!(!fa.accepts(&['b']));
+    assert!(!fa.accepts(&['a']));
+    assert!(!fa.accepts(&['a', 'b', 'a']));
+    assert!(!fa.accepts(&['b', 'a']));
 }
 
 #[test]
 fn accepts_with_multiple_epsilon_closures() {
     // q0 --eps--> q1 --eps--> q2 --a--> q3 (accepting)
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -144,13 +143,13 @@ fn accepts_with_multiple_epsilon_closures() {
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&['a']));
-    assert!(!nfa.accepts(&[]));
+    assert!(fa.accepts(&['a']));
+    assert!(!fa.accepts(&[]));
 }
 
 #[test]
 fn rejects_symbol_not_in_alphabet() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -160,25 +159,25 @@ fn rejects_symbol_not_in_alphabet() {
         .build()
         .unwrap();
 
-    assert!(!nfa.accepts(&['b']));
+    assert!(!fa.accepts(&['b']));
 }
 
 #[test]
 fn empty_string_accepted_when_initial_is_final() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .set_initial(0)
         .set_final(0)
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&[]));
-    assert!(!nfa.accepts(&['a']));
+    assert!(fa.accepts(&[]));
+    assert!(!fa.accepts(&['a']));
 }
 
 #[test]
 fn epsilon_closure_includes_all_reachable() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -192,7 +191,7 @@ fn epsilon_closure_includes_all_reachable() {
         .build()
         .unwrap();
 
-    let closure = nfa.epsilon_closure(&0);
+    let closure = fa.epsilon_closure(&0);
     assert!(closure.contains(&0));
     assert!(closure.contains(&1));
     assert!(closure.contains(&2));
@@ -201,7 +200,7 @@ fn epsilon_closure_includes_all_reachable() {
 
 #[test]
 fn next_states_returns_correct_set() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -213,7 +212,7 @@ fn next_states_returns_correct_set() {
         .build()
         .unwrap();
 
-    let next = nfa.next_states(&0, &'a');
+    let next = fa.next_states(&0, &'a');
     assert!(next.contains(&1));
     assert!(next.contains(&2));
     assert_eq!(next.len(), 2);
@@ -221,7 +220,7 @@ fn next_states_returns_correct_set() {
 
 #[test]
 fn is_empty_when_no_accepting() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -230,12 +229,12 @@ fn is_empty_when_no_accepting() {
         .build()
         .unwrap();
 
-    assert!(nfa.is_empty());
+    assert!(fa.is_empty());
 }
 
 #[test]
 fn is_empty_when_accepting_unreachable() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -244,12 +243,12 @@ fn is_empty_when_accepting_unreachable() {
         .build()
         .unwrap();
 
-    assert!(nfa.is_empty());
+    assert!(fa.is_empty());
 }
 
 #[test]
 fn is_not_empty_when_accepting_reachable() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -259,12 +258,12 @@ fn is_not_empty_when_accepting_reachable() {
         .build()
         .unwrap();
 
-    assert!(!nfa.is_empty());
+    assert!(!fa.is_empty());
 }
 
 #[test]
 fn reachable_states_follows_epsilon() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -276,15 +275,15 @@ fn reachable_states_follows_epsilon() {
         .build()
         .unwrap();
 
-    let reachable = nfa.reachable_states();
+    let reachable = fa.reachable_states();
     assert!(reachable.contains(&0));
     assert!(reachable.contains(&1));
     assert!(reachable.contains(&2));
 }
 
 #[test]
-fn nfa_to_data_roundtrip_via_builder() {
-    let nfa = NFA::builder()
+fn fa_to_data_roundtrip_via_builder() {
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -301,7 +300,7 @@ fn nfa_to_data_roundtrip_via_builder() {
         .unwrap();
 
     // Test that transitions are stored correctly
-    let t = nfa.get_transitions();
+    let t = fa.get_transitions();
     assert!(t.contains_key(&(0, 'a')));
     assert!(t.contains_key(&(0, EPSILON))); // epsilon
     assert!(t[&(0, 'a')].contains(&0));
@@ -309,9 +308,9 @@ fn nfa_to_data_roundtrip_via_builder() {
 }
 
 #[test]
-fn many_states_complex_nfa() {
-    // NFA for (a|b)*abb
-    let nfa = NFA::builder()
+fn many_states_complex_fa() {
+    // FA for (a|b)*abb
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -328,17 +327,17 @@ fn many_states_complex_nfa() {
         .build()
         .unwrap();
 
-    assert!(nfa.accepts(&['a', 'b', 'b']));
-    assert!(nfa.accepts(&['a', 'a', 'b', 'b']));
-    assert!(nfa.accepts(&['b', 'a', 'b', 'b']));
-    assert!(nfa.accepts(&['a', 'b', 'a', 'b', 'b']));
-    assert!(!nfa.accepts(&['a', 'b']));
-    assert!(!nfa.accepts(&['a', 'b', 'b', 'a']));
+    assert!(fa.accepts(&['a', 'b', 'b']));
+    assert!(fa.accepts(&['a', 'a', 'b', 'b']));
+    assert!(fa.accepts(&['b', 'a', 'b', 'b']));
+    assert!(fa.accepts(&['a', 'b', 'a', 'b', 'b']));
+    assert!(!fa.accepts(&['a', 'b']));
+    assert!(!fa.accepts(&['a', 'b', 'b', 'a']));
 }
 
 #[test]
-fn run_returns_trace_for_simple_nfa() {
-    let nfa = NFA::builder()
+fn run_returns_trace_for_simple_fa() {
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -351,7 +350,7 @@ fn run_returns_trace_for_simple_nfa() {
         .build()
         .unwrap();
 
-    let trace = nfa.run(&['a', 'b']).unwrap();
+    let trace = fa.run(&['a', 'b']).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
@@ -373,7 +372,7 @@ fn run_returns_trace_for_simple_nfa() {
 
 #[test]
 fn run_tracks_epsilon_steps() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -385,7 +384,7 @@ fn run_tracks_epsilon_steps() {
         .build()
         .unwrap();
 
-    let trace = nfa.run(&['a']).unwrap();
+    let trace = fa.run(&['a']).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
@@ -408,7 +407,7 @@ fn run_tracks_epsilon_steps() {
 #[test]
 fn run_finds_accepting_branch() {
     // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting); q0 --a--> q0
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -422,7 +421,7 @@ fn run_finds_accepting_branch() {
         .build()
         .unwrap();
 
-    let trace = nfa.run(&['a', 'a', 'b']).unwrap();
+    let trace = fa.run(&['a', 'a', 'b']).unwrap();
     assert_eq!(trace.len(), 3);
     assert_eq!(
         trace[0],
@@ -452,7 +451,7 @@ fn run_finds_accepting_branch() {
 
 #[test]
 fn run_rejects_when_no_path() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -462,27 +461,27 @@ fn run_rejects_when_no_path() {
         .build()
         .unwrap();
 
-    assert!(nfa.run(&['a', 'a']).is_none());
-    assert!(nfa.run(&['b']).is_none());
-    assert!(nfa.run(&[]).is_none());
+    assert!(fa.run(&['a', 'a']).is_none());
+    assert!(fa.run(&['b']).is_none());
+    assert!(fa.run(&[]).is_none());
 }
 
 #[test]
 fn run_accepts_empty_when_initial_is_final() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .set_initial(0)
         .set_final(0)
         .build()
         .unwrap();
 
-    let trace = nfa.run(&[]).unwrap();
+    let trace = fa.run(&[]).unwrap();
     assert!(trace.is_empty());
 }
 
 #[test]
 fn run_partial_full_acceptance() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -495,7 +494,7 @@ fn run_partial_full_acceptance() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert!(traces[0].isFinal);
@@ -521,7 +520,7 @@ fn run_partial_full_acceptance() {
 
 #[test]
 fn run_partial_rejected_no_path() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -533,7 +532,7 @@ fn run_partial_rejected_no_path() {
 
     // 'b' is not in the alphabet: reading stops before it (0 symbols consumed),
     // the single (empty so far) thread remains, and the string is rejected.
-    let (traces, accepted) = nfa.run_partial(&['b']);
+    let (traces, accepted) = fa.run_partial(&['b']);
     assert!(!accepted);
     assert_eq!(
         traces,
@@ -546,7 +545,7 @@ fn run_partial_rejected_no_path() {
 
 #[test]
 fn run_partial_rejected_empty_on_non_final() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -556,7 +555,7 @@ fn run_partial_rejected_empty_on_non_final() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = fa.run_partial(&[]);
     assert!(!accepted);
     assert_eq!(
         traces,
@@ -569,14 +568,14 @@ fn run_partial_rejected_empty_on_non_final() {
 
 #[test]
 fn run_partial_full_accepts_empty_when_initial_final() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .set_initial(0)
         .set_final(0)
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = fa.run_partial(&[]);
     assert!(accepted);
     assert_eq!(
         traces,
@@ -590,7 +589,7 @@ fn run_partial_full_accepts_empty_when_initial_final() {
 #[test]
 fn run_partial_stuck_mid_string() {
     // q0 --a--> q1, no transition from q1 on 'b'
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -601,7 +600,7 @@ fn run_partial_stuck_mid_string() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     // The branch consumed 'a' but could not read 'b': it is interrupted, so even
@@ -622,7 +621,7 @@ fn run_partial_stuck_mid_string() {
 #[test]
 fn run_partial_consumed_all_not_final() {
     // q0 --a--> q1 (not final)
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -633,7 +632,7 @@ fn run_partial_consumed_all_not_final() {
         .unwrap();
 
     // Input "aa" — first 'a' goes to q1, second 'a' has no transition from q1
-    let (traces, accepted) = nfa.run_partial(&['a', 'a']);
+    let (traces, accepted) = fa.run_partial(&['a', 'a']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(traces[0].steps.len(), 1);
@@ -642,9 +641,9 @@ fn run_partial_consumed_all_not_final() {
 #[test]
 fn run_partial_with_epsilon() {
     // q0 --eps--> q1 --a--> q2 (final)
-    // JFLAP Step with Closure: the ε-transition before the symbol is recorded
+    // JFLAP Step with Closure: the eps-transition before the symbol is recorded
     // as a '$' step in the trace.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -656,7 +655,7 @@ fn run_partial_with_epsilon() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&['a']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(
@@ -681,9 +680,9 @@ fn run_partial_with_epsilon() {
 
 #[test]
 fn run_partial_closes_after_last_symbol() {
-    // q0 --a--> q1 --eps--> q2 (final): the ε-transition AFTER the last symbol
+    // q0 --a--> q1 --eps--> q2 (final): the eps-transition AFTER the last symbol
     // must be executed (and recorded) before checking finality.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -695,7 +694,7 @@ fn run_partial_closes_after_last_symbol() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&['a']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(
@@ -722,7 +721,7 @@ fn run_partial_closes_after_last_symbol() {
 fn run_partial_transitive_epsilon_closure_recorded() {
     // q0 --eps--> q1 --eps--> q2 (final). Closure of {q0} = {q0,q1,q2} with both
     // epsilon steps recorded in one trace. No symbols consumed -> accepted.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -733,7 +732,7 @@ fn run_partial_transitive_epsilon_closure_recorded() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = fa.run_partial(&[]);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(
@@ -763,7 +762,7 @@ fn run_partial_nondeterministic() {
     //   - q0-a->q1 (dies on second 'a')         1 step
     //   - q0-a->q0-a->q0 (dies on 'b')          2 steps
     //   - q0-a->q0-a->q1-b->q2 (final)          3 steps
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -777,7 +776,7 @@ fn run_partial_nondeterministic() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'a', 'b']);
     assert!(accepted);
     assert_eq!(traces.len(), 3);
     assert!(traces.iter().any(|t| t.isFinal && t.steps.len() == 3));
@@ -807,7 +806,7 @@ fn run_partial_nondeterministic() {
 #[test]
 fn run_partial_nondeterministic_parallel() {
     // q0 --a--> {q0, q1}, separate reading histories per branch
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -818,7 +817,7 @@ fn run_partial_nondeterministic_parallel() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&['a']);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert!(traces.contains(&Trace {
@@ -845,7 +844,7 @@ fn run_partial_converging_branches_keep_separate_histories() {
     //   q0 -a-> q1 -b-> q3 (final)
     //   q0 -a-> q2 -b-> q3 (final)
     // Both reading streams must be reported separately (2 histories), not merged.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -861,7 +860,7 @@ fn run_partial_converging_branches_keep_separate_histories() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     let t1 = Trace {
@@ -911,7 +910,7 @@ fn run_partial_reports_every_branch_including_dead() {
     //   [q0-1->q3, q3-2->q6]          (dies on 3)
     //   [q0-1->q2, q2-2->q4]          (dies on 3)
     //   [q0-1->q2, q2-2->q5, q5-3->q7](final)
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -935,7 +934,7 @@ fn run_partial_reports_every_branch_including_dead() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['1', '2', '3']);
+    let (traces, accepted) = fa.run_partial(&['1', '2', '3']);
     assert!(accepted);
     assert_eq!(traces.len(), 4);
 
@@ -976,7 +975,7 @@ fn run_partial_reports_every_branch_including_dead() {
 }
 
 #[test]
-fn data_to_nfa_ignores_orphan_transitions() {
+fn data_to_fa_ignores_orphan_transitions() {
     // Transitions referencing states absent from the states list are dropped at
     // build time, so they do not spawn extra branches.
     let states = vec![
@@ -1021,9 +1020,9 @@ fn data_to_nfa_ignores_orphan_transitions() {
         },
     ];
 
-    let nfa = data_to_nfa(&states, &transitions, &[]).unwrap();
+    let fa = data_to_fa(&states, &transitions, &[]).unwrap();
     // Only the valid transition should reach final on "1".
-    let (traces, accepted) = nfa.run_partial(&['1']);
+    let (traces, accepted) = fa.run_partial(&['1']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(
@@ -1043,7 +1042,7 @@ fn run_partial_explores_all_branches() {
     //   q0 -a-> q2 -b-> q4 (final)
     //   q0 -a-> q3 -b-> q4 (final)
     // All three branches must be reported as separate histories.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1062,7 +1061,7 @@ fn run_partial_explores_all_branches() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(accepted);
     assert_eq!(traces.len(), 3);
     assert!(traces.contains(&Trace {
@@ -1114,7 +1113,7 @@ fn run_partial_explores_all_branches() {
 
 #[test]
 fn run_partial_symbol_not_in_alphabet() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -1125,7 +1124,7 @@ fn run_partial_symbol_not_in_alphabet() {
         .unwrap();
 
     // 'b' not in alphabet: reading stops before it, thread has 0 steps, rejected.
-    let (traces, accepted) = nfa.run_partial(&['b']);
+    let (traces, accepted) = fa.run_partial(&['b']);
     assert!(!accepted);
     assert_eq!(
         traces,
@@ -1139,7 +1138,7 @@ fn run_partial_symbol_not_in_alphabet() {
 #[test]
 fn run_partial_stops_before_symbol_not_in_alphabet() {
     // q0 --a--> q1 --b--> q2 (final); 'x' not in alphabet.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1153,7 +1152,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
         .unwrap();
 
     // Input "abx": should consume 'a' and 'b' (2 steps), then stop before 'x'.
-    let (traces, accepted) = nfa.run_partial(&['a', 'b', 'x']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b', 'x']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(traces[0].steps.len(), 2);
@@ -1180,7 +1179,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
 #[test]
 fn run_partial_rejects_all_when_no_final_state() {
     // No final states at all -> every string rejected, no histories.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1193,11 +1192,11 @@ fn run_partial_rejects_all_when_no_final_state() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = nfa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(!accepted);
     assert!(traces.is_empty());
 
-    let (traces, accepted) = nfa.run_partial(&[]);
+    let (traces, accepted) = fa.run_partial(&[]);
     assert!(!accepted);
     assert!(traces.is_empty());
 }
@@ -1206,7 +1205,7 @@ fn run_partial_rejects_all_when_no_final_state() {
 fn test_line_reports_is_final_and_correct_symbols() {
     // q0 --a--> q1 --a--> q2 (final). State q1 is not final, so "a" and "aa"
     // consume both symbols but only "aa" ends in a final state.
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1219,20 +1218,20 @@ fn test_line_reports_is_final_and_correct_symbols() {
         .unwrap();
 
     // Empty line: 0 correct symbols, not accepted.
-    assert_eq!(test_line(&nfa, ""), (false, 0));
+    assert_eq!(test_line(&fa, ""), (false, 0));
     // "a": stopped at q1 which is not final; 1 symbol consumed.
-    assert_eq!(test_line(&nfa, "a"), (false, 1));
+    assert_eq!(test_line(&fa, "a"), (false, 1));
     // "aa": full accept, 2 symbols.
-    assert_eq!(test_line(&nfa, "aa"), (true, 2));
+    assert_eq!(test_line(&fa, "aa"), (true, 2));
     // "aaa": all threads die; only 2 symbols are readable.
-    assert_eq!(test_line(&nfa, "aaa"), (false, 2));
+    assert_eq!(test_line(&fa, "aaa"), (false, 2));
 }
 
 #[test]
 fn test_line_counts_only_non_epsilon_steps() {
     // q0 --eps--> q1 --a--> q2 (final). The `$` step is not counted as a
     // consumed symbol, so "a" gives correctSymbols = 1 (not 2).
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1244,12 +1243,12 @@ fn test_line_counts_only_non_epsilon_steps() {
         .build()
         .unwrap();
 
-    assert_eq!(test_line(&nfa, "a"), (true, 1));
+    assert_eq!(test_line(&fa, "a"), (true, 1));
 }
 
 #[test]
 fn generate_test_inputs_empty_singles_and_sorted() {
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1262,7 +1261,7 @@ fn generate_test_inputs_empty_singles_and_sorted() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50, 15);
+    let inputs = fa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"".to_string()));
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"b".to_string()));
@@ -1279,14 +1278,14 @@ fn generate_test_inputs_empty_singles_and_sorted() {
     assert!(
         inputs
             .iter()
-            .any(|s| s.chars().any(|c| !nfa.alphabet().contains(&c)))
+            .any(|s| s.chars().any(|c| !fa.alphabet().contains(&c)))
     );
 }
 
 #[test]
 fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
     // q0 --a--> q0 (self-loop cycle), q0 --b--> q1 (final)
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -1298,7 +1297,7 @@ fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50, 15);
+    let inputs = fa.generate_test_inputs(50, 15);
     // the "a" cycle repeated 2 and 3 times
     assert!(inputs.contains(&"aa".to_string()));
     assert!(inputs.contains(&"aaa".to_string()));
@@ -1309,7 +1308,7 @@ fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
 #[test]
 fn generate_test_inputs_handles_epsilon_automaton() {
     // q0 --eps--> q1 --a--> q2 (final): shortest path to q2 is "a", not "$a"
-    let nfa = NFA::builder()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1321,18 +1320,18 @@ fn generate_test_inputs_handles_epsilon_automaton() {
         .build()
         .unwrap();
 
-    let inputs = nfa.generate_test_inputs(50, 15);
+    let inputs = fa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"".to_string()));
     // epsilon symbol is not emitted as a learned path character
     assert!(inputs.iter().all(|s| !s.contains('$')));
 }
 
-fn make_even_a_dfa() -> DFA {
-    // DFA: принимает строки с чётным количеством 'a'
+fn make_even_a_fa() -> FA {
+    // Детерминированный автомат: принимает строки с чётным количеством 'a'
     // q0 (initial, final) --a--> q1, q0 --b--> q0
     // q1 --a--> q0, q1 --b--> q1
-    DFABuilder::new()
+    FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -1347,133 +1346,67 @@ fn make_even_a_dfa() -> DFA {
 }
 
 #[test]
-fn builder_creates_valid_dfa() {
-    let dfa = make_even_a_dfa();
-    assert_eq!(dfa.states().len(), 2);
-    assert_eq!(dfa.initial_state(), &0);
-    assert!(dfa.final_states().contains(&0));
+fn builder_creates_valid_deterministic_fa() {
+    let fa = make_even_a_fa();
+    assert_eq!(fa.states().len(), 2);
+    assert_eq!(fa.initial_state(), &0);
+    assert!(fa.final_states().contains(&0));
+    assert!(fa.is_deterministic());
 }
 
 #[test]
-fn builder_fails_without_initial_dfa() {
-    let result = DFABuilder::new()
+fn is_deterministic_detects_nondeterministic_cases() {
+    let with_epsilon = FA::builder()
+        .state(0)
+        .set_initial(0)
+        .symbol('a')
+        .epsilon(0, 1)
+        .build()
+        .unwrap();
+    assert!(!with_epsilon.is_deterministic());
+
+    let branching = FA::builder()
         .state(0)
         .state(1)
-        .set_final(1)
+        .state(2)
+        .set_initial(0)
         .symbol('a')
         .transition(0, 'a', 1)
-        .build();
-    assert!(result.is_err());
-}
-
-#[test]
-fn new_fails_with_invalid_accepting_dfa() {
-    let states = HashSet::from([0]);
-    let accepting = HashSet::from([99]);
-    let result = DFA::new(states, HashSet::new(), HashMap::new(), 0, accepting);
-    assert!(result.is_err());
-}
-
-#[test]
-fn new_fails_with_invalid_transition_target() {
-    let states = HashSet::from([0]);
-    let mut transitions: HashMap<(i32, char), i32> = HashMap::new();
-    transitions.insert((0, 'a'), 99);
-    let result = DFA::new(states, HashSet::from(['a']), transitions, 0, HashSet::new());
-    assert!(result.is_err());
+        .transition(0, 'a', 2)
+        .build()
+        .unwrap();
+    assert!(!branching.is_deterministic());
 }
 
 #[test]
 fn accepts_even_a() {
-    let dfa = make_even_a_dfa();
+    let fa = make_even_a_fa();
 
-    assert!(dfa.accepts(&[])); // 0 a's - even
-    assert!(dfa.accepts(&['b'])); // 0 a's - even
-    assert!(dfa.accepts(&['b', 'b'])); // 0 a's - even
-    assert!(!dfa.accepts(&['a'])); // 1 a - odd
-    assert!(dfa.accepts(&['a', 'a'])); // 2 a's - even
-    assert!(!dfa.accepts(&['a', 'a', 'a'])); // 3 a's - odd
-    assert!(dfa.accepts(&['a', 'b', 'a'])); // 2 a's - even
-    assert!(!dfa.accepts(&['a', 'b', 'b'])); // 1 a - odd
+    assert!(fa.accepts(&[])); // 0 a's - even
+    assert!(fa.accepts(&['b'])); // 0 a's - even
+    assert!(fa.accepts(&['b', 'b'])); // 0 a's - even
+    assert!(!fa.accepts(&['a'])); // 1 a - odd
+    assert!(fa.accepts(&['a', 'a'])); // 2 a's - even
+    assert!(!fa.accepts(&['a', 'a', 'a'])); // 3 a's - odd
+    assert!(fa.accepts(&['a', 'b', 'a'])); // 2 a's - even
+    assert!(!fa.accepts(&['a', 'b', 'b'])); // 1 a - odd
+    assert!(!fa.accepts(&['c']));
+    assert!(!fa.accepts(&['a', 'c']));
 }
 
 #[test]
-fn rejects_symbol_not_in_alphabet_dfa() {
-    let dfa = make_even_a_dfa();
-    assert!(!dfa.accepts(&['c']));
-    assert!(!dfa.accepts(&['a', 'c']));
-}
+fn next_states_single_target_for_deterministic_fa() {
+    let fa = make_even_a_fa();
 
-#[test]
-fn next_state_deterministic() {
-    let dfa = make_even_a_dfa();
-
-    assert_eq!(dfa.next_state(&0, &'a'), Some(&1));
-    assert_eq!(dfa.next_state(&0, &'b'), Some(&0));
-    assert_eq!(dfa.next_state(&1, &'a'), Some(&0));
-    assert_eq!(dfa.next_state(&1, &'b'), Some(&1));
-}
-
-#[test]
-fn is_valid_full_dfa() {
-    let dfa = make_even_a_dfa();
-    assert!(dfa.is_valid().is_ok());
-}
-
-#[test]
-fn is_valid_incomplete_dfa() {
-    // q0 has transition on 'a' but not 'b'
-    let dfa = DFABuilder::new()
-        .state(0)
-        .state(1)
-        .set_initial(0)
-        .set_final(1)
-        .symbols(&['a', 'b'])
-        .transition(0, 'a', 1)
-        .build()
-        .unwrap();
-
-    assert!(dfa.is_valid().is_err());
-}
-
-#[test]
-fn is_empty_when_no_accepting_dfa() {
-    let dfa = DFABuilder::new()
-        .state(0)
-        .state(1)
-        .set_initial(0)
-        .symbols(&['a'])
-        .transition(0, 'a', 1)
-        .transition(1, 'a', 0)
-        .build()
-        .unwrap();
-
-    assert!(dfa.is_empty());
-}
-
-#[test]
-fn is_not_empty_normal() {
-    let dfa = make_even_a_dfa();
-    assert!(!dfa.is_empty());
-}
-
-#[test]
-fn empty_string_accepted_when_initial_final() {
-    let dfa = DFABuilder::new()
-        .state(0)
-        .set_initial(0)
-        .set_final(0)
-        .symbol('a')
-        .transition(0, 'a', 0)
-        .build()
-        .unwrap();
-
-    assert!(dfa.accepts(&[]));
+    assert_eq!(fa.next_states(&0, &'a'), HashSet::from([&1]));
+    assert_eq!(fa.next_states(&0, &'b'), HashSet::from([&0]));
+    assert_eq!(fa.next_states(&1, &'a'), HashSet::from([&0]));
+    assert_eq!(fa.next_states(&1, &'b'), HashSet::from([&1]));
 }
 
 #[test]
 fn empty_string_rejected_when_initial_not_final() {
-    let dfa = DFABuilder::new()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .set_initial(0)
@@ -1484,13 +1417,13 @@ fn empty_string_rejected_when_initial_not_final() {
         .build()
         .unwrap();
 
-    assert!(!dfa.accepts(&[]));
+    assert!(!fa.accepts(&[]));
 }
 
 #[test]
 fn single_state_loop() {
     // q0 --a--> q0, accepting: accepts a*
-    let dfa = DFABuilder::new()
+    let fa = FA::builder()
         .state(0)
         .set_initial(0)
         .set_final(0)
@@ -1499,19 +1432,19 @@ fn single_state_loop() {
         .build()
         .unwrap();
 
-    assert!(dfa.accepts(&[]));
-    assert!(dfa.accepts(&['a']));
-    assert!(dfa.accepts(&['a', 'a']));
-    assert!(dfa.accepts(&['a', 'a', 'a']));
-    assert!(!dfa.accepts(&['b']));
+    assert!(fa.accepts(&[]));
+    assert!(fa.accepts(&['a']));
+    assert!(fa.accepts(&['a', 'a']));
+    assert!(fa.accepts(&['a', 'a', 'a']));
+    assert!(!fa.accepts(&['b']));
 }
 
 #[test]
 fn accepts_only_specific_string() {
-    // DFA that accepts only "ab"
+    // Автомат, принимающий только "ab"
     // q0 --a--> q1 --b--> q2 (final)
     // q0 --b--> dead, q1 --a--> dead
-    let dfa = DFABuilder::new()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1530,18 +1463,18 @@ fn accepts_only_specific_string() {
         .build()
         .unwrap();
 
-    assert!(dfa.accepts(&['a', 'b']));
-    assert!(!dfa.accepts(&[]));
-    assert!(!dfa.accepts(&['a']));
-    assert!(!dfa.accepts(&['a', 'b', 'a']));
-    assert!(!dfa.accepts(&['b']));
-    assert!(!dfa.accepts(&['b', 'a']));
+    assert!(fa.accepts(&['a', 'b']));
+    assert!(!fa.accepts(&[]));
+    assert!(!fa.accepts(&['a']));
+    assert!(!fa.accepts(&['a', 'b', 'a']));
+    assert!(!fa.accepts(&['b']));
+    assert!(!fa.accepts(&['b', 'a']));
 }
 
 #[test]
 fn reachable_states_all_connected() {
-    let dfa = make_even_a_dfa();
-    let reachable = dfa.reachable_states();
+    let fa = make_even_a_fa();
+    let reachable = fa.reachable_states();
     assert_eq!(reachable.len(), 2);
     assert!(reachable.contains(&0));
     assert!(reachable.contains(&1));
@@ -1550,7 +1483,7 @@ fn reachable_states_all_connected() {
 #[test]
 fn reachable_states_partial() {
     // q0 --a--> q1 (final), q2 unreachable
-    let dfa = DFABuilder::new()
+    let fa = FA::builder()
         .state(0)
         .state(1)
         .state(2)
@@ -1562,7 +1495,7 @@ fn reachable_states_partial() {
         .build()
         .unwrap();
 
-    let reachable = dfa.reachable_states();
+    let reachable = fa.reachable_states();
     assert_eq!(reachable.len(), 2);
     assert!(reachable.contains(&0));
     assert!(reachable.contains(&1));
@@ -1571,20 +1504,20 @@ fn reachable_states_partial() {
 
 #[test]
 fn get_transitions_returns_correct_data() {
-    let dfa = make_even_a_dfa();
-    let t = dfa.get_transitions();
+    let fa = make_even_a_fa();
+    let t = fa.get_transitions();
     assert_eq!(t.len(), 4);
-    assert_eq!(t[&(0, 'a')], 1);
-    assert_eq!(t[&(0, 'b')], 0);
-    assert_eq!(t[&(1, 'a')], 0);
-    assert_eq!(t[&(1, 'b')], 1);
+    assert_eq!(t[&(0, 'a')], HashSet::from([1]));
+    assert_eq!(t[&(0, 'b')], HashSet::from([0]));
+    assert_eq!(t[&(1, 'a')], HashSet::from([0]));
+    assert_eq!(t[&(1, 'b')], HashSet::from([1]));
 }
 
 #[test]
 fn run_returns_trace_for_accepted_string() {
-    let dfa = make_even_a_dfa();
+    let fa = make_even_a_fa();
 
-    let trace = dfa.run(&['a', 'a']).unwrap();
+    let trace = fa.run(&['a', 'a']).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
@@ -1606,19 +1539,11 @@ fn run_returns_trace_for_accepted_string() {
 
 #[test]
 fn run_rejects_string_without_path() {
-    let dfa = make_even_a_dfa();
+    let fa = make_even_a_fa();
 
-    assert!(dfa.run(&['a']).is_none());
-    assert!(dfa.run(&['a', 'a', 'a']).is_none());
-    assert!(dfa.run(&['c']).is_none());
-}
-
-#[test]
-fn run_accepts_empty_when_initial_final() {
-    let dfa = make_even_a_dfa();
-
-    let trace = dfa.run(&[]).unwrap();
-    assert!(trace.is_empty());
+    assert!(fa.run(&['a']).is_none());
+    assert!(fa.run(&['a', 'a', 'a']).is_none());
+    assert!(fa.run(&['c']).is_none());
 }
 
 const EVEN_A_JFF: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>&#13;
@@ -1818,21 +1743,21 @@ fn no_states_and_transitions_yields_empty_automaton() {
 fn writes_example_files_to_target() {
     let dfa = to_jff(&even_a_data());
 
-    let mut nfa_data = even_a_data();
-    nfa_data.transitions.push(TransitionData {
+    let mut fa_data = even_a_data();
+    fa_data.transitions.push(TransitionData {
         id: 5,
         from: 0,
         to: 1,
         symbol: '$',
     });
-    let nfa = to_jff(&nfa_data);
+    let fa = to_jff(&fa_data);
 
     let out_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("target")
         .join("jff_examples");
     fs::create_dir_all(&out_dir).unwrap();
     fs::write(out_dir.join("even_a_dfa.jff"), dfa).unwrap();
-    fs::write(out_dir.join("nfa_with_epsilon.jff"), nfa).unwrap();
+    fs::write(out_dir.join("fa_with_epsilon.jff"), fa).unwrap();
 
     let content = fs::read_to_string(out_dir.join("even_a_dfa.jff")).unwrap();
     let parsed = parse_jff(&content).unwrap();

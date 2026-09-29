@@ -6,13 +6,13 @@ use crate::structs::data_models::{RunStep, Trace};
 pub const EPSILON: char = '$';
 
 /// Hard cap on the number of parallel reading threads kept by `run_partial`.
-/// Set high enough to explore all branches of realistic (educational) NFAs while
+/// Set high enough to explore all branches of realistic (educational) FAs while
 /// still bounding worst-case (exponential) blowup.
 const MAX_THREADS: usize = 1_000_000;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
-pub struct NFA {
+pub struct FA {
     states: HashSet<i32>,
     alphabet: HashSet<char>,
     transitions: HashMap<(i32, char), HashSet<i32>>,
@@ -21,7 +21,7 @@ pub struct NFA {
 }
 
 #[allow(dead_code)]
-impl NFA {
+impl FA {
     pub fn new(
         states: HashSet<i32>,
         alphabet: HashSet<char>,
@@ -62,7 +62,7 @@ impl NFA {
                 }
             }
         }
-        Ok(NFA {
+        Ok(FA {
             states,
             alphabet,
             transitions,
@@ -71,8 +71,8 @@ impl NFA {
         })
     }
 
-    pub fn builder() -> NFABuilder {
-        NFABuilder::new()
+    pub fn builder() -> FABuilder {
+        FABuilder::new()
     }
 
     pub fn get_transitions(&self) -> &HashMap<(i32, char), HashSet<i32>> {
@@ -113,6 +113,17 @@ impl NFA {
         !reachable.iter().any(|s| self.final_states.contains(s))
     }
 
+    /// True if the automaton is deterministic: no eps-transitions and at most one
+    /// target per `(state, symbol)`. Determinism is a property of a finite
+    /// automaton (checked/semantics), not a separate type — the same structure
+    /// can be run either way.
+    pub fn is_deterministic(&self) -> bool {
+        !self.alphabet.contains(&EPSILON)
+            && self.transitions.iter().all(|((_, symbol), targets)| {
+                *symbol != EPSILON && targets.len() == 1
+            })
+    }
+
     pub fn run(&self, input: &[char]) -> Option<Vec<RunStep>> {
         if input.iter().any(|s| !self.alphabet.contains(s)) {
             return None;
@@ -122,7 +133,7 @@ impl NFA {
         let mut visited: HashSet<(i32, usize)> = HashSet::new();
 
         fn explore(
-            nfa: &NFA,
+            fa: &FA,
             state: i32,
             pos: usize,
             input: &[char],
@@ -134,17 +145,17 @@ impl NFA {
             }
 
             if pos == input.len() {
-                if nfa.final_states.contains(&state) {
+                if fa.final_states.contains(&state) {
                     return true;
                 }
-                if let Some(next_states) = nfa.transitions.get(&(state, EPSILON)) {
+                if let Some(next_states) = fa.transitions.get(&(state, EPSILON)) {
                     for &next in next_states {
                         steps.push(RunStep {
                             from: state,
                             symbol: EPSILON,
                             to: next,
                         });
-                        if explore(nfa, next, pos, input, steps, visited) {
+                        if explore(fa, next, pos, input, steps, visited) {
                             return true;
                         }
                         steps.pop();
@@ -153,14 +164,14 @@ impl NFA {
                 return false;
             }
 
-            if let Some(next_states) = nfa.transitions.get(&(state, EPSILON)) {
+            if let Some(next_states) = fa.transitions.get(&(state, EPSILON)) {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
                         symbol: EPSILON,
                         to: next,
                     });
-                    if explore(nfa, next, pos, input, steps, visited) {
+                    if explore(fa, next, pos, input, steps, visited) {
                         return true;
                     }
                     steps.pop();
@@ -168,14 +179,14 @@ impl NFA {
             }
 
             let symbol = input[pos];
-            if let Some(next_states) = nfa.transitions.get(&(state, symbol)) {
+            if let Some(next_states) = fa.transitions.get(&(state, symbol)) {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
                         symbol: symbol,
                         to: next,
                     });
-                    if explore(nfa, next, pos + 1, input, steps, visited) {
+                    if explore(fa, next, pos + 1, input, steps, visited) {
                         return true;
                     }
                     steps.pop();
@@ -192,14 +203,14 @@ impl NFA {
         }
     }
 
-    /// JFLAP-style parallel run over NFA threads (JFLAP "Step with Closure").
+    /// JFLAP-style parallel run over FA threads (JFLAP "Step with Closure").
     /// Returns (traces, accepted). Each element of the outer is one parallel
     /// reading (thread): its step history plus whether it ended in a final
     /// state. Every distinct path is kept as its own trace, so branches that
     /// land in the same state (or split on the same symbol) produce separate
     /// traces.
     ///
-    /// ε-closure is computed before the first symbol, after every symbol and
+    /// eps-closure is computed before the first symbol, after every symbol and
     /// after the last symbol, and every `$`-transition traversed during a
     /// closure is recorded in that branch's history as a `RunStep` with symbol
     /// "$". Closure expands the state set without branching; nondeterminism only
@@ -217,13 +228,13 @@ impl NFA {
     ///   not present in the alphabet stops reading right before it and rejects.
     /// - The thread count is capped to bound the worst-case (exponential) blowup.
     pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
-        // Finalize a thread at the end of input: apply the final ε-closure
+        // Finalize a thread at the end of input: apply the final eps-closure
         // (recording its `$` steps) and mark isFinal if any state is final.
-        let finalize_end = |nfa: &Self, thread: (Vec<RunStep>, i32)| -> Trace {
-            let (closure_set, closure_steps) = nfa.epsilon_closure_with_steps(thread.1);
+        let finalize_end = |fa: &Self, thread: (Vec<RunStep>, i32)| -> Trace {
+            let (closure_set, closure_steps) = fa.epsilon_closure_with_steps(thread.1);
             let mut steps = thread.0;
             steps.extend(closure_steps);
-            let is_final = closure_set.iter().any(|s| nfa.final_states.contains(s));
+            let is_final = closure_set.iter().any(|s| fa.final_states.contains(s));
             Trace {
                 steps,
                 isFinal: is_final,
@@ -247,7 +258,7 @@ impl NFA {
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
             'outer: for (history, state) in &threads {
-                // 1) ε-closure of this thread's state BEFORE the symbol; record
+                // 1) eps-closure of this thread's state BEFORE the symbol; record
                 //    every `$` transition used into this branch's history.
                 let (closure_set, closure_steps) = self.epsilon_closure_with_steps(*state);
                 let mut hist = history.clone();
@@ -328,7 +339,7 @@ impl NFA {
         closure
     }
 
-    /// ε-closure of `state` plus the ordered list of `$`-transitions traversed
+    /// eps-closure of `state` plus the ordered list of `$`-transitions traversed
     /// to reach every state in the closure. `$`-transitions are not branched on
     /// (each is only recorded once per thread), matching JFLAP Step with Closure.
     fn epsilon_closure_with_steps(&self, state: i32) -> (HashSet<i32>, Vec<RunStep>) {
@@ -373,7 +384,7 @@ impl NFA {
     }
 
     /// Shortest string of alphabet symbols that reaches every reachable state.
-    /// ε-transitions are traversed for free (they never add characters), so the
+    /// eps-transitions are traversed for free (they never add characters), so the
     /// BFS level equals the number of consumed symbols and yields minimal strings.
     /// States further than `max_len` symbols from the start are not expanded.
     fn shortest_paths(&self, max_len: usize) -> HashMap<i32, String> {
@@ -516,7 +527,7 @@ impl NFA {
     }
 
     /// Generates an ordered, de-duplicated set of test strings that covers a wide
-    /// range of NFA scenarios: empty input, single symbols, shortest paths to every
+    /// range of FA scenarios: empty input, single symbols, shortest paths to every
     /// state, each transition activation, negative cases (symbols outside the
     /// alphabet, dead ends, strings ending in non-final states) and cyclic/long
     /// strings. Results are sorted by length and limited to `cap` entries.
@@ -615,7 +626,7 @@ impl NFA {
     }
 }
 
-impl Automaton for NFA {
+impl Automaton for FA {
     type State = i32;
     type Symbol = char;
 
@@ -654,7 +665,7 @@ impl Automaton for NFA {
     }
 }
 
-impl NondeterministicAutomaton for NFA {
+impl NondeterministicAutomaton for FA {
     fn epsilon_closure(&self, state: &i32) -> HashSet<&i32> {
         self.epsilon_closure_owned(*state)
             .into_iter()
@@ -673,7 +684,7 @@ impl NondeterministicAutomaton for NFA {
 }
 
 #[derive(Debug, Clone, Default)]
-pub struct NFABuilder {
+pub struct FABuilder {
     states: HashSet<i32>,
     alphabet: HashSet<char>,
     transitions: HashMap<(i32, char), HashSet<i32>>,
@@ -682,9 +693,9 @@ pub struct NFABuilder {
 }
 
 #[allow(dead_code)]
-impl NFABuilder {
+impl FABuilder {
     pub fn new() -> Self {
-        NFABuilder::default()
+        FABuilder::default()
     }
 
     pub fn state(mut self, state: i32) -> Self {
@@ -752,9 +763,9 @@ impl NFABuilder {
         self
     }
 
-    pub fn build(self) -> Result<NFA, String> {
+    pub fn build(self) -> Result<FA, String> {
         let initial_state = self.initial_state.ok_or("Не указано начальное состояние")?;
-        NFA::new(
+        FA::new(
             self.states,
             self.alphabet,
             self.transitions,

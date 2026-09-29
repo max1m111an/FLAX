@@ -77,17 +77,17 @@ mod tests {
     #[test]
     fn create_returns_automaton_with_id_1() {
         let store = make_store();
-        let entry = store.create("Test NFA".to_string(), "q0");
+        let entry = store.create("Test FA".to_string(), "q0");
         assert_eq!(entry.id, 1);
-        assert_eq!(entry.name, "Test NFA");
+        assert_eq!(entry.name, "Test FA");
     }
 
     #[test]
     fn create_auto_increments_id() {
         let store = make_store();
-        let e1 = store.create("NFA 1".to_string(), "q0");
+        let e1 = store.create("FA 1".to_string(), "q0");
         let e2 = store.create("DFA 1".to_string(), "q0");
-        let e3 = store.create("NFA 2".to_string(), "q0");
+        let e3 = store.create("FA 2".to_string(), "q0");
         assert_eq!(e1.id, 1);
         assert_eq!(e2.id, 2);
         assert_eq!(e3.id, 3);
@@ -170,9 +170,9 @@ mod tests {
     #[test]
     fn list_ids_multiple() {
         let store = make_store();
-        store.create("NFA 1".to_string(), "q0");
+        store.create("FA 1".to_string(), "q0");
         store.create("DFA 1".to_string(), "q0");
-        store.create("NFA 2".to_string(), "q0");
+        store.create("FA 2".to_string(), "q0");
 
         let mut ids = store.list_ids();
         ids.sort();

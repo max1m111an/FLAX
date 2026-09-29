@@ -7,7 +7,7 @@ use crate::{
             GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult, StateData,
             StateResult, StatusResult, TransitionData, TransitionResult,
         },
-        nfa::{EPSILON, NFA, NFABuilder},
+        fa::{EPSILON, FA, FABuilder},
         store::AutomatonStore,
     },
 };
@@ -351,7 +351,7 @@ pub fn fa_remove_transition(
 }
 
 /// Runs a string on the automaton (JFLAP-style parallel check via
-/// `NFA::run_partial`, statuses `200`/`401`/`402`). Takes the input as a whole
+/// `FA::run_partial`, statuses `200`/`401`/`402`). Takes the input as a whole
 /// string (not an array).
 #[tauri::command]
 pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: String) -> RunResult {
@@ -367,13 +367,13 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
     };
 
     let chars: Vec<char> = input.chars().collect();
-    match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
-        Ok(nfa) => {
-            let (mut traces, accepted) = nfa.run_partial(&chars);
+    match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
+        Ok(fa) => {
+            let (mut traces, accepted) = fa.run_partial(&chars);
             // Order the history so that accepted reading streams (isFinal) are
             // listed before rejected ones.
             traces.sort_by_key(|t| !t.isFinal);
-            // `$` (ε-closure) steps are part of the history; count only the
+            // `$` (eps-closure) steps are part of the history; count only the
             // symbol transitions actually consumed to derive the processed length.
             let processed_len = traces
                 .iter()
@@ -429,11 +429,11 @@ pub fn fa_multi_run_str(
     };
 
     let traces: Vec<LineTest> =
-        match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
-            Ok(nfa) => inputs
+        match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
+            Ok(fa) => inputs
                 .into_iter()
                 .map(|line| {
-                    let (is_final, correct_symbols) = test_line(&nfa, &line);
+                    let (is_final, correct_symbols) = test_line(&fa, &line);
                     LineTest {
                         line,
                         isFinal: is_final,
@@ -477,7 +477,7 @@ pub fn fa_generate_inputs(
         }
     };
 
-    let nfa = match data_to_nfa(&entry.states, &entry.transitions, &entry.alphabet) {
+    let fa = match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
         Ok(n) => n,
         Err(_) => {
             return GenerateInputsResult {
@@ -488,7 +488,7 @@ pub fn fa_generate_inputs(
         }
     };
 
-    let resp_vec: Vec<String> = nfa.generate_test_inputs(50, 15);
+    let resp_vec: Vec<String> = fa.generate_test_inputs(50, 15);
 
     GenerateInputsResult {
         status: 200,
@@ -515,9 +515,9 @@ pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) 
 /// accepted (`true` if at least one thread reaches a final state after
 /// consuming all of it) and how many symbols were consumed correctly (only
 /// non-`$` steps).
-pub(crate) fn test_line(nfa: &NFA, input: &str) -> (bool, usize) {
+pub(crate) fn test_line(fa: &FA, input: &str) -> (bool, usize) {
     let chars: Vec<char> = input.chars().collect();
-    let (traces, accepted) = nfa.run_partial(&chars);
+    let (traces, accepted) = fa.run_partial(&chars);
     let correct_symbols = traces
         .iter()
         .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
@@ -526,12 +526,12 @@ pub(crate) fn test_line(nfa: &NFA, input: &str) -> (bool, usize) {
     (accepted, correct_symbols)
 }
 
-pub(crate) fn data_to_nfa(
+pub(crate) fn data_to_fa(
     states: &[StateData],
     transitions: &[TransitionData],
     alphabet: &[char],
-) -> Result<NFA, String> {
-    let mut builder = NFABuilder::new();
+) -> Result<FA, String> {
+    let mut builder = FABuilder::new();
 
     for state in states {
         builder = builder.state(state.id);
