@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use roxmltree::Node;
 
 use crate::id_gen;
-use crate::structs::data_models::{AutomatonData, AutomatonKind, StateData, TransitionData};
+use crate::structs::data_models::{AutomatonData, StateData, TransitionData};
 use crate::structs::nfa::EPSILON;
 
 fn escape(s: &str) -> String {
@@ -211,28 +211,4 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
         transitions: parsed_transitions,
         alphabet,
     })
-}
-
-pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) -> bool {
-    if states.iter().filter(|s| s.isInitial).count() != 1 {
-        return false;
-    }
-    let mut seen: HashSet<(i32, char)> = HashSet::new();
-    for t in transitions {
-        if t.symbol == EPSILON {
-            return false;
-        }
-        if !seen.insert((t.from, t.symbol.clone())) {
-            return false;
-        }
-    }
-    true
-}
-
-pub fn infer_kind(states: &[StateData], transitions: &[TransitionData]) -> AutomatonKind {
-    if is_deterministic(states, transitions) {
-        AutomatonKind::DFA
-    } else {
-        AutomatonKind::NFA
-    }
 }

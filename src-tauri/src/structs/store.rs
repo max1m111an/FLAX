@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::sync::Mutex;
 
-use crate::structs::data_models::{AutomatonData, AutomatonKind, StateData};
+use crate::structs::data_models::{AutomatonData, StateData};
 
 pub struct AutomatonStore {
     automata: Mutex<HashMap<i32, AutomatonData>>,
@@ -16,11 +16,10 @@ impl AutomatonStore {
         }
     }
 
-    pub fn create(&self, name: String, kind: AutomatonKind, initial_label: &str) -> AutomatonData {
+    pub fn create(&self, name: String, initial_label: &str) -> AutomatonData {
         let entry = AutomatonData {
             id: 0,
             name,
-            kind,
             states: vec![StateData {
                 id: 0,
                 label: initial_label.to_string(),
@@ -78,18 +77,17 @@ mod tests {
     #[test]
     fn create_returns_automaton_with_id_1() {
         let store = make_store();
-        let entry = store.create("Test NFA".to_string(), AutomatonKind::NFA, "q0");
+        let entry = store.create("Test NFA".to_string(), "q0");
         assert_eq!(entry.id, 1);
         assert_eq!(entry.name, "Test NFA");
-        assert_eq!(entry.kind, AutomatonKind::NFA);
     }
 
     #[test]
     fn create_auto_increments_id() {
         let store = make_store();
-        let e1 = store.create("NFA 1".to_string(), AutomatonKind::NFA, "q0");
-        let e2 = store.create("DFA 1".to_string(), AutomatonKind::DFA, "q0");
-        let e3 = store.create("NFA 2".to_string(), AutomatonKind::NFA, "q0");
+        let e1 = store.create("NFA 1".to_string(), "q0");
+        let e2 = store.create("DFA 1".to_string(), "q0");
+        let e3 = store.create("NFA 2".to_string(), "q0");
         assert_eq!(e1.id, 1);
         assert_eq!(e2.id, 2);
         assert_eq!(e3.id, 3);
@@ -98,7 +96,7 @@ mod tests {
     #[test]
     fn create_initial_state_is_correct() {
         let store = make_store();
-        let entry = store.create("Test".to_string(), AutomatonKind::NFA, "q0");
+        let entry = store.create("Test".to_string(), "q0");
         assert_eq!(entry.states.len(), 1);
         assert_eq!(entry.states[0].id, 0);
         assert_eq!(entry.states[0].label, "q0");
@@ -111,7 +109,7 @@ mod tests {
     #[test]
     fn get_existing_automaton() {
         let store = make_store();
-        let created = store.create("Test".to_string(), AutomatonKind::NFA, "q0");
+        let created = store.create("Test".to_string(), "q0");
         let fetched = store.get(created.id);
         assert!(fetched.is_some());
         let fetched = fetched.unwrap();
@@ -128,7 +126,7 @@ mod tests {
     #[test]
     fn update_modifies_automaton() {
         let store = make_store();
-        let mut entry = store.create("Test".to_string(), AutomatonKind::NFA, "q0");
+        let mut entry = store.create("Test".to_string(), "q0");
         entry.name = "Updated".to_string();
         entry.states.push(StateData {
             id: 1,
@@ -150,7 +148,7 @@ mod tests {
     #[test]
     fn remove_returns_automaton() {
         let store = make_store();
-        let entry = store.create("Test".to_string(), AutomatonKind::NFA, "q0");
+        let entry = store.create("Test".to_string(), "q0");
         let removed = store.remove(entry.id);
         assert!(removed.is_some());
         assert_eq!(removed.unwrap().id, 1);
@@ -172,9 +170,9 @@ mod tests {
     #[test]
     fn list_ids_multiple() {
         let store = make_store();
-        store.create("NFA 1".to_string(), AutomatonKind::NFA, "q0");
-        store.create("DFA 1".to_string(), AutomatonKind::DFA, "q0");
-        store.create("NFA 2".to_string(), AutomatonKind::NFA, "q0");
+        store.create("NFA 1".to_string(), "q0");
+        store.create("DFA 1".to_string(), "q0");
+        store.create("NFA 2".to_string(), "q0");
 
         let mut ids = store.list_ids();
         ids.sort();
@@ -192,7 +190,7 @@ mod tests {
         for i in 0..10 {
             let store = Arc::clone(&store);
             handles.push(thread::spawn(move || {
-                store.create(format!("Auto {}", i), AutomatonKind::NFA, "q0");
+                store.create(format!("Auto {}", i), "q0");
             }));
         }
 
@@ -210,7 +208,6 @@ mod tests {
         let data = AutomatonData {
             id: 99,
             name: "Loaded".to_string(),
-            kind: AutomatonKind::NFA,
             states: Vec::new(),
             transitions: Vec::new(),
             alphabet: Vec::new(),
@@ -227,7 +224,6 @@ mod tests {
         let again = store.insert(AutomatonData {
             id: 100,
             name: "Second".to_string(),
-            kind: AutomatonKind::DFA,
             states: Vec::new(),
             transitions: Vec::new(),
             alphabet: Vec::new(),
@@ -240,7 +236,7 @@ mod tests {
         let store = make_store();
 
         // Create
-        let mut entry = store.create("Workflow Test".to_string(), AutomatonKind::NFA, "q0");
+        let mut entry = store.create("Workflow Test".to_string(), "q0");
         assert_eq!(entry.states.len(), 1);
 
         // Add state

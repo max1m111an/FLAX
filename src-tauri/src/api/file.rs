@@ -70,7 +70,6 @@ pub fn load_jff(state: State<'_, AutomatonStore>, path: String) -> OperationResu
     let entry = state.insert(AutomatonData {
         id: 0,
         name,
-        kind: jff::infer_kind(&parsed.states, &parsed.transitions),
         states: parsed.states,
         transitions: parsed.transitions,
         alphabet: parsed.alphabet,

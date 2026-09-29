@@ -1,11 +1,5 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum AutomatonKind {
-    NFA,
-    DFA,
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct StateData {
@@ -29,7 +23,6 @@ pub struct TransitionData {
 pub struct AutomatonData {
     pub id: i32,
     pub name: String,
-    pub kind: AutomatonKind,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
     pub alphabet: Vec<char>,
