@@ -7,6 +7,7 @@ import { useTabs } from "@/context/TabsContext.tsx";
 import { models } from "@/data/models.ts";
 import { loadJff } from "@/services/jffService.ts";
 import styles from "../../scenes/MainScene.module.scss";
+import { useNavigate } from "react-router-dom";
 
 const pluralHours = (n: number): string => {
     const mod10 = n % 10;
@@ -101,8 +102,9 @@ const getDisplayNames = (files: RecentFile[]): Map<string, string> => {
 
 export default function MainHistoryWidget () {
     const { files, addFile, clearFiles } = useRecentFiles();
-    const { loadTab } = useTabs();
+    const { loadTab, tabs } = useTabs();
     const [ now, setNow ] = useState(() => Date.now());
+    const navigate = useNavigate();
 
     useEffect(() => {
         const timer = setInterval(() => setNow(Date.now()), 60_000);
@@ -116,6 +118,13 @@ export default function MainHistoryWidget () {
     const displayNames = getDisplayNames(files);
 
     const openRecent = async (path: string) => {
+        if (tabs.find((tab) => tab.savedPath === path)) {
+            const existingTab = tabs.find((tab) => tab.savedPath === path);
+            if (existingTab) {
+                navigate(`/models/${existingTab.id}`);
+                return;
+            }
+        }
         const response = await loadJff({ path });
         if (response.automaton) {
             loadTab(response.automaton, models[0], path);
