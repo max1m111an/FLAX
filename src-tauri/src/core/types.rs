@@ -6,6 +6,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Mutex;
 
+use tauri::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 // ---------------------------------------------------------------------------
@@ -42,27 +43,31 @@ pub struct AutomatonData {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OperationResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub automaton: Option<AutomatonData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub state: Option<StateData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitionResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub transition: Vec<TransitionData>,
 }
@@ -83,7 +88,8 @@ pub struct Trace {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub traces: Vec<Trace>,
 }
@@ -98,14 +104,16 @@ pub struct LineTest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiRunResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub traces: Vec<LineTest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerateInputsResult {
-    pub status: u16,
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
     pub message: String,
     pub inputs: Vec<String>,
 }

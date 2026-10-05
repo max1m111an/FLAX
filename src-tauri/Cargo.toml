@@ -26,6 +26,7 @@ rand = "0.8"
 roxmltree = "0.21.1"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+http-serde = "2.1.1"
 
 [profile.dev]
 strip = true
