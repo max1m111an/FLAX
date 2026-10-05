@@ -3,8 +3,8 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
 import { model } from "@/data/models.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
-import { createNFA, deleteNFAService } from "@/services/nfaService.ts";
-import type { Trace } from "@/services/nfaService.ts";
+import { createFA, deleteFAService } from "@/services/faService.ts";
+import type { Trace } from "@/services/faService.ts";
 import { save } from "@tauri-apps/plugin-dialog";
 import { basename } from "@tauri-apps/api/path";
 import { saveJff } from "@/services/jffService.ts";
@@ -60,7 +60,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             }
         }
         try {
-            const response = await createNFA("Без названия*");
+            const response = await createFA("Без названия*");
             const newTab: tab = {
                 id: response.automaton.id,
                 title: response.automaton.name,
@@ -147,7 +147,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
     const closeTab = async (self_tab: tab): Promise<void> => {
-        const response = deleteNFAService(self_tab.id);
+        const response = deleteFAService(self_tab.id);
         if (!response) {return;}
 
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);

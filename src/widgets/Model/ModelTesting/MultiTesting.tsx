@@ -7,7 +7,7 @@ import { TextArea } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelTestWidget.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { generateTestInputs, lineTest, runMultipleStrings, runString } from "@/services/nfaService.ts";
+import { generateTestInputs, lineTest, runMultipleStrings, runString } from "@/services/faService.ts";
 import Steps from "@/assets/svg/Steps.svg?react";
 import clsx from "clsx";
 import React, { useState } from "react";

@@ -1,4 +1,4 @@
-mod commands;
+mod api;
 pub mod structs;
 
 #[path = "utils/id_gen.rs"]
@@ -10,8 +10,8 @@ mod jff;
 #[cfg(test)]
 mod tests;
 
-use crate::commands::file_cmd::*;
-use crate::commands::nfa_cmd::*;
+use crate::api::file::*;
+use crate::api::fa::*;
 use crate::structs::store::AutomatonStore;
 
 #[tauri::command]
@@ -28,18 +28,18 @@ pub fn run() {
         .manage(AutomatonStore::new())
         .invoke_handler(tauri::generate_handler![
             greet,
-            create_new_nfa,
-            nfa_get,
-            nfa_add_state,
-            nfa_update_state,
-            nfa_remove_state,
-            nfa_add_transition,
-            nfa_update_transition,
-            nfa_remove_transition,
-            nfa_run_str,
-            nfa_multiple_run_str,
-            nfa_generate_inputs,
-            nfa_remove_automaton,
+            fa_create_new,
+            fa_get,
+            fa_add_state,
+            fa_update_state,
+            fa_remove_state,
+            fa_add_transition,
+            fa_update_transition,
+            fa_remove_transition,
+            fa_run_str,
+            fa_multi_run_str,
+            fa_generate_inputs,
+            fa_remove_automaton,
             save_jff,
             load_jff,
         ])

@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use roxmltree::Node;
 
 use crate::id_gen;
-use crate::structs::data_models::{AutomatonData, AutomatonKind, StateData, TransitionData};
-use crate::structs::nfa::EPSILON;
+use crate::structs::data_models::{AutomatonData, StateData, TransitionData};
+use crate::structs::fa::EPSILON;
 
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -213,6 +213,9 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
     })
 }
 
+/// True if the automaton is deterministic: exactly one initial state, no
+/// eps-transitions and at most one transition per `(from, symbol)`.
+#[allow(dead_code)]
 pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) -> bool {
     if states.iter().filter(|s| s.isInitial).count() != 1 {
         return false;
@@ -222,17 +225,9 @@ pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) ->
         if t.symbol == EPSILON {
             return false;
         }
-        if !seen.insert((t.from, t.symbol.clone())) {
+        if !seen.insert((t.from, t.symbol)) {
             return false;
         }
     }
     true
-}
-
-pub fn infer_kind(states: &[StateData], transitions: &[TransitionData]) -> AutomatonKind {
-    if is_deterministic(states, transitions) {
-        AutomatonKind::DFA
-    } else {
-        AutomatonKind::NFA
-    }
 }
