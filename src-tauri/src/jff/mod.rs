@@ -1,10 +1,23 @@
+//! JFLAP XML (`.jff`) import/export.
+//!
+//! Only `<type>fa</type>` finite automata are supported; an empty `<read>`
+//! element is decoded as the epsilon transition (`$`).
+
+pub mod api;
+pub mod types;
+
+#[cfg(test)]
+mod tests;
+
 use std::collections::HashSet;
 
 use roxmltree::Node;
 
-use crate::id_gen;
-use crate::structs::data_models::{AutomatonData, StateData, TransitionData};
-use crate::structs::fa::EPSILON;
+pub use types::JffParsed;
+
+use crate::core::api::generate_id;
+use crate::core::types::{AutomatonData, StateData, TransitionData};
+use crate::fa::types::EPSILON;
 
 fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -65,15 +78,6 @@ pub fn to_jff(data: &AutomatonData) -> String {
     s.push_str("\t</automaton>\n");
     s.push_str("</structure>\n");
     s
-}
-
-#[derive(Debug)]
-pub struct JffParsed {
-    #[allow(dead_code)]
-    pub kind: String,
-    pub states: Vec<StateData>,
-    pub transitions: Vec<TransitionData>,
-    pub alphabet: Vec<char>,
 }
 
 fn element_text(node: Node, tag: &str) -> Option<String> {
@@ -195,7 +199,7 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
             }
         }
 
-        let id = id_gen::generate_id(&used);
+        let id = generate_id(&used);
         used.insert(id);
         parsed_transitions.push(TransitionData {
             id,

@@ -1,23 +1,21 @@
-use tauri::State;
-
-use crate::{
-    id_gen,
-    structs::{
-        data_models::{
-            GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult, StateData,
-            StateResult, StatusResult, TransitionData, TransitionResult,
-        },
-        fa::{EPSILON, FA, FABuilder},
-        store::AutomatonStore,
-    },
+use tauri::{
+    http::StatusCode,
+    State,
 };
+
+use crate::core::api::generate_id;
+use crate::core::types::{
+    AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
+    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+};
+use crate::fa::types::{EPSILON, FA, FABuilder};
 
 /// Creates a new finite automaton with a single initial state `q0`.
 #[tauri::command]
 pub fn fa_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
     let entry = state.create(name.unwrap_or_else(|| "Автомат".to_string()), "q0");
     OperationResult {
-        status: 200,
+        status: StatusCode::OK,
         message: "Конечный автомат создан".to_string(),
         automaton: Some(entry),
     }
@@ -27,12 +25,12 @@ pub fn fa_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> 
 pub fn fa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
     match state.get(automaton_id) {
         Some(entry) => OperationResult {
-            status: 200,
+            status: StatusCode::OK,
             message: "Автомат получен".to_string(),
             automaton: Some(entry),
         },
         None => OperationResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Автомат с id {} не найден", automaton_id),
             automaton: None,
         },
@@ -53,7 +51,7 @@ pub fn fa_add_state(
         Some(e) => e,
         None => {
             return StateResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -61,7 +59,7 @@ pub fn fa_add_state(
     };
 
     let used: std::collections::HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
-    let new_id = id_gen::generate_id(&used);
+    let new_id = generate_id(&used);
 
     entry.states.push(StateData {
         id: new_id,
@@ -75,7 +73,7 @@ pub fn fa_add_state(
     let created = entry.states.last().unwrap().clone();
     state.update(entry.clone());
     StateResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("Состояние {} добавлено", new_id),
         state: Some(created),
     }
@@ -96,7 +94,7 @@ pub fn fa_update_state(
         Some(e) => e,
         None => {
             return StateResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -107,7 +105,7 @@ pub fn fa_update_state(
         Some(i) => i,
         None => {
             return StateResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Состояние {} не существует", state_id),
                 state: None,
             };
@@ -137,7 +135,7 @@ pub fn fa_update_state(
 
     state.update(entry.clone());
     StateResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("Состояние {} обновлено", state_id),
         state: Some(entry.states[idx].clone()),
     }
@@ -155,7 +153,7 @@ pub fn fa_remove_state(
         Some(e) => e,
         None => {
             return StatusResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -163,7 +161,7 @@ pub fn fa_remove_state(
 
     if !entry.states.iter().any(|s| s.id == state_id) {
         return StatusResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Состояние {} не существует", state_id),
         };
     }
@@ -175,7 +173,7 @@ pub fn fa_remove_state(
 
     state.update(entry.clone());
     StatusResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("Состояние {} удалено", state_id),
     }
 }
@@ -197,7 +195,7 @@ pub fn fa_add_transition(
         Some(e) => e,
         None => {
             return TransitionResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -206,14 +204,14 @@ pub fn fa_add_transition(
 
     if !entry.states.iter().any(|s| s.id == from) {
         return TransitionResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Состояние {} не существует", from),
             transition: vec![],
         };
     }
     if !entry.states.iter().any(|s| s.id == to) {
         return TransitionResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Состояние {} не существует", to),
             transition: vec![],
         };
@@ -229,7 +227,7 @@ pub fn fa_add_transition(
 
         if conflict_exists {
             return TransitionResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Переход {} -> {} по '{}' уже существует", from, to, symbol),
                 transition: vec![],
             };
@@ -240,7 +238,7 @@ pub fn fa_add_transition(
         }
 
         let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
-        let tid = id_gen::generate_id(&used);
+        let tid = generate_id(&used);
         let created = TransitionData {
             id: tid,
             from,
@@ -254,7 +252,7 @@ pub fn fa_add_transition(
 
     state.update(entry.clone());
     TransitionResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("{} переход(ов) {} -> {} добавлено", count, from, to),
         transition: added,
     }
@@ -275,7 +273,7 @@ pub fn fa_update_transition(
         Some(e) => e,
         None => {
             return TransitionResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -286,7 +284,7 @@ pub fn fa_update_transition(
         Some(i) => i,
         None => {
             return TransitionResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Переход {} не найден", transition_id),
                 transition: vec![],
             };
@@ -311,7 +309,7 @@ pub fn fa_update_transition(
     entry.transitions[idx] = updated.clone();
     state.update(entry.clone());
     TransitionResult {
-        status: 200,
+        status: StatusCode::OK,
         message: "Переход обновлён".to_string(),
         transition: vec![updated],
     }
@@ -327,7 +325,7 @@ pub fn fa_remove_transition(
         Some(e) => e,
         None => {
             return StatusResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -337,15 +335,15 @@ pub fn fa_remove_transition(
     entry.transitions.retain(|t| t.id != transition_id);
     let removed = original_count - entry.transitions.len();
 
-    let (code, msg) = if removed > 0 {
-        (200, format!("Удалено {} переход(ов)", removed))
+    let (status, msg) = if removed > 0 {
+        (StatusCode::OK, format!("Удалено {} переход(ов)", removed))
     } else {
-        (400, "Переход не найден".to_string())
+        (StatusCode::BAD_REQUEST, "Переход не найден".to_string())
     };
 
     state.update(entry.clone());
     StatusResult {
-        status: code,
+        status: status,
         message: msg,
     }
 }
@@ -359,7 +357,7 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
         Some(e) => e,
         None => {
             return RunResult {
-                status: 404,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 traces: Vec::new(),
             };
@@ -381,10 +379,10 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
                 .max()
                 .unwrap_or(0);
             let (status, message) = if accepted {
-                (200u16, format!("Цепочка '{}' принята", input))
+                (StatusCode::OK, format!("Цепочка '{}' принята", input))
             } else if processed_len > 0 {
                 (
-                    401,
+                    StatusCode::UNAUTHORIZED,
                     format!(
                         "Цепочка '{}' принята частично (обработано {} из {} символов)",
                         input,
@@ -393,7 +391,7 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
                     ),
                 )
             } else {
-                (402, format!("Цепочка '{}' отклонена", input))
+                (StatusCode::PAYMENT_REQUIRED, format!("Цепочка '{}' отклонена", input))
             };
             RunResult {
                 status,
@@ -402,7 +400,7 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
             }
         }
         Err(err) => RunResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Некорректный автомат: {}", err),
             traces: Vec::new(),
         },
@@ -421,7 +419,7 @@ pub fn fa_multi_run_str(
         Some(e) => e,
         None => {
             return MultiRunResult {
-                status: 404,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 traces: Vec::new(),
             };
@@ -443,7 +441,7 @@ pub fn fa_multi_run_str(
                 .collect(),
             Err(_) => {
                 return MultiRunResult {
-                    status: 400,
+                    status: StatusCode::BAD_REQUEST,
                     message: "Некорректный автомат".to_string(),
                     traces: Vec::new(),
                 };
@@ -451,7 +449,7 @@ pub fn fa_multi_run_str(
         };
 
     MultiRunResult {
-        status: 200,
+        status: StatusCode::OK,
         message: String::new(),
         traces,
     }
@@ -470,7 +468,7 @@ pub fn fa_generate_inputs(
         Some(e) => e,
         None => {
             return GenerateInputsResult {
-                status: 404,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 inputs: Vec::new(),
             };
@@ -481,7 +479,7 @@ pub fn fa_generate_inputs(
         Ok(n) => n,
         Err(_) => {
             return GenerateInputsResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: "Некорректный автомат".to_string(),
                 inputs: Vec::new(),
             };
@@ -491,7 +489,7 @@ pub fn fa_generate_inputs(
     let resp_vec: Vec<String> = fa.generate_test_inputs(50, 15);
 
     GenerateInputsResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("Сгенерировано {} тестовых входов", resp_vec.len()),
         inputs: resp_vec,
     }
@@ -501,11 +499,11 @@ pub fn fa_generate_inputs(
 pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     match state.remove(automaton_id) {
         Some(_) => StatusResult {
-            status: 200,
+            status: StatusCode::OK,
             message: format!("Автомат с id {} удалён", automaton_id),
         },
         None => StatusResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }

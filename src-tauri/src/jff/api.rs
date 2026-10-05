@@ -1,15 +1,13 @@
 use std::fs;
 use std::path::Path;
 
-use tauri::State;
-
-use crate::{
-    jff,
-    structs::{
-        data_models::{AutomatonData, OperationResult, StatusResult},
-        store::AutomatonStore,
-    },
+use tauri::{
+    http::StatusCode,
+    State,
 };
+
+use crate::core::types::{AutomatonData, AutomatonStore, OperationResult, StatusResult};
+use crate::jff;
 
 #[tauri::command]
 pub fn save_jff(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {
@@ -17,7 +15,7 @@ pub fn save_jff(state: State<'_, AutomatonStore>, automaton_id: i32, path: Strin
         Some(e) => e,
         None => {
             return StatusResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -27,13 +25,13 @@ pub fn save_jff(state: State<'_, AutomatonStore>, automaton_id: i32, path: Strin
 
     if let Err(err) = fs::write(&path, content) {
         return StatusResult {
-            status: 400,
+            status: StatusCode::BAD_REQUEST,
             message: format!("Не удалось сохранить файл: {}", err),
         };
     }
 
     StatusResult {
-        status: 200,
+        status: StatusCode::OK,
         message: format!("Автомат сохранён в {}", path),
     }
 }
@@ -44,7 +42,7 @@ pub fn load_jff(state: State<'_, AutomatonStore>, path: String) -> OperationResu
         Ok(c) => c,
         Err(err) => {
             return OperationResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: format!("Не удалось прочитать файл: {}", err),
                 automaton: None,
             };
@@ -55,7 +53,7 @@ pub fn load_jff(state: State<'_, AutomatonStore>, path: String) -> OperationResu
         Ok(p) => p,
         Err(err) => {
             return OperationResult {
-                status: 400,
+                status: StatusCode::BAD_REQUEST,
                 message: err,
                 automaton: None,
             };
@@ -76,7 +74,7 @@ pub fn load_jff(state: State<'_, AutomatonStore>, path: String) -> OperationResu
     });
 
     OperationResult {
-        status: 200,
+        status: StatusCode::OK,
         message: "Автомат загружен из файла".to_string(),
         automaton: Some(entry),
     }

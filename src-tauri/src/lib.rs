@@ -1,18 +1,10 @@
-mod api;
-pub mod structs;
-
-#[path = "utils/id_gen.rs"]
-mod id_gen;
-
-#[path = "utils/jff.rs"]
+mod core;
+mod fa;
 mod jff;
 
-#[cfg(test)]
-mod tests;
-
-use crate::api::file::*;
-use crate::api::fa::*;
-use crate::structs::store::AutomatonStore;
+use crate::core::types::AutomatonStore;
+use crate::fa::api::*;
+use crate::jff::api::*;
 
 #[tauri::command]
 fn greet(name: &str) -> String {

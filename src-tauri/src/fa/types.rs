@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::structs::automata::{Automaton, NondeterministicAutomaton};
-use crate::structs::data_models::{RunStep, Trace};
+use crate::core::types::{Automaton, NondeterministicAutomaton, RunStep, Trace};
 
 pub const EPSILON: char = '$';
 
