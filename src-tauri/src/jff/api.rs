@@ -3,13 +3,8 @@ use std::path::Path;
 
 use tauri::State;
 
-use crate::{
-    jff,
-    structs::{
-        data_models::{AutomatonData, OperationResult, StatusResult},
-        store::AutomatonStore,
-    },
-};
+use crate::core::types::{AutomatonData, AutomatonStore, OperationResult, StatusResult};
+use crate::jff;
 
 #[tauri::command]
 pub fn save_jff(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {

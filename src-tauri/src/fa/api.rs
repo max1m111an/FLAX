@@ -1,16 +1,11 @@
 use tauri::State;
 
-use crate::{
-    id_gen,
-    structs::{
-        data_models::{
-            GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult, StateData,
-            StateResult, StatusResult, TransitionData, TransitionResult,
-        },
-        fa::{EPSILON, FA, FABuilder},
-        store::AutomatonStore,
-    },
+use crate::core::api::generate_id;
+use crate::core::types::{
+    AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
+    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
 };
+use crate::fa::types::{EPSILON, FA, FABuilder};
 
 /// Creates a new finite automaton with a single initial state `q0`.
 #[tauri::command]
@@ -61,7 +56,7 @@ pub fn fa_add_state(
     };
 
     let used: std::collections::HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
-    let new_id = id_gen::generate_id(&used);
+    let new_id = generate_id(&used);
 
     entry.states.push(StateData {
         id: new_id,
@@ -240,7 +235,7 @@ pub fn fa_add_transition(
         }
 
         let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
-        let tid = id_gen::generate_id(&used);
+        let tid = generate_id(&used);
         let created = TransitionData {
             id: tid,
             from,
