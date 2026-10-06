@@ -30,6 +30,8 @@ pub struct TransitionData {
     pub from: i32,
     pub to: i32,
     pub symbol: char,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub output: Option<char>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

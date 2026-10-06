@@ -31,6 +31,7 @@ pub fn run() {
             save_jff,
             load_jff,
             mealy_create_new,
+            mealy_add_transition,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

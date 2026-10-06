@@ -72,24 +72,28 @@ fn even_a_data() -> AutomatonData {
                 from: 0,
                 to: 1,
                 symbol: 'a',
+            output: None,
             },
             TransitionData {
                 id: 2,
                 from: 1,
                 to: 0,
                 symbol: 'a',
+            output: None,
             },
             TransitionData {
                 id: 3,
                 from: 0,
                 to: 0,
                 symbol: 'b',
+            output: None,
             },
             TransitionData {
                 id: 4,
                 from: 1,
                 to: 1,
                 symbol: 'b',
+            output: None,
             },
         ],
         alphabet: vec!['a', 'b'],
@@ -152,6 +156,7 @@ fn epsilon_transition_written_as_empty_read() {
         from: 0,
         to: 1,
         symbol: '$',
+    output: None,
     });
 
     let xml = to_jff(&data);
@@ -209,6 +214,7 @@ fn writes_example_files_to_target() {
         from: 0,
         to: 1,
         symbol: '$',
+    output: None,
     });
     let fa = to_jff(&fa_data);
 

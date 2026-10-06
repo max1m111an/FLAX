@@ -244,6 +244,7 @@ pub fn fa_add_transition(
             from,
             to,
             symbol,
+            output: None,
         };
         entry.transitions.push(created.clone());
         added.push(created);

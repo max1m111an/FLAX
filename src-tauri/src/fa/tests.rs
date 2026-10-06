@@ -1003,6 +1003,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             from: 0,
             to: 1,
             symbol: '1',
+        output: None,
         },
         // orphan: 'to' 99 does not exist
         TransitionData {
@@ -1010,6 +1011,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             from: 0,
             to: 99,
             symbol: '1',
+        output: None,
         },
         // orphan: 'from' 99 does not exist
         TransitionData {
@@ -1017,6 +1019,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             from: 99,
             to: 1,
             symbol: '1',
+        output: None,
         },
     ];
 
