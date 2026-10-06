@@ -4,7 +4,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::core::types::{AutomatonData, StateData, TransitionData};
-use crate::jff::{is_deterministic, parse_jff, to_jff};
+use crate::fa::jff::{is_deterministic, parse_jff, to_jff};
 
 const EVEN_A_JFF: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>&#13;
 	<type>fa</type>&#13;
@@ -72,28 +72,28 @@ fn even_a_data() -> AutomatonData {
                 from: 0,
                 to: 1,
                 symbol: 'a',
-            output: None,
+                output: None,
             },
             TransitionData {
                 id: 2,
                 from: 1,
                 to: 0,
                 symbol: 'a',
-            output: None,
+                output: None,
             },
             TransitionData {
                 id: 3,
                 from: 0,
                 to: 0,
                 symbol: 'b',
-            output: None,
+                output: None,
             },
             TransitionData {
                 id: 4,
                 from: 1,
                 to: 1,
                 symbol: 'b',
-            output: None,
+                output: None,
             },
         ],
         alphabet: vec!['a', 'b'],
@@ -156,7 +156,7 @@ fn epsilon_transition_written_as_empty_read() {
         from: 0,
         to: 1,
         symbol: '$',
-    output: None,
+        output: None,
     });
 
     let xml = to_jff(&data);
@@ -214,7 +214,7 @@ fn writes_example_files_to_target() {
         from: 0,
         to: 1,
         symbol: '$',
-    output: None,
+        output: None,
     });
     let fa = to_jff(&fa_data);
 
