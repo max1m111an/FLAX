@@ -1,10 +1,12 @@
 mod core;
 mod fa;
 mod jff;
+mod mealy;
 
 use crate::core::types::AutomatonStore;
 use crate::fa::api::*;
 use crate::jff::api::*;
+use crate::mealy::api::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -28,6 +30,7 @@ pub fn run() {
             fa_remove_automaton,
             save_jff,
             load_jff,
+            mealy_create_new,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
