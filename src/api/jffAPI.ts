@@ -13,10 +13,10 @@ export type loadJFFResponse = {
 
 export const loadJFF = async (params: loadJFFRequest): Promise<loadJFFResponse> => {
     try {
-        const response = await invoke<loadJFFResponse>("load_jff", params);
+        const response = await invoke<loadJFFResponse>("fa_load", params);
         return response;
     } catch (error) {
-        console.error("Ошибка при вызове save_jff:", error);
+        console.error("Ошибка при вызове fa_load:", error);
         throw error;
     }
 };
@@ -33,10 +33,10 @@ export type saveJFFResponse = {
 
 export const saveJFF = async (params: saveJFFRequest): Promise<saveJFFResponse> => {
     try {
-        const response = await invoke<saveJFFResponse>("save_jff", params);
+        const response = await invoke<saveJFFResponse>("fa_save", params);
         return response;
     } catch (error) {
-        console.error("Ошибка при вызове save_jff:", error);
+        console.error("Ошибка при вызове fa_save:", error);
         throw error;
     }
 };
