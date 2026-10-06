@@ -1,6 +1,6 @@
 //! Unit tests for the shared in-memory automaton registry.
 
-use crate::core::types::{AutomatonData, AutomatonStore, StateData};
+use crate::core::types::{AutomatonData, AutomatonStore, StateData, TransitionData};
 
 fn make_store() -> AutomatonStore {
     AutomatonStore::new()
@@ -191,4 +191,31 @@ fn create_and_modify_full_workflow() {
     let removed = store.remove(1).unwrap();
     assert_eq!(removed.name, "Workflow Test");
     assert!(store.get(1).is_none());
+}
+
+#[test]
+fn transition_output_is_optional_in_json() {
+    let fa = TransitionData {
+        id: 1,
+        from: 0,
+        to: 1,
+        symbol: 'a',
+        output: None,
+    };
+    let json = serde_json::to_string(&fa).unwrap();
+    assert!(!json.contains("output"));
+    let back: TransitionData = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.output, None);
+
+    let mm = TransitionData {
+        id: 2,
+        from: 0,
+        to: 1,
+        symbol: 'a',
+        output: Some('1'),
+    };
+    let json = serde_json::to_string(&mm).unwrap();
+    assert!(json.contains("\"output\":\"1\""));
+    let back: TransitionData = serde_json::from_str(&json).unwrap();
+    assert_eq!(back.output, Some('1'));
 }

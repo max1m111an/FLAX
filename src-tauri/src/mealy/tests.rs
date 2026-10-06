@@ -4,9 +4,36 @@ use std::collections::HashSet;
 
 use tauri::http::StatusCode;
 
-use crate::core::types::AutomatonStore;
-use crate::mealy::api::create_new_mealy;
+use crate::core::types::{AutomatonData, AutomatonStore, StateData};
+use crate::mealy::api::{add_mealy_transition, create_new_mealy};
 use crate::mealy::types::{MM, MealyTransition};
+
+fn mealy_entry() -> AutomatonData {
+    AutomatonData {
+        id: 1,
+        name: "Мили".to_string(),
+        states: vec![
+            StateData {
+                id: 0,
+                label: "q0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                isInitial: true,
+                isFinal: false,
+            },
+            StateData {
+                id: 1,
+                label: "q1".to_string(),
+                x: 200.0,
+                y: 0.0,
+                isInitial: false,
+                isFinal: false,
+            },
+        ],
+        transitions: vec![],
+        alphabet: vec![],
+    }
+}
 
 #[test]
 fn builder_creates_valid_mm() {
@@ -184,4 +211,90 @@ fn create_new_assigns_fresh_ids() {
         .expect("второй автомат должен присутствовать");
 
     assert_ne!(first.id, second.id);
+}
+
+
+#[test]
+fn add_transition_stores_output_and_extends_alphabet() {
+    let mut entry = mealy_entry();
+
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
+
+    assert_eq!(created.from, 0);
+    assert_eq!(created.to, 1);
+    assert_eq!(created.symbol, 'a');
+    assert_eq!(created.output, Some('1'));
+    assert_eq!(entry.transitions.len(), 1);
+    assert_eq!(entry.alphabet, vec!['a']);
+}
+
+#[test]
+fn add_transition_assigns_fresh_ids() {
+    let mut entry = mealy_entry();
+
+    let first = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+
+    assert_ne!(first.id, second.id);
+    assert_eq!(entry.transitions.len(), 2);
+}
+
+#[test]
+fn add_transition_keeps_existing_alphabet_symbols() {
+    let mut entry = mealy_entry();
+    entry.alphabet.push('a');
+
+    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
+
+    assert_eq!(entry.alphabet, vec!['a']);
+}
+
+#[test]
+fn add_transition_fails_on_unknown_states() {
+    let mut entry = mealy_entry();
+
+    assert!(add_mealy_transition(&mut entry, 99, 1, 'a', '0').is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 99, 'a', '0').is_err());
+    assert!(entry.transitions.is_empty());
+    assert!(entry.alphabet.is_empty());
+}
+
+#[test]
+fn add_transition_fails_on_conflicting_input() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+
+    let err = add_mealy_transition(&mut entry, 0, 0, 'a', '1').expect_err("конфликт должен падать");
+
+    assert!(err.contains('a'));
+    assert_eq!(entry.transitions.len(), 1);
+    assert_eq!(entry.transitions[0].output, Some('0'));
+}
+
+#[test]
+fn add_transition_rejects_epsilon() {
+    let mut entry = mealy_entry();
+
+    assert!(add_mealy_transition(&mut entry, 0, 1, '$', '0').is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 1, 'a', '$').is_err());
+    assert!(entry.transitions.is_empty());
+}
+
+#[test]
+fn added_transitions_build_mm_with_outputs() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("a");
+    add_mealy_transition(&mut entry, 1, 0, 'b', '0').expect("b");
+
+    let mut builder = MM::builder().set_initial(0);
+    for &s in entry.states.iter().map(|s| &s.id) {
+        builder = builder.state(s);
+    }
+    for t in &entry.transitions {
+        builder = builder.transition(t.from, t.symbol, t.to, t.output.expect("выход задан"));
+    }
+    let mm = builder.build().expect("переходы Мили должны собираться в MM");
+
+    assert_eq!(mm.step(0, 'a'), Some((1, '1')));
+    assert_eq!(mm.step(1, 'b'), Some((0, '0')));
 }
