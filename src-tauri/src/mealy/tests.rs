@@ -5,7 +5,9 @@ use std::collections::HashSet;
 use tauri::http::StatusCode;
 
 use crate::core::types::{AutomatonData, AutomatonStore, StateData};
-use crate::mealy::api::{add_mealy_transition, create_new_mealy, update_mealy_transition};
+use crate::mealy::api::{
+    add_mealy_transition, create_new_mealy, remove_mealy_transition, update_mealy_transition,
+};
 use crate::mealy::types::{MM, MealyTransition};
 
 fn mealy_entry() -> AutomatonData {
@@ -386,4 +388,40 @@ fn update_transition_rejects_epsilon() {
     assert!(update_mealy_transition(&mut entry, created.id, None, Some('$')).is_err());
     assert_eq!(entry.transitions[0].symbol, 'a');
     assert_eq!(entry.transitions[0].output, Some('0'));
+}
+
+#[test]
+fn remove_transition_removes_by_id() {
+    let mut entry = mealy_entry();
+    let first = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+
+    remove_mealy_transition(&mut entry, first.id).expect("удаление");
+
+    assert_eq!(entry.transitions.len(), 1);
+    assert_eq!(entry.transitions[0].id, second.id);
+    assert_eq!(entry.transitions[0].symbol, 'b');
+}
+
+#[test]
+fn remove_transition_fails_on_unknown_id() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    let err = remove_mealy_transition(&mut entry, created.id + 1)
+        .expect_err("неизвестный переход должен падать");
+
+    assert!(err.contains(&(created.id + 1).to_string()));
+    assert_eq!(entry.transitions.len(), 1);
+}
+
+#[test]
+fn remove_transition_keeps_alphabet() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    remove_mealy_transition(&mut entry, created.id).expect("удаление");
+
+    assert!(entry.transitions.is_empty());
+    assert_eq!(entry.alphabet, vec!['a']);
 }
