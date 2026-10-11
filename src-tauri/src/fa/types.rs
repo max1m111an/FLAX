@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::core::types::{Automaton, NondeterministicAutomaton, RunStep, Trace};
 
-pub const EPSILON: char = '$';
+pub use crate::core::types::EPSILON;
 
 /// Hard cap on the number of parallel reading threads kept by `run_partial`.
 /// Set high enough to explore all branches of realistic (educational) FAs while

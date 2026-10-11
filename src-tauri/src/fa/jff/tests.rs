@@ -3,7 +3,7 @@
 use std::fs;
 use std::path::Path;
 
-use crate::core::types::{AutomatonData, StateData, TransitionData};
+use crate::core::types::{AutomatonData, StateData, TransitionData, alphabet_from_transitions};
 use crate::fa::jff::{is_deterministic, parse_jff, to_jff};
 
 const EVEN_A_JFF: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>&#13;
@@ -96,7 +96,6 @@ fn even_a_data() -> AutomatonData {
                 output: None,
             },
         ],
-        alphabet: vec!['a', 'b'],
     }
 }
 
@@ -193,7 +192,6 @@ fn no_states_and_transitions_yields_empty_automaton() {
         name: "Empty".to_string(),
         states: Vec::new(),
         transitions: Vec::new(),
-        alphabet: Vec::new(),
     };
 
     let xml = to_jff(&data);
@@ -259,7 +257,10 @@ fn parses_even_a_jff() {
         vec![(0, 1, 'a'), (1, 0, 'a'), (0, 0, 'b'), (1, 1, 'b')]
     );
 
-    assert_eq!(parsed.alphabet, vec!['a', 'b']);
+    assert_eq!(
+        alphabet_from_transitions(&parsed.transitions),
+        vec!['a', 'b']
+    );
 }
 
 #[test]
@@ -278,7 +279,7 @@ fn parses_epsilon_transition_as_dollar() {
     assert_eq!(parsed.transitions.len(), 2);
     assert_eq!(parsed.transitions[0].symbol, '$');
     assert_eq!(parsed.transitions[1].symbol, 'a');
-    assert_eq!(parsed.alphabet, vec!['a']);
+    assert_eq!(alphabet_from_transitions(&parsed.transitions), vec!['a']);
 }
 
 #[test]
@@ -324,7 +325,7 @@ fn decodes_xml_entities_in_name_and_read() {
     let parsed = parse_jff(xml).unwrap();
     assert_eq!(parsed.states[0].label, "q&<1>");
     assert_eq!(parsed.transitions[0].symbol, '&');
-    assert_eq!(parsed.alphabet, vec!['&']);
+    assert_eq!(alphabet_from_transitions(&parsed.transitions), vec!['&']);
 }
 
 #[test]
@@ -373,7 +374,10 @@ fn roundtrip_to_jff_then_parse() {
         assert_eq!(ps.isInitial, os.isInitial);
         assert_eq!(ps.isFinal, os.isFinal);
     }
-    assert_eq!(parsed.alphabet, original.alphabet);
+    assert_eq!(
+        alphabet_from_transitions(&parsed.transitions),
+        original.get_alphabet()
+    );
     assert_eq!(parsed.transitions.len(), original.transitions.len());
     for (pt, ot) in parsed.transitions.iter().zip(original.transitions.iter()) {
         assert_eq!(pt.from, ot.from);

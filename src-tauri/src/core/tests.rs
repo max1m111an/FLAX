@@ -1,6 +1,8 @@
 //! Unit tests for the shared in-memory automaton registry.
 
-use crate::core::types::{AutomatonData, AutomatonStore, StateData, TransitionData};
+use crate::core::types::{
+    AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
+};
 
 fn make_store() -> AutomatonStore {
     AutomatonStore::new()
@@ -35,7 +37,7 @@ fn create_initial_state_is_correct() {
     assert!(entry.states[0].isInitial);
     assert!(!entry.states[0].isFinal);
     assert!(entry.transitions.is_empty());
-    assert!(entry.alphabet.is_empty());
+    assert!(entry.get_alphabet().is_empty());
 }
 
 #[test]
@@ -142,7 +144,6 @@ fn insert_assigns_fresh_id_and_stores() {
         name: "Loaded".to_string(),
         states: Vec::new(),
         transitions: Vec::new(),
-        alphabet: Vec::new(),
     };
 
     let stored = store.insert(data);
@@ -158,7 +159,6 @@ fn insert_assigns_fresh_id_and_stores() {
         name: "Second".to_string(),
         states: Vec::new(),
         transitions: Vec::new(),
-        alphabet: Vec::new(),
     });
     assert_eq!(again.id, 2);
 }
@@ -218,4 +218,49 @@ fn transition_output_is_optional_in_json() {
     assert!(json.contains("\"output\":\"1\""));
     let back: TransitionData = serde_json::from_str(&json).unwrap();
     assert_eq!(back.output, Some('1'));
+}
+
+fn trans(id: i32, from: i32, to: i32, symbol: char) -> TransitionData {
+    TransitionData {
+        id,
+        from,
+        to,
+        symbol,
+        output: None,
+    }
+}
+
+#[test]
+fn get_alphabet_is_derived_from_transitions() {
+    let mut entry = make_store().create("Test".to_string(), "q0");
+    entry.transitions = vec![
+        trans(1, 0, 1, 'a'),
+        trans(2, 1, 0, 'b'),
+        trans(3, 1, 1, 'a'),
+        trans(4, 0, 0, '$'),
+    ];
+
+    assert_eq!(entry.get_alphabet(), vec!['a', 'b']);
+}
+
+#[test]
+fn alphabet_from_transitions_skips_epsilon_and_duplicates() {
+    let transitions = vec![
+        trans(1, 0, 1, '$'),
+        trans(2, 0, 1, 'x'),
+        trans(3, 1, 0, '$'),
+        trans(4, 1, 0, 'x'),
+    ];
+
+    assert_eq!(alphabet_from_transitions(&transitions), vec!['x']);
+    assert!(alphabet_from_transitions(&[]).is_empty());
+}
+
+#[test]
+fn serializes_derived_alphabet() {
+    let mut entry = make_store().create("Test".to_string(), "q0");
+    entry.transitions = vec![trans(1, 0, 1, 'a')];
+
+    let value = serde_json::to_value(&entry).unwrap();
+    assert_eq!(value["alphabet"], serde_json::json!(["a"]));
 }
