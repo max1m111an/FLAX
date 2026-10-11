@@ -61,3 +61,9 @@ npm run tauri dev
 ```bash
 .\run.dev.bat
 ```
+
+## Тесты
+Для запуска `cargo` тестов используйте скрипт:
+```bash
+.\run.tests.bat
+```
