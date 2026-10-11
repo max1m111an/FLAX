@@ -4,7 +4,7 @@ use tauri::{http::StatusCode, State};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, OperationResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, OperationResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
 
@@ -120,6 +120,24 @@ pub(crate) fn update_mealy_transition(
     Ok(updated)
 }
 
+/// Removes the transition with the given `transition_id` from the entry.
+///
+/// The alphabet is intentionally left untouched (it is append-only: symbols are
+/// never removed from it). Returns `Err` when no transition matches the id, so
+/// the caller can tell "not found" apart from success without counting entries;
+/// in that case the entry is left unchanged.
+pub(crate) fn remove_mealy_transition(
+    entry: &mut AutomatonData,
+    transition_id: i32,
+) -> Result<(), String> {
+    let len_before = entry.transitions.len();
+    entry.transitions.retain(|t| t.id != transition_id);
+    if entry.transitions.len() == len_before {
+        return Err(format!("Переход {} не найден", transition_id));
+    }
+    Ok(())
+}
+
 /// Creates a new mealy machine with a single initial state `q0`.
 #[tauri::command]
 pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
@@ -199,6 +217,37 @@ pub fn mealy_update_transition(
             status: StatusCode::BAD_REQUEST,
             message,
             transition: vec![],
+        },
+    }
+}
+
+#[tauri::command]
+pub fn mealy_remove_transition(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    transition_id: i32,
+) -> StatusResult {
+    let mut entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return StatusResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Автомат с id {} не найден", automaton_id),
+            };
+        }
+    };
+
+    match remove_mealy_transition(&mut entry, transition_id) {
+        Ok(()) => {
+            state.update(entry);
+            StatusResult {
+                status: StatusCode::OK,
+                message: format!("Удалён переход {}", transition_id),
+            }
+        }
+        Err(message) => StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message,
         },
     }
 }
