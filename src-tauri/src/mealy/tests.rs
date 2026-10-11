@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use tauri::http::StatusCode;
 
 use crate::core::types::{AutomatonData, AutomatonStore, StateData};
-use crate::mealy::api::{add_mealy_transition, create_new_mealy};
+use crate::mealy::api::{add_mealy_transition, create_new_mealy, update_mealy_transition};
 use crate::mealy::types::{MM, MealyTransition};
 
 fn mealy_entry() -> AutomatonData {
@@ -297,4 +297,93 @@ fn added_transitions_build_mm_with_outputs() {
 
     assert_eq!(mm.step(0, 'a'), Some((1, '1')));
     assert_eq!(mm.step(1, 'b'), Some((0, '0')));
+}
+
+#[test]
+fn update_transition_changes_symbol_and_output() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    let updated =
+        update_mealy_transition(&mut entry, created.id, Some('b'), Some('1')).expect("обновление");
+
+    assert_eq!(updated.id, created.id);
+    assert_eq!(updated.from, 0);
+    assert_eq!(updated.to, 1);
+    assert_eq!(updated.symbol, 'b');
+    assert_eq!(updated.output, Some('1'));
+    assert_eq!(entry.transitions[0].symbol, 'b');
+    assert_eq!(entry.transitions[0].output, Some('1'));
+}
+
+#[test]
+fn update_transition_keeps_fields_when_none() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    let updated = update_mealy_transition(&mut entry, created.id, None, None).expect("обновление");
+
+    assert_eq!(updated.symbol, 'a');
+    assert_eq!(updated.output, Some('0'));
+    assert_eq!(entry.alphabet, vec!['a']);
+}
+
+#[test]
+fn update_transition_extends_alphabet_with_new_symbol() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    update_mealy_transition(&mut entry, created.id, Some('b'), None).expect("обновление");
+
+    assert_eq!(entry.alphabet, vec!['a', 'b']);
+}
+
+#[test]
+fn update_transition_fails_on_unknown_transition() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    let err = update_mealy_transition(&mut entry, 999, Some('b'), None)
+        .expect_err("неизвестный переход должен падать");
+
+    assert!(err.contains("999"));
+    assert_eq!(entry.transitions.len(), 1);
+    assert_eq!(entry.transitions[0].symbol, 'a');
+}
+
+#[test]
+fn update_transition_fails_on_conflicting_input() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 0, 0, 'b', '1').expect("второй переход");
+
+    let err = update_mealy_transition(&mut entry, second.id, Some('a'), None)
+        .expect_err("конфликт по (from, input) должен падать");
+
+    assert!(err.contains('a'));
+    assert_eq!(entry.transitions[1].symbol, 'b');
+    assert_eq!(entry.transitions[1].output, Some('1'));
+}
+
+#[test]
+fn update_transition_allows_same_symbol_from_other_state() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+
+    update_mealy_transition(&mut entry, second.id, Some('a'), None)
+        .expect("другой источник не конфликтует");
+
+    assert_eq!(entry.transitions[1].symbol, 'a');
+}
+
+#[test]
+fn update_transition_rejects_epsilon() {
+    let mut entry = mealy_entry();
+    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+
+    assert!(update_mealy_transition(&mut entry, created.id, Some('$'), None).is_err());
+    assert!(update_mealy_transition(&mut entry, created.id, None, Some('$')).is_err());
+    assert_eq!(entry.transitions[0].symbol, 'a');
+    assert_eq!(entry.transitions[0].output, Some('0'));
 }

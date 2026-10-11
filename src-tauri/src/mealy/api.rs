@@ -40,7 +40,7 @@ pub(crate) fn add_mealy_transition(
         return Err(format!("Состояние {} не существует", to));
     }
     if input == EPSILON || output == EPSILON {
-        return Err("Машина Мили не поддерживает ε-переходы".to_string());
+        return Err("Машина Мили не поддерживает eps-переходы".to_string());
     }
     if entry
         .transitions
@@ -68,6 +68,56 @@ pub(crate) fn add_mealy_transition(
     };
     entry.transitions.push(created.clone());
     Ok(created)
+}
+
+/// Updates the `input` and/or `output` symbol of an existing transition.
+///
+/// `None` leaves the corresponding field unchanged; `from`/`to`/`id` are never
+/// touched. Validation is performed before any mutation, so an `Err` leaves the
+/// entry untouched. A conflicting `(from, input)` pair is rejected to preserve
+/// the mealy determinism invariant. The new input symbol is appended to the
+/// alphabet when missing (existing symbols are never removed).
+pub(crate) fn update_mealy_transition(
+    entry: &mut AutomatonData,
+    transition_id: i32,
+    input: Option<char>,
+    output: Option<char>,
+) -> Result<TransitionData, String> {
+    let idx = entry
+        .transitions
+        .iter()
+        .position(|t| t.id == transition_id)
+        .ok_or_else(|| format!("Переход {} не найден", transition_id))?;
+
+    let mut updated = entry.transitions[idx].clone();
+
+    if let Some(symbol) = input {
+        updated.symbol = symbol;
+    }
+    if let Some(symbol) = output {
+        updated.output = Some(symbol);
+    }
+
+    if updated.symbol == EPSILON || updated.output == Some(EPSILON) {
+        return Err("Машина Мили не поддерживает eps-переходы".to_string());
+    }
+    if entry
+        .transitions
+        .iter()
+        .any(|t| t.id != transition_id && t.from == updated.from && t.symbol == updated.symbol)
+    {
+        return Err(format!(
+            "Переход из {} по входу '{}' уже существует",
+            updated.from, updated.symbol
+        ));
+    }
+
+    if !entry.alphabet.contains(&updated.symbol) {
+        entry.alphabet.push(updated.symbol);
+    }
+
+    entry.transitions[idx] = updated.clone();
+    Ok(updated)
 }
 
 /// Creates a new mealy machine with a single initial state `q0`.
@@ -107,6 +157,42 @@ pub fn mealy_add_transition(
                     from, input, to, output
                 ),
                 transition: vec![created],
+            }
+        }
+        Err(message) => TransitionResult {
+            status: StatusCode::BAD_REQUEST,
+            message,
+            transition: vec![],
+        },
+    }
+}
+
+#[tauri::command]
+pub fn mealy_update_transition(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    transition_id: i32,
+    input: Option<char>,
+    output: Option<char>,
+) -> TransitionResult {
+    let mut entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return TransitionResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                transition: vec![],
+            };
+        }
+    };
+
+    match update_mealy_transition(&mut entry, transition_id, input, output) {
+        Ok(updated) => {
+            state.update(entry);
+            TransitionResult {
+                status: StatusCode::OK,
+                message: format!("Переход {} обновлён", transition_id),
+                transition: vec![updated],
             }
         }
         Err(message) => TransitionResult {
