@@ -251,3 +251,17 @@ pub fn mealy_remove_transition(
         },
     }
 }
+
+#[tauri::command]
+pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
+    match state.remove(automaton_id) {
+        Some(_) => StatusResult {
+            status: StatusCode::OK,
+            message: format!("Автомат с id {} удалён", automaton_id),
+        },
+        None => StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Автомат с id {} не найден", automaton_id),
+        },
+    }
+}

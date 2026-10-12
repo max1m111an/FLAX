@@ -32,6 +32,7 @@ pub fn run() {
             mealy_add_transition,
             mealy_update_transition,
             mealy_remove_transition,
+            mealy_remove_automaton,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
