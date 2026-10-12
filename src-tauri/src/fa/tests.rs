@@ -1023,7 +1023,7 @@ fn data_to_fa_ignores_orphan_transitions() {
         },
     ];
 
-    let fa = data_to_fa(&states, &transitions, &[]).unwrap();
+    let fa = data_to_fa(&states, &transitions).unwrap();
     // Only the valid transition should reach final on "1".
     let (traces, accepted) = fa.run_partial(&['1']);
     assert!(accepted);

@@ -10,6 +10,7 @@ use crate::core::api::generate_id;
 use crate::core::types::{
     AutomatonData, AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult,
     RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    alphabet_from_transitions,
 };
 use crate::fa::jff::{parse_jff, to_jff};
 use crate::fa::types::{EPSILON, FA, FABuilder};
@@ -237,10 +238,6 @@ pub fn fa_add_transition(
             };
         }
 
-        if symbol != EPSILON && !entry.alphabet.contains(&symbol) {
-            entry.alphabet.push(symbol);
-        }
-
         let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
         let tid = generate_id(&used);
         let created = TransitionData {
@@ -307,10 +304,6 @@ pub fn fa_update_transition(
         updated.symbol = s;
     }
 
-    if updated.symbol != EPSILON && !entry.alphabet.contains(&updated.symbol) {
-        entry.alphabet.push(updated.symbol);
-    }
-
     entry.transitions[idx] = updated.clone();
     state.update(entry.clone());
     TransitionResult {
@@ -370,7 +363,7 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
     };
 
     let chars: Vec<char> = input.chars().collect();
-    match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
+    match data_to_fa(&entry.states, &entry.transitions) {
         Ok(fa) => {
             let (mut traces, accepted) = fa.run_partial(&chars);
             // Order the history so that accepted reading streams (isFinal) are
@@ -431,27 +424,26 @@ pub fn fa_multi_run_str(
         }
     };
 
-    let traces: Vec<LineTest> =
-        match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
-            Ok(fa) => inputs
-                .into_iter()
-                .map(|line| {
-                    let (is_final, correct_symbols) = test_line(&fa, &line);
-                    LineTest {
-                        line,
-                        isFinal: is_final,
-                        correctSymbols: correct_symbols,
-                    }
-                })
-                .collect(),
-            Err(_) => {
-                return MultiRunResult {
-                    status: StatusCode::BAD_REQUEST,
-                    message: "Некорректный автомат".to_string(),
-                    traces: Vec::new(),
-                };
-            }
-        };
+    let traces: Vec<LineTest> = match data_to_fa(&entry.states, &entry.transitions) {
+        Ok(fa) => inputs
+            .into_iter()
+            .map(|line| {
+                let (is_final, correct_symbols) = test_line(&fa, &line);
+                LineTest {
+                    line,
+                    isFinal: is_final,
+                    correctSymbols: correct_symbols,
+                }
+            })
+            .collect(),
+        Err(_) => {
+            return MultiRunResult {
+                status: StatusCode::BAD_REQUEST,
+                message: "Некорректный автомат".to_string(),
+                traces: Vec::new(),
+            };
+        }
+    };
 
     MultiRunResult {
         status: StatusCode::OK,
@@ -480,7 +472,7 @@ pub fn fa_generate_inputs(
         }
     };
 
-    let fa = match data_to_fa(&entry.states, &entry.transitions, &entry.alphabet) {
+    let fa = match data_to_fa(&entry.states, &entry.transitions) {
         Ok(n) => n,
         Err(_) => {
             return GenerateInputsResult {
@@ -532,7 +524,6 @@ pub(crate) fn test_line(fa: &FA, input: &str) -> (bool, usize) {
 pub(crate) fn data_to_fa(
     states: &[StateData],
     transitions: &[TransitionData],
-    alphabet: &[char],
 ) -> Result<FA, String> {
     let mut builder = FABuilder::new();
 
@@ -546,7 +537,7 @@ pub(crate) fn data_to_fa(
         }
     }
 
-    for &symbol in alphabet {
+    for symbol in alphabet_from_transitions(transitions) {
         builder = builder.symbol(symbol);
     }
 
@@ -628,7 +619,6 @@ pub fn fa_load(state: State<'_, AutomatonStore>, path: String) -> OperationResul
         name,
         states: parsed.states,
         transitions: parsed.transitions,
-        alphabet: parsed.alphabet,
     });
 
     OperationResult {
