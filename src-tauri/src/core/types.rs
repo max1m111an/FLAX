@@ -135,6 +135,23 @@ pub struct RunResult {
     pub traces: Vec<Trace>,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct MealyRunStep {
+    pub from: i32,
+    pub symbol: char,
+    pub to: i32,
+    pub output: char,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealyRunResult {
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
+    pub message: String,
+    pub output: String,
+    pub steps: Vec<MealyRunStep>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct LineTest {

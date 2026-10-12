@@ -9,6 +9,8 @@
 
 use std::collections::{HashMap, HashSet};
 
+use crate::core::types::MealyRunStep;
+
 /// One Mealy transition: in state `from`, reading `input`, move to `to` and
 /// emit `output`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -135,6 +137,31 @@ impl MM {
     pub fn step(&self, from: i32, input: char) -> Option<(i32, char)> {
         self.transitions.get(&(from, input)).copied()
     }
+
+    /// Reads `input` from the initial state, emitting one output symbol per
+    /// transition. Stops as soon as a `(state, input)` pair has no transition
+    /// (partial run). Returns the trace and the produced output string.
+    pub fn run(&self, input: &[char]) -> (Vec<MealyRunStep>, String) {
+        let mut steps: Vec<MealyRunStep> = Vec::new();
+        let mut output = String::new();
+        let mut state = self.initial_state;
+        for &symbol in input {
+            match self.step(state, symbol) {
+                Some((to, out)) => {
+                    steps.push(MealyRunStep {
+                        from: state,
+                        symbol,
+                        to,
+                        output: out,
+                    });
+                    output.push(out);
+                    state = to;
+                }
+                None => break,
+            }
+        }
+        (steps, output)
+    }
 }
 
 /// Fluent builder for [`MM`], mirroring `FABuilder`.
@@ -204,7 +231,8 @@ impl MMBuilder {
         self.states.insert(to);
         self.input_alphabet.insert(input);
         self.output_alphabet.insert(output);
-        self.transitions.push(MealyTransition::new(from, input, to, output));
+        self.transitions
+            .push(MealyTransition::new(from, input, to, output));
         self
     }
 
