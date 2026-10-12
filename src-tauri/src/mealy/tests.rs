@@ -4,9 +4,10 @@ use std::collections::HashSet;
 
 use tauri::http::StatusCode;
 
-use crate::core::types::{AutomatonData, AutomatonStore, StateData};
+use crate::core::types::{AutomatonData, AutomatonStore, MealyRunStep, StateData, TransitionData};
 use crate::mealy::api::{
-    add_mealy_transition, create_new_mealy, remove_mealy_transition, update_mealy_transition,
+    add_mealy_transition, create_new_mealy, data_to_mm, remove_mealy_transition, run_mealy,
+    update_mealy_transition,
 };
 use crate::mealy::types::{MM, MealyTransition};
 
@@ -35,6 +36,14 @@ fn mealy_entry() -> AutomatonData {
         transitions: vec![],
         alphabet: vec![],
     }
+}
+
+/// Two-state machine: `0 --a/1--> 1 --b/0--> 0`.
+fn run_entry() -> AutomatonData {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход a");
+    add_mealy_transition(&mut entry, 1, 0, 'b', '0').expect("переход b");
+    entry
 }
 
 #[test]
@@ -182,7 +191,9 @@ fn create_new_returns_ok_with_single_initial_state() {
     let result = create_new_mealy(&store, None);
 
     assert_eq!(result.status, StatusCode::OK);
-    let automaton = result.automaton.expect("созданный автомат должен присутствовать");
+    let automaton = result
+        .automaton
+        .expect("созданный автомат должен присутствовать");
     assert_eq!(automaton.name, "Мили");
     assert_eq!(automaton.states.len(), 1);
     assert_eq!(automaton.states[0].label, "q0");
@@ -197,7 +208,9 @@ fn create_new_uses_given_name() {
     let store = AutomatonStore::new();
     let result = create_new_mealy(&store, Some("Машина 1".to_string()));
 
-    let automaton = result.automaton.expect("созданный автомат должен присутствовать");
+    let automaton = result
+        .automaton
+        .expect("созданный автомат должен присутствовать");
     assert_eq!(automaton.name, "Машина 1");
 }
 
@@ -215,12 +228,12 @@ fn create_new_assigns_fresh_ids() {
     assert_ne!(first.id, second.id);
 }
 
-
 #[test]
 fn add_transition_stores_output_and_extends_alphabet() {
     let mut entry = mealy_entry();
 
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
 
     assert_eq!(created.from, 0);
     assert_eq!(created.to, 1);
@@ -295,7 +308,9 @@ fn added_transitions_build_mm_with_outputs() {
     for t in &entry.transitions {
         builder = builder.transition(t.from, t.symbol, t.to, t.output.expect("выход задан"));
     }
-    let mm = builder.build().expect("переходы Мили должны собираться в MM");
+    let mm = builder
+        .build()
+        .expect("переходы Мили должны собираться в MM");
 
     assert_eq!(mm.step(0, 'a'), Some((1, '1')));
     assert_eq!(mm.step(1, 'b'), Some((0, '0')));
@@ -424,4 +439,169 @@ fn remove_transition_keeps_alphabet() {
 
     assert!(entry.transitions.is_empty());
     assert_eq!(entry.alphabet, vec!['a']);
+}
+
+#[test]
+fn mm_run_produces_output_and_steps() {
+    let mm = MM::builder()
+        .set_initial(0)
+        .transition(0, 'a', 1, '1')
+        .transition(1, 'b', 0, '0')
+        .build()
+        .unwrap();
+
+    let (steps, output) = mm.run(&['a', 'b']);
+
+    assert_eq!(output, "10");
+    assert_eq!(
+        steps,
+        vec![
+            MealyRunStep {
+                from: 0,
+                symbol: 'a',
+                to: 1,
+                output: '1',
+            },
+            MealyRunStep {
+                from: 1,
+                symbol: 'b',
+                to: 0,
+                output: '0',
+            },
+        ]
+    );
+}
+
+#[test]
+fn mm_run_stops_when_transition_missing() {
+    let mm = MM::builder()
+        .set_initial(0)
+        .transition(0, 'a', 1, '1')
+        .build()
+        .unwrap();
+
+    let (steps, output) = mm.run(&['a', 'c']);
+
+    assert_eq!(output, "1");
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].symbol, 'a');
+}
+
+#[test]
+fn mm_run_empty_input_emits_nothing() {
+    let mm = MM::builder().set_initial(0).build().unwrap();
+
+    let (steps, output) = mm.run(&[]);
+
+    assert!(steps.is_empty());
+    assert!(output.is_empty());
+}
+
+#[test]
+fn data_to_mm_builds_from_entry() {
+    let entry = run_entry();
+
+    let mm = data_to_mm(&entry.states, &entry.transitions).expect("автомат должен собраться");
+
+    assert_eq!(mm.step(0, 'a'), Some((1, '1')));
+    assert_eq!(mm.step(1, 'b'), Some((0, '0')));
+}
+
+#[test]
+fn data_to_mm_requires_initial_state() {
+    let mut entry = mealy_entry();
+    for state in &mut entry.states {
+        state.isInitial = false;
+    }
+
+    assert!(data_to_mm(&entry.states, &entry.transitions).is_err());
+}
+
+#[test]
+fn data_to_mm_ignores_orphan_transitions() {
+    let mut entry = mealy_entry();
+    entry.transitions.push(TransitionData {
+        id: 1,
+        from: 0,
+        to: 99,
+        symbol: 'a',
+        output: Some('1'),
+    });
+
+    let mm = data_to_mm(&entry.states, &entry.transitions).expect("осиротевший переход не мешает");
+
+    assert!(mm.transitions().is_empty());
+}
+
+#[test]
+fn data_to_mm_rejects_transition_without_output() {
+    let mut entry = mealy_entry();
+    entry.transitions.push(TransitionData {
+        id: 1,
+        from: 0,
+        to: 1,
+        symbol: 'a',
+        output: None,
+    });
+
+    assert!(data_to_mm(&entry.states, &entry.transitions).is_err());
+}
+
+#[test]
+fn run_mealy_full_run_returns_200_and_output() {
+    let entry = run_entry();
+
+    let result = run_mealy(&entry, "ab");
+
+    assert_eq!(result.status, StatusCode::OK);
+    assert_eq!(result.output, "10");
+    assert_eq!(result.steps.len(), 2);
+    assert!(result.message.contains("10"));
+}
+
+#[test]
+fn run_mealy_partial_run_returns_401() {
+    let entry = run_entry();
+
+    let result = run_mealy(&entry, "ac");
+
+    assert_eq!(result.status, StatusCode::UNAUTHORIZED);
+    assert_eq!(result.output, "1");
+    assert_eq!(result.steps.len(), 1);
+}
+
+#[test]
+fn run_mealy_stuck_on_first_symbol_returns_402() {
+    let entry = run_entry();
+
+    let result = run_mealy(&entry, "z");
+
+    assert_eq!(result.status, StatusCode::PAYMENT_REQUIRED);
+    assert!(result.output.is_empty());
+    assert!(result.steps.is_empty());
+}
+
+#[test]
+fn run_mealy_empty_input_returns_200() {
+    let entry = run_entry();
+
+    let result = run_mealy(&entry, "");
+
+    assert_eq!(result.status, StatusCode::OK);
+    assert!(result.output.is_empty());
+    assert!(result.steps.is_empty());
+}
+
+#[test]
+fn run_mealy_invalid_automaton_returns_400() {
+    let mut entry = mealy_entry();
+    for state in &mut entry.states {
+        state.isInitial = false;
+    }
+
+    let result = run_mealy(&entry, "a");
+
+    assert_eq!(result.status, StatusCode::BAD_REQUEST);
+    assert!(result.output.is_empty());
+    assert!(result.steps.is_empty());
 }

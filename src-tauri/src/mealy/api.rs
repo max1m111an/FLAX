@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
-use tauri::{http::StatusCode, State};
+use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, OperationResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, MealyRunResult, OperationResult, StateData, StatusResult,
+    TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
+use crate::mealy::types::MMBuilder;
 
 /// Creates a new mealy machine in the store with a single initial state `q0`.
 ///
@@ -138,6 +140,95 @@ pub(crate) fn remove_mealy_transition(
     Ok(())
 }
 
+/// Builds an [`MM`](crate::mealy::types::MM) from the stored DTOs, mirroring
+/// `data_to_fa` in the `fa` module. Transitions referencing states that are not
+/// present are ignored (orphan IDs). A transition without an output symbol, or
+/// with the epsilon symbol, makes the automaton invalid.
+pub(crate) fn data_to_mm(
+    states: &[StateData],
+    transitions: &[TransitionData],
+) -> Result<crate::mealy::types::MM, String> {
+    let mut builder = MMBuilder::new();
+
+    let mut has_initial = false;
+    for state in states {
+        builder = builder.state(state.id);
+        if state.isInitial {
+            builder = builder.set_initial(state.id);
+            has_initial = true;
+        }
+    }
+    if !has_initial {
+        return Err("Начальное состояние не задано".to_string());
+    }
+
+    let state_ids: std::collections::HashSet<i32> = states.iter().map(|s| s.id).collect();
+    for trans in transitions {
+        if !state_ids.contains(&trans.from) || !state_ids.contains(&trans.to) {
+            continue;
+        }
+        if trans.symbol == EPSILON {
+            return Err("Машина Мили не поддерживает eps-переходы".to_string());
+        }
+        let output = trans
+            .output
+            .ok_or_else(|| format!("Переход {} не имеет выходного символа", trans.id))?;
+        builder = builder.transition(trans.from, trans.symbol, trans.to, output);
+    }
+
+    builder.build()
+}
+
+/// Runs a string on a mealy machine. A mealy machine has no accepting states:
+/// it either processes the whole input (status `200`, with the produced output)
+/// or stops at the first `(state, input)` pair that has no transition (`401`
+/// when some symbols were processed, `402` when none were).
+pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
+    let mm = match data_to_mm(&entry.states, &entry.transitions) {
+        Ok(mm) => mm,
+        Err(err) => {
+            return MealyRunResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Некорректный автомат: {}", err),
+                output: String::new(),
+                steps: Vec::new(),
+            };
+        }
+    };
+
+    let chars: Vec<char> = input.chars().collect();
+    let (steps, output) = mm.run(&chars);
+    let processed = steps.len();
+    let total = chars.len();
+
+    let (status, message) = if processed == total {
+        (
+            StatusCode::OK,
+            format!("Цепочка '{}' обработана, выход '{}'", input, output),
+        )
+    } else if processed > 0 {
+        (
+            StatusCode::UNAUTHORIZED,
+            format!(
+                "Цепочка '{}' обработана частично (обработано {} из {} символов)",
+                input, processed, total
+            ),
+        )
+    } else {
+        (
+            StatusCode::PAYMENT_REQUIRED,
+            format!("Цепочка '{}' не обработана", input),
+        )
+    };
+
+    MealyRunResult {
+        status,
+        message,
+        output,
+        steps,
+    }
+}
+
 /// Creates a new mealy machine with a single initial state `q0`.
 #[tauri::command]
 pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
@@ -250,6 +341,27 @@ pub fn mealy_remove_transition(
             message,
         },
     }
+}
+
+#[tauri::command]
+pub fn mealy_run_str(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    input: String,
+) -> MealyRunResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return MealyRunResult {
+                status: StatusCode::NOT_FOUND,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                output: String::new(),
+                steps: Vec::new(),
+            };
+        }
+    };
+
+    run_mealy(&entry, &input)
 }
 
 #[tauri::command]
