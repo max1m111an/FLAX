@@ -34,7 +34,6 @@ fn mealy_entry() -> AutomatonData {
             },
         ],
         transitions: vec![],
-        alphabet: vec![],
     }
 }
 
@@ -200,7 +199,7 @@ fn create_new_returns_ok_with_single_initial_state() {
     assert!(automaton.states[0].isInitial);
     assert!(!automaton.states[0].isFinal);
     assert!(automaton.transitions.is_empty());
-    assert!(automaton.alphabet.is_empty());
+    assert!(automaton.get_alphabet().is_empty());
 }
 
 #[test]
@@ -240,7 +239,7 @@ fn add_transition_stores_output_and_extends_alphabet() {
     assert_eq!(created.symbol, 'a');
     assert_eq!(created.output, Some('1'));
     assert_eq!(entry.transitions.len(), 1);
-    assert_eq!(entry.alphabet, vec!['a']);
+    assert_eq!(entry.get_alphabet(), vec!['a']);
 }
 
 #[test]
@@ -255,23 +254,13 @@ fn add_transition_assigns_fresh_ids() {
 }
 
 #[test]
-fn add_transition_keeps_existing_alphabet_symbols() {
-    let mut entry = mealy_entry();
-    entry.alphabet.push('a');
-
-    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
-
-    assert_eq!(entry.alphabet, vec!['a']);
-}
-
-#[test]
 fn add_transition_fails_on_unknown_states() {
     let mut entry = mealy_entry();
 
     assert!(add_mealy_transition(&mut entry, 99, 1, 'a', '0').is_err());
     assert!(add_mealy_transition(&mut entry, 0, 99, 'a', '0').is_err());
     assert!(entry.transitions.is_empty());
-    assert!(entry.alphabet.is_empty());
+    assert!(entry.get_alphabet().is_empty());
 }
 
 #[test]
@@ -342,17 +331,17 @@ fn update_transition_keeps_fields_when_none() {
 
     assert_eq!(updated.symbol, 'a');
     assert_eq!(updated.output, Some('0'));
-    assert_eq!(entry.alphabet, vec!['a']);
+    assert_eq!(entry.get_alphabet(), vec!['a']);
 }
 
 #[test]
-fn update_transition_extends_alphabet_with_new_symbol() {
+fn update_transition_reflects_new_symbol_in_derived_alphabet() {
     let mut entry = mealy_entry();
     let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
 
     update_mealy_transition(&mut entry, created.id, Some('b'), None).expect("обновление");
 
-    assert_eq!(entry.alphabet, vec!['a', 'b']);
+    assert_eq!(entry.get_alphabet(), vec!['b']);
 }
 
 #[test]
@@ -431,14 +420,14 @@ fn remove_transition_fails_on_unknown_id() {
 }
 
 #[test]
-fn remove_transition_keeps_alphabet() {
+fn remove_transition_updates_derived_alphabet() {
     let mut entry = mealy_entry();
     let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
 
     remove_mealy_transition(&mut entry, created.id).expect("удаление");
 
     assert!(entry.transitions.is_empty());
-    assert_eq!(entry.alphabet, vec!['a']);
+    assert!(entry.get_alphabet().is_empty());
 }
 
 #[test]

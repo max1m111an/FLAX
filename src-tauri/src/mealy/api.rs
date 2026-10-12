@@ -26,8 +26,8 @@ pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> 
 /// Appends one mealy transition `from --input/output--> to` to the entry.
 ///
 /// Validation is performed before any mutation, so an `Err` leaves the entry
-/// untouched. The input symbol is appended to the alphabet (there is no
-/// separate output alphabet in the store: it is derived from transitions).
+/// untouched. The alphabet is derived from the transitions
+/// (`AutomatonData::get_alphabet`), so it is not maintained here.
 pub(crate) fn add_mealy_transition(
     entry: &mut AutomatonData,
     from: i32,
@@ -55,10 +55,6 @@ pub(crate) fn add_mealy_transition(
         ));
     }
 
-    if !entry.alphabet.contains(&input) {
-        entry.alphabet.push(input);
-    }
-
     let used: HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
     let id = generate_id(&used);
     let created = TransitionData {
@@ -77,8 +73,8 @@ pub(crate) fn add_mealy_transition(
 /// `None` leaves the corresponding field unchanged; `from`/`to`/`id` are never
 /// touched. Validation is performed before any mutation, so an `Err` leaves the
 /// entry untouched. A conflicting `(from, input)` pair is rejected to preserve
-/// the mealy determinism invariant. The new input symbol is appended to the
-/// alphabet when missing (existing symbols are never removed).
+/// the mealy determinism invariant. The alphabet is derived from the transitions
+/// (`AutomatonData::get_alphabet`), so it is not maintained here.
 pub(crate) fn update_mealy_transition(
     entry: &mut AutomatonData,
     transition_id: i32,
@@ -114,20 +110,16 @@ pub(crate) fn update_mealy_transition(
         ));
     }
 
-    if !entry.alphabet.contains(&updated.symbol) {
-        entry.alphabet.push(updated.symbol);
-    }
-
     entry.transitions[idx] = updated.clone();
     Ok(updated)
 }
 
 /// Removes the transition with the given `transition_id` from the entry.
 ///
-/// The alphabet is intentionally left untouched (it is append-only: symbols are
-/// never removed from it). Returns `Err` when no transition matches the id, so
-/// the caller can tell "not found" apart from success without counting entries;
-/// in that case the entry is left unchanged.
+/// Returns `Err` when no transition matches the id, so the caller can tell
+/// "not found" apart from success without counting entries; in that case the
+/// entry is left unchanged. The alphabet is derived from the transitions, so it
+/// updates automatically.
 pub(crate) fn remove_mealy_transition(
     entry: &mut AutomatonData,
     transition_id: i32,

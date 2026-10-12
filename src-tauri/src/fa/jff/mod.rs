@@ -58,7 +58,6 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
 
     let mut used: HashSet<i32> = HashSet::new();
     let mut transitions: Vec<TransitionData> = Vec::new();
-    let mut alphabet: Vec<char> = Vec::new();
 
     for child in automaton.children().filter(|n| n.is_element()) {
         if child.tag_name().name() != "transition" {
@@ -80,10 +79,6 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
             read.chars().next().unwrap()
         };
 
-        if symbol != EPSILON && !alphabet.contains(&symbol) {
-            alphabet.push(symbol);
-        }
-
         let id = generate_id(&used);
         used.insert(id);
         transitions.push(TransitionData {
@@ -99,7 +94,6 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
         kind,
         states,
         transitions,
-        alphabet,
     })
 }
 

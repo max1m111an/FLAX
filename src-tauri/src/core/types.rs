@@ -6,8 +6,12 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Mutex;
 
+use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use tauri::http::StatusCode;
+
+/// Символ эпсилон-перехода. Никогда не входит во входной алфавит.
+pub const EPSILON: char = '$';
 
 // ---------------------------------------------------------------------------
 // Serde DTOs (serialization contract with the frontend)
@@ -34,16 +38,51 @@ pub struct TransitionData {
     pub output: Option<char>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct AutomatonData {
     pub id: i32,
     pub name: String,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
-    pub alphabet: Vec<char>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Собирает входной алфавит из переходов: уникальные не-ε `symbol` в порядке
+/// первого появления.
+pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
+    let mut seen: HashSet<char> = HashSet::new();
+    let mut alphabet: Vec<char> = Vec::new();
+    for t in transitions {
+        if t.symbol != EPSILON && seen.insert(t.symbol) {
+            alphabet.push(t.symbol);
+        }
+    }
+    alphabet
+}
+
+impl AutomatonData {
+    /// Входной алфавит, выведенный из переходов (единый источник правды —
+    /// отдельное поле не хранится; алфавит всегда отражает текущие переходы).
+    pub fn get_alphabet(&self) -> Vec<char> {
+        alphabet_from_transitions(&self.transitions)
+    }
+}
+
+impl Serialize for AutomatonData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut state = serializer.serialize_struct("AutomatonData", 5)?;
+        state.serialize_field("id", &self.id)?;
+        state.serialize_field("name", &self.name)?;
+        state.serialize_field("states", &self.states)?;
+        state.serialize_field("transitions", &self.transitions)?;
+        state.serialize_field("alphabet", &self.get_alphabet())?;
+        state.end()
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
 pub struct OperationResult {
     #[serde(with = "http_serde::status_code")]
     pub status: StatusCode,
@@ -193,7 +232,6 @@ impl AutomatonStore {
                 isFinal: false,
             }],
             transitions: Vec::new(),
-            alphabet: Vec::new(),
         };
 
         self.insert(entry)

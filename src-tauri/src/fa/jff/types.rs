@@ -9,5 +9,4 @@ pub struct JffParsed {
     pub kind: String,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
-    pub alphabet: Vec<char>,
 }
