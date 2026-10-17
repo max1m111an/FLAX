@@ -3,6 +3,7 @@ import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
 import clsx from "clsx";
 import styles from "./StateNode.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
+import { EDGE_ATTACH_TOLERANCE, NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
 
 interface StateProps {
     isFinal?: boolean;
@@ -16,6 +17,7 @@ interface StateProps {
     onMoveNode?: (id: number, pos: { x: number; y: number }) => void;
     onEndMoveNode?: (id: number, pos: { x: number; y: number }) => void;
     onDeleteNode?: (id: number) => void;
+    getCanvasRect: () => DOMRect;
 }
 
 export function State(
@@ -31,6 +33,7 @@ export function State(
         onMoveNode,
         onDeleteNode,
         onEndMoveNode,
+        getCanvasRect,
     }: StateProps) {
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
@@ -68,13 +71,11 @@ export function State(
         if (currentTab?.activeControl === "move") {
             dragging.current = true;
 
-            if (nodeRef.current) {
-                const rect = nodeRef.current.getBoundingClientRect();
-                offset.current = {
-                    x: e.clientX - rect.left,
-                    y: e.clientY - rect.top,
-                };
-            }
+            const canvasRect = getCanvasRect();
+            offset.current = {
+                x: (e.clientX - canvasRect.left) - position.current.x,
+                y: (e.clientY - canvasRect.top) - position.current.y,
+            };
 
             document.addEventListener("mousemove", onMouseMove);
             document.addEventListener("mouseup", onMouseUp);
@@ -95,50 +96,47 @@ export function State(
         e.stopPropagation();
         e.preventDefault();
         if (currentTab?.activeControl === "edge") {
-            const rect = nodeRef.current!.getBoundingClientRect();
+            if (!nodeRef.current) return;
 
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top + rect.height / 2;
+            const canvasRect = getCanvasRect();
+            const nodeRect = nodeRef.current.getBoundingClientRect();
 
-            const distToCenter = Math.sqrt(
-                Math.pow(e.clientX - cx, 2) +
-                Math.pow(e.clientY - cy, 2),
-            );
+            const cx = nodeRect.left + nodeRect.width / 2 - canvasRect.left;
+            const cy = nodeRect.top + nodeRect.height / 2 - canvasRect.top;
 
-            const radius = rect.width / 2;
+            const point = {
+                x: e.clientX - canvasRect.left,
+                y: e.clientY - canvasRect.top,
+            };
 
-            if (distToCenter < radius + 10) {
+            const distToCenter = Math.hypot(point.x - cx, point.y - cy);
+
+            if (distToCenter < NODE_RADIUS + EDGE_ATTACH_TOLERANCE) {
                 return;
             }
 
-            const dx = e.clientX - cx;
-            const dy = e.clientY - cy;
+            const dx = point.x - cx;
+            const dy = point.y - cy;
 
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const r = rect.width / 2;
+            const len = Math.hypot(dx, dy) || 1;
 
             const start = {
-                x: cx + (dx / len) * r,
-                y: cy + (dy / len) * r,
+                x: cx + (dx / len) * NODE_RADIUS,
+                y: cy + (dy / len) * NODE_RADIUS,
             };
 
             onStartEdge?.(start);
-            onMoveEdge?.({
-                x: e.clientX,
-                y: e.clientY,
-            });
+            onMoveEdge?.(point);
         }
         if (currentTab?.activeControl === "move") {
             if (!dragging.current) return;
 
-            let newX = e.clientX - offset.current.x;
-            let newY = e.clientY - offset.current.y;
+            const canvasRect = getCanvasRect();
+            let newX = (e.clientX - canvasRect.left) - offset.current.x;
+            let newY = (e.clientY - canvasRect.top) - offset.current.y;
 
-            if (nodeRef.current) {
-                const rect = nodeRef.current.getBoundingClientRect();
-                newX = Math.max(0, Math.min(newX, window.innerWidth - rect.width));
-                newY = Math.max(0, Math.min(newY, window.innerHeight - rect.height));
-            }
+            newX = Math.max(0, Math.min(newX, canvasRect.width - NODE_SIZE));
+            newY = Math.max(0, Math.min(newY, canvasRect.height - NODE_SIZE));
 
             position.current = { x: newX, y: newY };
 

@@ -17,7 +17,7 @@
   z-index: 999;
   flex-direction: column;
   width: 64px;
-  height: calc(100vh - 44px);
+  height: 100%;
   background: var(--bg-surface-alt);
   align-items: center;
   border-right: var(--border-base) solid 1px;
@@ -28,9 +28,10 @@
 
 .modelCanvasWrapper {
   position: relative;
-  flex-grow: 1;
-  width: 100%;
-  height: 100vh;
+  overflow: hidden;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
   background-image: radial-gradient(var(--point-bg) 1px, transparent 1px);
   background-size: 24px 24px;
   background-color: var(--bg-base);

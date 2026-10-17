@@ -1,4 +1,5 @@
 import { StateModel, TransitionModel } from "@/types/Automaton.ts";
+import { NODE_RADIUS } from "@/configs/CanvasConst.ts";
 
 const TANGENT_DEG = 5;
 
@@ -24,20 +25,20 @@ export default function calculatePoints(
     if (!startNode || !endNode) return null;
 
     const startCenter = {
-        x: startNode.x + 32,
-        y: startNode.y + 32,
+        x: startNode.x + NODE_RADIUS,
+        y: startNode.y + NODE_RADIUS,
     };
 
     const endCenter = {
-        x: endNode.x + 32,
-        y: endNode.y + 32,
+        x: endNode.x + NODE_RADIUS,
+        y: endNode.y + NODE_RADIUS,
     };
 
     const dx = endCenter.x - startCenter.x;
     const dy = endCenter.y - startCenter.y;
 
     const len = Math.sqrt(dx * dx + dy * dy) || 1;
-    const r = 32;
+    const r = NODE_RADIUS;
 
     let x1 = startCenter.x + (dx / len) * r;
     let y1 = startCenter.y + (dy / len) * r;

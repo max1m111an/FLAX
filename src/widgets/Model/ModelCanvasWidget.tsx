@@ -1,5 +1,5 @@
 import { State } from "@/components/State.tsx";
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import Edge from "@/components/Edge";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
@@ -7,6 +7,7 @@ import styles from "@/scenes/ModelScene.module.scss";
 import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addState, addTransition, removeState as removeStateRequest, removeTransitionService as removeTransitionRequest, updateState } from "@/services/faService.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
+import { NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
 
 
 export default function ModelCanvasWidget() {
@@ -22,11 +23,26 @@ export default function ModelCanvasWidget() {
         to: number;
     } | null>(null);
 
+    const canvasRef = useRef<HTMLDivElement | null>(null);
+
+    const getCanvasRect = useCallback((): DOMRect => canvasRef.current!.getBoundingClientRect(), []);
+
+    const clampToCanvas = (x: number, y: number) => {
+        const rect = getCanvasRect();
+        return {
+            x: Math.max(0, Math.min(x, rect.width - NODE_SIZE)),
+            y: Math.max(0, Math.min(y, rect.height - NODE_SIZE)),
+        };
+    };
+
     if (!currentTab) return null;
 
     const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
-        const x1 = e.clientX - 32;
-        const y1 = e.clientY - 32;
+        const rect = getCanvasRect();
+        const { x: x1, y: y1 } = clampToCanvas(
+            e.clientX - rect.left - NODE_RADIUS,
+            e.clientY - rect.top - NODE_RADIUS,
+        );
         const nextIndex = currentTab.automaton.states.length;
         const newNode = {
             automatonId: currentTab.id,
@@ -188,9 +204,9 @@ export default function ModelCanvasWidget() {
 
         const stateX = state.x;
         const stateY = state.y;
-        const cx = stateX + 32;
-        const cy = stateY + 32;
-        const r = 32;
+        const cx = stateX + NODE_RADIUS;
+        const cy = stateY + NODE_RADIUS;
+        const r = NODE_RADIUS;
 
         const attachX = 18;
         const attachY = cy - Math.sqrt(r * r - attachX * attachX);
@@ -244,6 +260,7 @@ export default function ModelCanvasWidget() {
 
     return (
         <div
+            ref={ canvasRef }
             className={ styles.modelCanvasWrapper }
             onClick={ (e) => {
                 if (currentTab.activeControl === "cursor") {
@@ -272,10 +289,11 @@ export default function ModelCanvasWidget() {
                     onDeleteNode={ removeState }
                     onMoveNode={ moveStateLocal }
                     onEndMoveNode={ saveStatePosition }
+                    getCanvasRect={ getCanvasRect }
                 />
             ))}
 
-            <svg style={ { position: "fixed", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
+            <svg style={ { position: "absolute", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
 
                 {groupedTransitions.map((edgeGroup) => {
                     if (edgeGroup.from === edgeGroup.to) {
@@ -378,11 +396,10 @@ export default function ModelCanvasWidget() {
                                 autoFocus
                                 onEdge
                                 style={ {
-                                    position: "fixed",
+                                    position: "absolute",
                                     left: loop.textX,
                                     top: loop.textY,
                                     transform: "translate(-50%, -50%)",
-                                    zIndex: 1000,
                                 } }
                                 onKeyDown={ (e) => {
                                     if (e.key === "Enter") {
@@ -418,11 +435,10 @@ export default function ModelCanvasWidget() {
                         autoFocus
                         onEdge
                         style={ {
-                            position: "fixed",
+                            position: "absolute",
                             left: midX,
                             top: midY,
                             transform: "translate(-50%, -50%)",
-                            zIndex: 1000,
                         } }
                         onKeyDown={ (e) => {
                             if (e.key === "Enter") {
