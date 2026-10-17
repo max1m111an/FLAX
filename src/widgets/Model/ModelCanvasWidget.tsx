@@ -159,7 +159,7 @@ export default function ModelCanvasWidget() {
                 stateId: id,
             };
             await removeStateRequest(request);
-            const connectedIds = connectedTransitions.map((t) => t.id);
+            const connectedIds: number[] = connectedTransitions.map((t) => t.id);
             const newTabData = {
                 ...currentTab,
                 selectedNodeId: currentTab.selectedNodeId === id ? null : currentTab.selectedNodeId,

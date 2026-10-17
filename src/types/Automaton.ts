@@ -3,7 +3,6 @@ export interface AutomatonModel {
     name: string;
     states: StateModel[]
     transitions: TransitionModel[];
-    alphabet: string[];
 }
 export interface StateModel {
     id: number;
