@@ -1,0 +1,66 @@
+.modelWrapper{
+  position: fixed;
+  display: flex;
+  box-sizing: content-box;
+  flex-direction: row;
+  align-items: center;
+  bottom: 16px;
+  left: 50%;
+  z-index: 9999;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 12px;
+  padding: 8px 8px;
+  gap: 6px;
+  animation: slideIn 0.3s ease-out forwards;
+
+  &.closing {
+    animation: fadeOut 0.3s ease-in forwards;
+  }
+
+  &.success{
+    color: var(--green-main);
+    border: 1px solid var(--green-main);
+    background-color: var(--green-bg);
+  }
+
+  &.warning{
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
+    background-color: var(--accent-bg);
+  }
+
+  &.error{
+    color: var(--red-main);
+    border: 1px solid var(--red-main);
+    background-color: var(--red-bg);
+  }
+}
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, 20px);
+  }
+}
+
+.icon {
+  box-sizing: content-box;
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+}

@@ -4,18 +4,22 @@ import TabsWidget from "@/widgets/Navigation/TabsWidget.tsx";
 import { TabsProvider } from "@/context/TabsContext.tsx";
 import { RecentFilesProvider } from "@/context/RecentFilesContext.tsx";
 import styles from "./MainLayout.module.scss";
+import { SnackbarProvider } from "@/context/SnackbarContext.tsx";
+
 
 export default function MainLayout() {
     return (
-        <RecentFilesProvider>
-            <TabsProvider>
-                <div className={ styles.appContainer }>
-                    <TabsWidget />
-                    <main className={ styles.container }>
-                        <Outlet />
-                    </main>
-                </div>
-            </TabsProvider>
-        </RecentFilesProvider>
+        <SnackbarProvider>
+            <RecentFilesProvider>
+                <TabsProvider>
+                    <div className={ styles.appContainer }>
+                        <TabsWidget />
+                        <main className={ styles.container }>
+                            <Outlet />
+                        </main>
+                    </div>
+                </TabsProvider>
+            </RecentFilesProvider>
+        </SnackbarProvider>
     );
 }
