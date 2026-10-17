@@ -1,6 +1,6 @@
-import { State } from "@/components/State.tsx";
+import { State } from "@/components/State/State.tsx";
 import { useCallback, useRef, useState } from "react";
-import Edge from "@/components/Edge";
+import Edge from "@/components/Edge/Edge.tsx";
 import calculatePoints from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
