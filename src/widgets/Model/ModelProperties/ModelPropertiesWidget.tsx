@@ -1,6 +1,6 @@
 import Cancel from "@/assets/svg/Cancel.svg?react";
 import { useState } from "react";
-import NodeProperties from "./NodeProperties.tsx";
+import StateProperties from "./StateProperties.tsx";
 import EdgeProperties from "./EdgeProperties.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import { IconButton } from "@/components/ui/IconButton/IconButton.tsx";
@@ -45,7 +45,7 @@ export default function ModelPropertiesWidget() {
             </div>
             <div className={ styles.propTypeWrapper }>
                 {typeProp === "nodeType" ? (
-                    <NodeProperties />
+                    <StateProperties />
                 ) :
                     (
                         <EdgeProperties />

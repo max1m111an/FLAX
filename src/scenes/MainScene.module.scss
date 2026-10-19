@@ -154,24 +154,6 @@
   margin-top: -4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-base) transparent;
-  
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: var(--border-base);
-    border-radius: 10px;
-    transition: background 0.2s;
-  }
-
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--text-secondary);
-  }
 }
 
 .recentCard {

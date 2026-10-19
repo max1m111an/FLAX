@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import styles from "./Edge.module.scss";
 import { useCurrentTab } from "@/context/TabsContext.tsx";
+import React from "react";
 
 interface EdgeProps {
     x1: number;
@@ -20,6 +21,7 @@ interface EdgeProps {
     id?: number;
     from?: number;
     to?: number;
+    onContextMenu?: (e: React.MouseEvent<SVGGElement>) => void;
 }
 
 export default function Edge(
@@ -41,13 +43,14 @@ export default function Edge(
         angle,
         from,
         to,
+        onContextMenu,
     }: EdgeProps) {
     const currentTab = useCurrentTab();
 
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-
+        if (e.button !== 0) return;
         if (currentTab?.activeControl === "trashcan") {
             if (id !== undefined && onDeleteEdge) {
                 onDeleteEdge(id);
@@ -73,6 +76,7 @@ export default function Edge(
                 currentTab?.activeControl === "trashcan" && styles.deleteMode,
                 traceStatus,
             ) }
+            onContextMenu={ onContextMenu }
         >
             <defs>
                 <marker id={ `arrowhead-${id}` } markerWidth="14" markerHeight="14" refX="12" refY="7" orient="auto">

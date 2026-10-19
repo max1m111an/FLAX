@@ -1,4 +1,3 @@
-import Cursor from "@/assets/svg/Cursor.svg?react";
 import Circle from "@/assets/svg/Circle.svg?react";
 import ArrowUpRight from "@/assets/svg/ArrowUpRight.svg?react";
 import Trashcan from "@/assets/svg/Trashcan.svg?react";
@@ -7,7 +6,6 @@ import PenLine from "@/assets/svg/PenLine.svg?react";
 import Wrench from "@/assets/svg/Wrench.svg?react";
 import Image from "@/assets/svg/Image.svg?react";
 import Play from "@/assets/svg/Play.svg?react";
-import Settings from "@/assets/svg/Settings.svg?react";
 import Move from "@/assets/svg/Move.svg?react";
 import clsx from "clsx";
 import styles from "../../scenes/ModelScene.module.scss";
@@ -73,7 +71,7 @@ export default function ModelControlWidget() {
     return (
         <div className={ styles.modelLeftControlWrapper }>
             <div className={ styles.modelTopGroup }>
-                <Cursor
+                {/*<Cursor
                     className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "cursor" && styles.active) }
                     onClick={ () => {
                         if (currentTab) {
@@ -82,7 +80,7 @@ export default function ModelControlWidget() {
                                 activeControl: "cursor",
                             });
                         }
-                    } } />
+                    } } />*/}
                 <Move
                     className={ clsx(styles.modelControlIcon, currentTab?.activeControl == "move" && styles.active) }
                     onClick={ () => {
@@ -150,7 +148,7 @@ export default function ModelControlWidget() {
             </div>
 
             <div className={ styles.modelBottomGroup }>
-                <Settings
+                {/*<Settings
                     className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "settings" && styles.active) }
                     onClick={ () => {
                         if (currentTab) {
@@ -166,7 +164,7 @@ export default function ModelControlWidget() {
                                 });
                             }
                         }
-                    } } />
+                    } } />*/}
                 <Play
                     className={ clsx(styles.modelControlIcon, currentTab?.activePanel == "play" && styles.active) }
                     onClick={ () => {
