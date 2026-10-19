@@ -70,6 +70,7 @@ export function State(
     const onMouseDown = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
+        if (e.button !== 0) return;
         if (currentTab?.activeControl === "move") {
             dragging.current = true;
 
@@ -97,6 +98,7 @@ export function State(
     const onMouseMove = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
+        if (e.button !== 0) return;
         if (currentTab?.activeControl === "edge") {
             if (!nodeRef.current) return;
 
@@ -152,6 +154,7 @@ export function State(
     const onMouseUp = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
+        if (e.button !== 0) return;
         if (currentTab?.activeControl === "edge") {
             const element = document.elementFromPoint(e.clientX, e.clientY);
             const hoveredNode = element?.closest("[data-node-id]");

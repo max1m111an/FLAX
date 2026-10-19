@@ -50,7 +50,7 @@ export default function Edge(
     const handleDelete = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-
+        if (e.button !== 0) return;
         if (currentTab?.activeControl === "trashcan") {
             if (id !== undefined && onDeleteEdge) {
                 onDeleteEdge(id);
