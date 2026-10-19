@@ -8,7 +8,7 @@ import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addState, addTransition, removeState as removeStateRequest, removeTransitionService as removeTransitionRequest, updateState } from "@/services/faService.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 import { NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
-import { ContextMenuItem, useContextMenu } from "@/context/ContextMenuContext.tsx";
+import { ContextMenuInput, ContextMenuItem, useContextMenu } from "@/context/ContextMenuContext.tsx";
 import Mark from "@/assets/svg/Mark.svg?react";
 import { useStateActions } from "@/hooks/useStateAction.tsx";
 
@@ -21,8 +21,7 @@ export default function ModelCanvasWidget() {
         to: { x: number; y: number };
     } | null>(null);
     const { setMenuState } = useContextMenu();
-    const { handleFinalChange, handleInitialChange } = useStateActions();
-
+    const { handleFinalChange, handleInitialChange, handleNameChange } = useStateActions();
     const [ draftEdge, setDraftEdge ] = useState<{
         from: number;
         to: number;
@@ -276,6 +275,23 @@ export default function ModelCanvasWidget() {
             y: e.pageY,
             content: (
                 <>
+                    <ContextMenuItem
+                        onClick={ (e) => e.stopPropagation() }
+                        isInput
+                    >
+                        <ContextMenuInput
+                            defaultValue={ clickedState.label }
+                            onKeyDown={ (e) => {
+                                if (e.key === "Enter") {
+                                    handleNameChange(e.currentTarget.value, clickedState.id);
+                                }
+                            } }
+                            onBlur={ (e) => {
+                                handleNameChange(e.currentTarget.value, clickedState.id);
+                            } }
+                        >
+                        </ContextMenuInput>
+                    </ContextMenuItem>
                     <ContextMenuItem onClick={ () => handleInitialChange(!clickedState.isInitial, clickedState.id) }>
                         Начальное
                         {clickedState.isInitial && <Mark />}
@@ -284,7 +300,7 @@ export default function ModelCanvasWidget() {
                         Финальное
                         {clickedState.isFinal && <Mark />}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={ () => removeState(clickedState.id) } isRed={ true }>
+                    <ContextMenuItem onClick={ () => removeState(clickedState.id) } isRed>
                         Удалить
                     </ContextMenuItem>
                 </>

@@ -31,12 +31,16 @@ export const useStateActions = () => {
         }
     };
 
-    const handleNameChange = async (name: string) => {
+    const handleNameChange = async (name: string, stateId: number | undefined) => {
         if (!currentTab) return;
-        if (selectedStateId === null) return;
+        if (stateId === undefined || stateId === null) return;
+        if (name.length === 0) {
+            showSnackbar("error", "Длина должна быть больше 0");
+            return;
+        }
         const request: updateStateFARequest = {
             automatonId: currentTab.id,
-            stateId: selectedStateId,
+            stateId,
             label: name,
         };
         await fetchUpdateState(request);

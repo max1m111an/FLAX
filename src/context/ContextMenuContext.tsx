@@ -1,6 +1,6 @@
 import {
     createContext,
-    HTMLAttributes,
+    HTMLAttributes, InputHTMLAttributes,
     ReactNode,
     useContext,
     useEffect,
@@ -30,13 +30,23 @@ interface ProviderProps {
 
 interface MenuItemProps extends HTMLAttributes<HTMLDivElement> {
     isRed?: boolean;
+    isInput?: boolean;
     children: ReactNode;
 }
 const ContextMenuContext = createContext<ContextMenuContextType | null>(null);
 
-export const ContextMenuItem = ({ isRed = false, children, ...props }: MenuItemProps) => {
+interface MenuInputProps extends InputHTMLAttributes<HTMLInputElement> {
+    children: ReactNode;
+
+}
+
+export const ContextMenuInput = (props: MenuInputProps) => {
+    return <input className={ styles.input } { ...props } />;
+};
+
+export const ContextMenuItem = ({ isRed = false, isInput = false, children, ...props }: MenuItemProps) => {
     return (
-        <div className={ clsx(styles.item, isRed && styles.red) } { ...props }>
+        <div className={ clsx(styles.item, isRed && styles.red, isInput && styles.inputContainer) } { ...props }>
             {children}
         </div>
     );
@@ -55,15 +65,22 @@ export const ContextMenuContextProvider = ({ children }: ProviderProps) => {
 
     useEffect(() => {
         const handleScroll = () => closeMenu();
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Escape") {
+                console.log("Клавиша:", e.key);
+                closeMenu();
+            }
+        };
 
         document.addEventListener("click", closeMenu);
         window.addEventListener("scroll", handleScroll, { passive: true });
         window.addEventListener("resize", closeMenu);
-
+        window.addEventListener("keydown", handleKeyDown, true);
         return () => {
             document.removeEventListener("click", closeMenu);
             window.removeEventListener("scroll", handleScroll);
             window.removeEventListener("resize", closeMenu);
+            window.removeEventListener("keydown", handleKeyDown, true);
         };
     }, []);
 
