@@ -18,6 +18,7 @@ interface StateProps {
     onEndMoveNode?: (id: number, pos: { x: number; y: number }) => void;
     onDeleteNode?: (id: number) => void;
     getCanvasRect: () => DOMRect;
+    onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 export function State(
@@ -34,6 +35,7 @@ export function State(
         onDeleteNode,
         onEndMoveNode,
         getCanvasRect,
+        onContextMenu,
     }: StateProps) {
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
@@ -208,6 +210,7 @@ export function State(
                             : ""),
                 ) }
                 onMouseDown={ onMouseDown }
+                onContextMenu={ onContextMenu }
             >
                 {label}
             </div>

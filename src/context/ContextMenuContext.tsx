@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import styles from "./ContextMenu.module.scss";
+import clsx from "clsx";
 
 
 interface MenuState {
@@ -28,13 +29,14 @@ interface ProviderProps {
 }
 
 interface MenuItemProps extends HTMLAttributes<HTMLDivElement> {
+    isRed?: boolean;
     children: ReactNode;
 }
 const ContextMenuContext = createContext<ContextMenuContextType | null>(null);
 
-export const ContextMenuItem = ({ children, ...props }: MenuItemProps) => {
+export const ContextMenuItem = ({ isRed = false, children, ...props }: MenuItemProps) => {
     return (
-        <div className={ styles.item } { ...props }>
+        <div className={ clsx(styles.item, isRed && styles.red) } { ...props }>
             {children}
         </div>
     );

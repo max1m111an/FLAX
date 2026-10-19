@@ -8,6 +8,9 @@ import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { addState, addTransition, removeState as removeStateRequest, removeTransitionService as removeTransitionRequest, updateState } from "@/services/faService.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
 import { NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
+import { ContextMenuItem, useContextMenu } from "@/context/ContextMenuContext.tsx";
+import Mark from "@/assets/svg/Mark.svg?react";
+import { useStateActions } from "@/hooks/useStateAction.tsx";
 
 
 export default function ModelCanvasWidget() {
@@ -17,6 +20,8 @@ export default function ModelCanvasWidget() {
         from: { x: number; y: number };
         to: { x: number; y: number };
     } | null>(null);
+    const { setMenuState } = useContextMenu();
+    const { handleFinalChange, handleInitialChange } = useStateActions();
 
     const [ draftEdge, setDraftEdge ] = useState<{
         from: number;
@@ -258,6 +263,55 @@ export default function ModelCanvasWidget() {
         }
     };
 
+    const handleRightClickState = (e: React.MouseEvent, stateId: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const clickedState = currentTab.automaton.states.find((state) => state.id === stateId);
+
+        if (!clickedState) return;
+
+        setMenuState({
+            visible: true,
+            x: e.pageX,
+            y: e.pageY,
+            content: (
+                <>
+                    <ContextMenuItem onClick={ () => handleInitialChange(!clickedState.isInitial, clickedState.id) }>
+                        Начальное
+                        {clickedState.isInitial && <Mark />}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={ () => handleFinalChange(!clickedState.isFinal, clickedState.id) }>
+                        Финальное
+                        {clickedState.isFinal && <Mark />}
+                    </ContextMenuItem>
+                    <ContextMenuItem onClick={ () => removeState(clickedState.id) } isRed={ true }>
+                        Удалить
+                    </ContextMenuItem>
+                </>
+            ),
+        });
+    };
+    const handleRightClickTransition = (e: React.MouseEvent, transitionid: number) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const clickedTransition = currentTab.automaton.transitions.find((transition) => transition.id === transitionid);
+
+        if (!clickedTransition) return;
+
+        setMenuState({
+            visible: true,
+            x: e.pageX,
+            y: e.pageY,
+            content: (
+                <>
+                    <ContextMenuItem onClick={ () => removeEdge(clickedTransition.id) } isRed={ true }>
+                        Удалить
+                    </ContextMenuItem>
+                </>
+            ),
+        });
+    };
+
     return (
         <div
             ref={ canvasRef }
@@ -290,6 +344,7 @@ export default function ModelCanvasWidget() {
                     onMoveNode={ moveStateLocal }
                     onEndMoveNode={ saveStatePosition }
                     getCanvasRect={ getCanvasRect }
+                    onContextMenu={ (e) => handleRightClickState(e, state.id) }
                 />
             ))}
 
@@ -316,6 +371,7 @@ export default function ModelCanvasWidget() {
                                 angle={ 0 }
                                 label={ edgeGroup.allSymbols.join(", ") }
                                 onDeleteEdge={ removeEdge }
+                                onContextMenu={ (e) => handleRightClickTransition(e, edgeGroup.id) }
                             />
                         );
                     }
@@ -343,6 +399,7 @@ export default function ModelCanvasWidget() {
                             angle={ points.angle }
                             label={ edgeGroup.allSymbols.join(", ") }
                             onDeleteEdge={ removeEdge }
+                            onContextMenu={ (e) => handleRightClickTransition(e, edgeGroup.id) }
                         />
                     );
                 })}

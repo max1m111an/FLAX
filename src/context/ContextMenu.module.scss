@@ -20,7 +20,15 @@
   align-items: center;
 
   &:hover {
-    background: rgba(249, 115, 22, 0.1);
-    color: #fb923c;
+    background: var(--accent-bg);
+    color: var(--accent-primary);
+  }
+
+}
+
+.red {
+  &:hover{
+    background: var(--red-bg);
+    color: var(--red-main);
   }
 }
