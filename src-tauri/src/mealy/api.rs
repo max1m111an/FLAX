@@ -4,8 +4,8 @@ use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, MealyRunResult, OperationResult, StateData, StatusResult,
-    TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, MealyRunResult, OperationResult, StateData, StateResult,
+    StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MMBuilder;
@@ -225,6 +225,57 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
 #[tauri::command]
 pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
     create_new_mealy(&state, name)
+}
+
+/// Adds a state to a mealy machine. Delegates to `fa_add_state` — states are
+/// shared between FA and MM in the store.
+#[tauri::command]
+pub fn mealy_add_state(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    label: Option<String>,
+    x: Option<f32>,
+    y: Option<f32>,
+    is_initial: Option<bool>,
+    is_final: Option<bool>,
+) -> StateResult {
+    crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, is_final)
+}
+
+/// Updates a state of a mealy machine. Delegates to `fa_update_state`.
+#[tauri::command]
+#[allow(clippy::too_many_arguments)]
+pub fn mealy_update_state(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    state_id: i32,
+    label: Option<String>,
+    x: Option<f32>,
+    y: Option<f32>,
+    is_initial: Option<bool>,
+    is_final: Option<bool>,
+) -> StateResult {
+    crate::fa::api::fa_update_state(
+        state,
+        automaton_id,
+        state_id,
+        label,
+        x,
+        y,
+        is_initial,
+        is_final,
+    )
+}
+
+/// Removes a state and all transitions touching it. Delegates to
+/// `fa_remove_state`.
+#[tauri::command]
+pub fn mealy_remove_state(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    state_id: i32,
+) -> StatusResult {
+    crate::fa::api::fa_remove_state(state, automaton_id, state_id)
 }
 
 /// Adds a single mealy transition `from --input/output--> to`.
