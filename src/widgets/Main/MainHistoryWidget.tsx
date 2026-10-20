@@ -4,8 +4,6 @@ import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import CircleDot from "@/assets/svg/CircleDot.svg?react";
 import { useRecentFiles, RecentFile } from "@/context/RecentFilesContext.tsx";
 import { useTabs } from "@/context/TabsContext.tsx";
-import { models } from "@/data/models.ts";
-import { loadJff } from "@/services/jffService.ts";
 import styles from "../../scenes/MainScene.module.scss";
 import { useNavigate } from "react-router-dom";
 
@@ -125,11 +123,10 @@ export default function MainHistoryWidget () {
                 return;
             }
         }
-        const response = await loadJff({ path });
-        if (response.automaton) {
-            loadTab(response.automaton, models[0], path);
-            addFile(path);
-        }
+
+        loadTab(path);
+        addFile(path);
+
     };
 
     return (

@@ -13,15 +13,15 @@ import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { save } from "@tauri-apps/plugin-dialog";
-import { saveJff } from "@/services/jffService.ts";
 import { isDirty } from "@/services/dirtyState.ts";
 import { basename } from "@tauri-apps/api/path";
 
 
 export default function ModelControlWidget() {
     const currentTab = useCurrentTab();
-    const { updateTab } = useTabs();
+    const { updateTab, saveTab } = useTabs();
     const { addFile } = useRecentFiles();
+    if (!currentTab || currentTab.type === "SETTINGS") return null;
 
     const fetchSave = async (): Promise<boolean> => {
         try {
@@ -35,10 +35,7 @@ export default function ModelControlWidget() {
             const fileName = await basename(filePath);
             const nameWithoutExt = fileName.replace(/\.jff$/i, "");
 
-            await saveJff({
-                automatonId: currentTab.id,
-                path: filePath,
-            });
+            saveTab(currentTab);
 
             updateTab({
                 ...currentTab,
@@ -59,7 +56,7 @@ export default function ModelControlWidget() {
         }
         const filePath = currentTab?.savedPath;
         if (filePath) {
-            await saveJff({ automatonId: currentTab.id, path: filePath });
+            saveTab(currentTab);
             addFile(filePath);
             return;
         }
