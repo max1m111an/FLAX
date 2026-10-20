@@ -407,16 +407,9 @@ pub fn mealy_run_str(
     run_mealy(&entry, &input)
 }
 
+/// Removes a mealy machine from the store. Delegates to `fa_remove_automaton`
+/// — the store is shared between FA and MM.
 #[tauri::command]
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
-    match state.remove(automaton_id) {
-        Some(_) => StatusResult {
-            status: StatusCode::OK,
-            message: format!("Автомат с id {} удалён", automaton_id),
-        },
-        None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Автомат с id {} не найден", automaton_id),
-        },
-    }
+    crate::fa::api::fa_remove_automaton(state, automaton_id)
 }
