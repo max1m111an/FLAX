@@ -1,122 +1,94 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, ReactNode, ComponentType, SVGProps } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
-import { model } from "@/data/models.ts";
-import { AutomatonModel } from "@/types/Automaton.ts";
-import { createFA, deleteFAService } from "@/services/faService.ts";
-import type { Trace } from "@/services/faService.ts";
 import { save } from "@tauri-apps/plugin-dialog";
 import { basename } from "@tauri-apps/api/path";
-import { saveJff } from "@/services/jffService.ts";
 import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import { ConfirmCloseModal } from "@/components/ConfirmCloseModal/ConfirmCloseModal.tsx";
+import { model } from "@/types/Automaton.ts";
+import { AppTab } from "@/types/Tabs.ts";
+import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
+import { buildTab } from "@/utils/tabFactory.ts";
+import { models } from "@/data/Models.ts";
+import { jffService } from "@/services/jffService.ts";
 
-export interface TraceHighlight {
-    id: number;
-    status?: "success" | "error";
-}
-
-export interface tab{
-    id: number;
-    title: string;
-    model: model;
-    automaton: AutomatonModel;
-    activeControl: string | null;
-    activePanel: string | null;
-    selectedState: TraceHighlight[] | null;
-    selectedTransition: TraceHighlight[] | null;
-    selectedNodeId: number | null;
-    testMode: string;
-    testInput: string;
-    pendingTestLine: string | null;
-    pendingTraces: Trace[] | null;
-    isSaved: boolean;
-    savedPath: string | null;
-}
 
 interface TabsContextProps {
-    tabs: tab[];
-    addTab: (model: model, type?: string) => Promise<tab | void>;
-    removeTab: (tab: tab) => void;
-    updateTab: (updatedTab: tab) => void;
-    loadTab: (automaton: AutomatonModel, model: model, path: string) => void;
+    tabs: AppTab[];
+    addTab: (model: model, type?: string) => Promise<AppTab | void>;
+    addUtilTab: (type: string, icon: ComponentType<SVGProps<SVGSVGElement>>) => Promise<AppTab | void>;
+    removeTab: (tab: AppTab) => void;
+    updateTab: (updatedTab: AppTab) => void;
+    loadTab: (path: string) => void;
+    saveTab: (currentTab: AppTab) => Promise<boolean>;
 }
 
 const TabsContext = createContext<TabsContextProps | undefined>(undefined);
 
 export const TabsProvider = ({ children }: { children: ReactNode }) => {
-    const [ tabs, setTabs ] = useState<tab[]>([]);
-    const [ pendingCloseTab, setPendingCloseTab ] = useState<tab | null>(null);
+    const [ tabs, setTabs ] = useState<AppTab[]>([]);
+    const [ pendingCloseTab, setPendingCloseTab ] = useState<AppTab | null>(null);
     const navigate = useNavigate();
     const location = useLocation();
     const { addFile } = useRecentFiles();
 
-    const addTab = async (model: model, type: string = "Без названия*"): Promise<tab | void> => {
-        if (type === "Настройки") {
-            const existingSettingsTab = tabs.find((t) => t.title === "Настройки");
-            if (existingSettingsTab) {
-                navigate(ROUTES.SETTINGS);
-                return;
-            }
-        }
+    const addTab = async (model: model): Promise<AppTab | void> => {
         try {
-            const response = await createFA("Без названия*");
-            const newTab: tab = {
-                id: response.automaton.id,
-                title: response.automaton.name,
-                model,
-                automaton: response.automaton,
-                activeControl: null,
-                activePanel: null,
-                selectedState: null,
-                selectedTransition: null,
-                selectedNodeId: null,
-                testMode: "solo",
-                testInput: "",
-                pendingTestLine: null,
-                pendingTraces: null,
-                isSaved: false,
-                savedPath: null,
-            };
+            const service = modelServiceRegistry.getService(model.type);
+
+            const response = await service.createAutomaton("Без названия*");
+
+            const newTab = buildTab(response.automaton, model.icon, model.type);
+
             setTabs([ ...tabs, newTab ]);
 
-            if (type == "Настройки") {
-                navigate(ROUTES.SETTINGS);
-            } else if (type == "Без названия*") {
-                navigate(`/models/${newTab.id}`);
-            }
+            navigate(`/models/${newTab.id}`);
+
             return newTab;
+
         } catch (error) {
             console.error("Ошибка при создании автомата:", error);
         }
     };
 
-    const loadTab = (automaton: AutomatonModel, model: model, path: string) => {
-        const newTab: tab = {
-            id: automaton.id,
-            title: automaton.name,
-            model,
-            automaton,
-            activeControl: null,
-            activePanel: null,
-            selectedState: null,
-            selectedTransition: null,
-            selectedNodeId: null,
-            testMode: "solo",
-            testInput: "",
-            pendingTestLine: null,
-            pendingTraces: null,
-            isSaved: true,
-            savedPath: path,
-        };
+    const addUtilTab = async (type: string, icon: ComponentType<SVGProps<SVGSVGElement>>): Promise<AppTab | void> => {
+        if (type === "SETTINGS") {
+            if (tabs.some((t) => t.type === "SETTINGS")) {
+                navigate(ROUTES.SETTINGS);
+                return;
+            }
+            const settingsTab: AppTab = { id: 0, title: "Настройки", type: "SETTINGS", isSaved: true, savedPath: null, icon };
+            setTabs([ ...tabs, settingsTab ]);
+            navigate(ROUTES.SETTINGS);
+            return settingsTab;
+        }
+    };
+
+    const loadTab = async (path: string) => { //todo hardcode, incorrect API loadJFF
+        const response = await jffService.loadJff({ path });
+        const currentModel = models.find((model) => model.type === "FA");
+
+        if (!response.automaton) {
+            throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
+        }
+        if (!currentModel) {
+            throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
+        }
+
+        const newTab = buildTab(response.automaton, currentModel?.icon, "FA", true, path);
+
         setTabs([ ...tabs, newTab ]);
         navigate(`/models/${newTab.id}`);
     };
 
-    const updateTab = (updatedTab: tab) => {
+    const updateTab = (updatedTab: AppTab) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
-    const fetchSave = async (currentTab: tab): Promise<boolean> => {
+
+    const saveTab = async (currentTab: AppTab): Promise<boolean> => {
+        if (currentTab.type === "SETTINGS") return false;
+
+        const service = modelServiceRegistry.getService(currentTab.type);
         try {
             const filePath = await save({
                 defaultPath: `${currentTab?.title}.jff`,
@@ -128,10 +100,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             const fileName = await basename(filePath);
             const nameWithoutExt = fileName.replace(/\.jff$/i, "");
 
-            await saveJff({
-                automatonId: currentTab.id,
-                path: filePath,
-            });
+            await service.saveAutomaton(currentTab.id, filePath);
 
             updateTab({
                 ...currentTab,
@@ -139,28 +108,38 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 isSaved: true,
                 savedPath: filePath,
             });
+
             addFile(filePath);
+
             return true;
+
         } catch (error) {
             console.error("Ошибка при сохранении файла:", error);
             return false;
         }
     };
-    const closeTab = async (self_tab: tab): Promise<void> => {
-        const response = deleteFAService(self_tab.id);
-        if (!response) {return;}
+    const closeTab = async (self_tab: AppTab): Promise<void> => {
+        if (self_tab.type === "SETTINGS") {
+            removeTabFromState(self_tab);
+            return;
+        }
 
+        const service = modelServiceRegistry.getService(self_tab.type);
+
+        await service.deleteAutomaton(self_tab.id);
+
+        removeTabFromState(self_tab);
+    };
+
+    const removeTabFromState = (self_tab: AppTab) => {
         const newTabs = tabs.filter((tab) => tab.id !== self_tab.id);
-
-        const tabPath = self_tab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${self_tab.id}`;
-        const isCurrent = location.pathname === tabPath;
-
         setTabs(newTabs);
 
-        if (isCurrent) {
+        const tabPath = self_tab.type === "SETTINGS" ? ROUTES.SETTINGS : `/models/${self_tab.id}`;
+        if (location.pathname === tabPath) {
             if (newTabs.length > 0) {
                 const lastTab = newTabs[newTabs.length - 1];
-                const navigatePath = lastTab.title === "Настройки" ? ROUTES.SETTINGS : `/models/${lastTab.id}`;
+                const navigatePath = lastTab.type === "SETTINGS" ? ROUTES.SETTINGS : `/models/${lastTab.id}`;
                 navigate(navigatePath);
             } else {
                 navigate(ROUTES.MAIN);
@@ -168,7 +147,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const removeTab = (self_tab: tab): void => {
+    const removeTab = (self_tab: AppTab): void => {
         if (!self_tab.isSaved) {
             setPendingCloseTab(self_tab);
             return;
@@ -178,7 +157,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
 
     const handleConfirmSave = async (): Promise<void> => {
         if (!pendingCloseTab) return;
-        const saved = await fetchSave(pendingCloseTab);
+        const saved = await saveTab(pendingCloseTab);
         if (saved) {
             await closeTab(pendingCloseTab);
         }
@@ -196,7 +175,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab, loadTab } }>
+        <TabsContext.Provider value={ { tabs, addTab, removeTab, updateTab, loadTab, addUtilTab, saveTab } }>
             {children}
             {pendingCloseTab && (
                 <ConfirmCloseModal
@@ -218,7 +197,7 @@ export const useTabs = () => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useCurrentTab = (): tab | undefined => {
+export const useCurrentTab = (): AppTab | undefined => {
     const { tabs } = useTabs();
     const { id } = useParams();
     return tabs.find((tab) => String(tab.id) === id);
