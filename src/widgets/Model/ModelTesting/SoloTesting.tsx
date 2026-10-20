@@ -12,8 +12,9 @@ import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import clsx from "clsx";
 import styles from "./SoloTesting.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import type { TraceHighlight } from "@/context/TabsContext.tsx";
-import { RunStep, runString } from "@/services/faService.ts";
+import { TraceHighlight } from "@/types/Tabs.ts";
+import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
+import { RunStep } from "@/types/api/fa.ts";
 
 export default function SoloTesting() {
     const [ testLine, setTestLine ] = useState<string>("");
@@ -26,7 +27,9 @@ export default function SoloTesting() {
     const [ finalStatus, setFinalStatus ] = useState<string | null>(null);
     const initializedRef = useRef(false);
 
+
     useEffect(() => {
+        if (!currentTab || currentTab.type === "SETTINGS") return;
         if (initializedRef.current || !currentTab) return;
         initializedRef.current = true;
 
@@ -48,7 +51,9 @@ export default function SoloTesting() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ currentTab ]);
 
-    if (!currentTab) return null;
+    if (!currentTab || currentTab.type === "SETTINGS") return null;
+    const service = modelServiceRegistry.getService(currentTab.type);
+
 
     const applyHighlights = (consumed: number, activeTraces: { steps: RunStep[]; isFinal: boolean }[]) => {
         if (consumed <= 0) {
@@ -120,13 +125,9 @@ export default function SoloTesting() {
     const handlePlay = async () => {
         if (!testLine) return;
 
-        const request = {
-            automatonId: currentTab.id,
-            input: testLine,
-        };
 
         try {
-            const response = await runString(request);
+            const response = await service.runStr(currentTab.automaton.id, testLine);
             setTraces(response.traces);
             applyHighlights(0, response.traces);
         } catch {
