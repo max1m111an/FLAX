@@ -1,5 +1,6 @@
 .mainContainer {
-  padding: 32px 64px;
+  padding: 32px 58px;
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -19,19 +20,24 @@
   margin-bottom: 32px;
 }
 .cardsWrapper {
-  display: flex;
-  flex-direction: row;
+  box-sizing: content-box;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, 280px);
+  justify-content: flex-start;
   gap: 28px;
-  justify-content: space-between;
   margin-bottom: 32px;
+  min-height: 250px;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-base) transparent;
+  scroll-behavior: smooth;
+  padding: 1px;
 }
-@media (min-width: 1025px) {
-  .cardsWrapper {
-    justify-content: flex-start;
-  }
-}
+
 .cardType {
   width: 280px;
+  height: 214px;
   background: var(--bg-surface);
   border: 1px solid var(--border-base);
   border-radius: 16px;
@@ -208,6 +214,6 @@
 }
 
 .bottomSpace {
-  height: 64px;
+  height: 16px;
   flex-shrink: 0;
 }
