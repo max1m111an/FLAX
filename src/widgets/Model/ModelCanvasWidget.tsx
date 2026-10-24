@@ -107,7 +107,7 @@ export default function ModelCanvasWidget() {
         const clickedState = currentTab.automaton.states.find((state) => state.id === stateId);
 
         if (!clickedState) return;
-
+        const isFinal = "isFinal" in clickedState ? clickedState.isFinal === true : false;
         setMenuState({
             visible: true,
             x: e.pageX,
@@ -134,10 +134,12 @@ export default function ModelCanvasWidget() {
                         Начальное
                         {clickedState.isInitial && <Mark />}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={ () => handleFinalChange(!clickedState.isFinal, clickedState.id) }>
-                        Финальное
-                        {clickedState.isFinal && <Mark />}
-                    </ContextMenuItem>
+                    {"isFinal" in clickedState && (
+                        <ContextMenuItem onClick={ () => handleFinalChange(!isFinal, clickedState.id) }>
+                            Финальное
+                            {isFinal && <Mark />}
+                        </ContextMenuItem>
+                    )}
                     <ContextMenuItem onClick={ () => removeState(clickedState.id) } isRed>
                         Удалить
                     </ContextMenuItem>
@@ -181,7 +183,7 @@ export default function ModelCanvasWidget() {
                     label={ state.label }
                     initialPosition={ { x: state.x, y: state.y } }
                     isInitial={ state.isInitial }
-                    isFinal={ state.isFinal }
+                    isFinal={ "isFinal" in state ? state.isFinal : false }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
@@ -328,51 +330,27 @@ export default function ModelCanvasWidget() {
                 )}
             </svg>
 
-            {draftEdge && (() => {
+            {draftEdge && (((): React.ReactNode => {
+                let inputX = 0;
+                let inputY = 0;
+
                 if (draftEdge.from === draftEdge.to) {
                     const state = currentTab.automaton.states.find((s) => s.id === draftEdge.from);
                     if (!state) return null;
 
                     const loop = buildSelfLoop(state.x, state.y);
-                    if (loop) {
-                        return (
-                            <Textfield
-                                key="draft-edge-input"
-                                autoFocus
-                                onEdge
-                                style={ {
-                                    position: "absolute",
-                                    left: loop.textX,
-                                    top: loop.textY,
-                                    transform: "translate(-50%, -50%)",
-                                } }
-                                onKeyDown={ (e) => {
-                                    if (e.key === "Enter") {
-                                        handleAddTransition(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
-                                    } else if (e.key === "Escape") {
-                                        setDraftEdge(null);
-                                    }
-                                } }
-                                onBlur={ (e) => {
-                                    const val = (e.target as HTMLInputElement).value;
-                                    if (val.trim()) {
-                                        handleAddTransition(draftEdge.from, draftEdge.to, val);
-                                    } else {
-                                        setDraftEdge(null);
-                                    }
-                                } }
-                            />
-                        );
-                    }
+                    if (!loop) return null;
+
+                    inputX = loop.textX;
+                    inputY = loop.textY;
+                } else {
+                    const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
+                    const points = calculatePoints(fakeEdge, currentTab.automaton.states);
+                    if (!points) return null;
+
+                    inputX = (points.x1 + points.x2) / 2;
+                    inputY = (points.y1 + points.y2) / 2;
                 }
-
-                const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
-                const points = calculatePoints(fakeEdge, currentTab.automaton.states);
-
-                if (!points) return null;
-
-                const midX = (points.x1 + points.x2) / 2;
-                const midY = (points.y1 + points.y2) / 2;
 
                 return (
                     <Textfield
@@ -381,8 +359,8 @@ export default function ModelCanvasWidget() {
                         onEdge
                         style={ {
                             position: "absolute",
-                            left: midX,
-                            top: midY,
+                            left: inputX,
+                            top: inputY,
                             transform: "translate(-50%, -50%)",
                         } }
                         onKeyDown={ (e) => {
@@ -402,7 +380,7 @@ export default function ModelCanvasWidget() {
                         } }
                     />
                 );
-            })()}
+            })())}
         </div>
     );
 }

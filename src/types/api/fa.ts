@@ -1,7 +1,7 @@
-import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
 import { ApiResponse } from "@/types/api/common.ts";
+import { FAAutomatonModel, StateFAModel, TransitionFAModel } from "@/types/Automaton.ts";
 
-export type createFAResponse = ApiResponse<{ automaton: AutomatonModel }>;
+export type createFAResponse = ApiResponse<{ automaton: FAAutomatonModel }>;
 
 export type deleteFAResponse = ApiResponse;
 
@@ -14,7 +14,7 @@ export type addStateFARequest = {
     isFinal: boolean;
 }
 
-export type addStateFAResponse = ApiResponse<{ state: StateModel }>;
+export type addStateFAResponse = ApiResponse<{ state: StateFAModel }>;
 
 export type removeStateFARequest = {
     automatonId: number;
@@ -33,7 +33,7 @@ export type updateStateFARequest = {
     isFinal?: boolean;
 }
 
-export type updateStateFAResponse = ApiResponse<{ state: StateModel }>;
+export type updateStateFAResponse = ApiResponse<{ state: StateFAModel }>;
 
 export type addTransitFARequest = {
     automatonId: number;
@@ -42,7 +42,7 @@ export type addTransitFARequest = {
     symbols: string[];
 }
 
-export type addTransitFAResponse = ApiResponse<{ transition: TransitionModel[] }>;
+export type addTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
 
 export type updateTransitFARequest = {
     automatonId: number;
@@ -52,7 +52,7 @@ export type updateTransitFARequest = {
     newSymbol?: string;
 }
 
-export type updateTransitFAResponse = ApiResponse<{ transition: TransitionModel[] }>;
+export type updateTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
 
 export type removeTransitFARequest = {
     automatonId: number;

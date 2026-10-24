@@ -3,6 +3,7 @@ import { useSnackbar } from "@/context/SnackbarContext.tsx";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { AppTab } from "@/types/Tabs.ts";
 import { TransitionPayload } from "@/types/Payloads.ts";
+import { AutomatonModel } from "@/types/Automaton.ts";
 
 export const useTransitionAction = () => {
     const currentTab = useCurrentTab();
@@ -78,7 +79,7 @@ export const useTransitionAction = () => {
                     transitions: currentTab.automaton.transitions.filter(
                         (t) => !idsToDelete.includes(t.id),
                     ),
-                },
+                } as AutomatonModel,
             };
 
             updateTab(newTabData);
