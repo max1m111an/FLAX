@@ -1,34 +1,36 @@
-export type AutomatonType = "FA" | "SETTINGS" | "MEALY" | "AT" | "GRAMMAR" | "MOORE"
+export type AutomatonType = "FA" | "SETTINGS" | "MEALY" | "AT" | "GRAMMAR" | "MOORE";
 
-export interface FAStatePayload {
-    type: "FA";
+export interface BaseStatePayload {
     label?: string;
     isInitial?: boolean;
-    isFinal?: boolean;
     x?: number;
     y?: number;
 }
 
-export interface MealyStatePayload {
+export interface BaseTransitionPayload {
+    from: number;
+    to: number;
+}
+
+export interface FAStatePayload extends BaseStatePayload {
+    type: "FA";
+    isFinal?: boolean;
+}
+
+export interface MealyStatePayload extends BaseStatePayload {
     type: "MEALY";
-    label?: string;
-    isInitial?: boolean;
-    x?: number;
-    y?: number;
 }
 
 export type StatePayload = FAStatePayload | MealyStatePayload;
 
-export interface FATransitionPayload {
+export interface FATransitionPayload extends BaseTransitionPayload {
     type: "FA";
-    from: number
-    to: number;
     symbol: string;
 }
 
-export interface MealyTransitionPayload {
+export interface MealyTransitionPayload extends BaseTransitionPayload {
     type: "MEALY";
-    inputSymbol: string;
+    symbol: string;
     outputSymbol: string;
 }
 

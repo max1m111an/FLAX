@@ -3,6 +3,7 @@ import { useSnackbar } from "@/context/SnackbarContext.tsx";
 import { AppTab } from "@/types/Tabs.ts";
 import { StatePayload } from "@/types/Payloads.ts";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
+import { AutomatonModel } from "@/types/Automaton.ts";
 
 
 export const useStateActions = () => {
@@ -52,7 +53,7 @@ export const useStateActions = () => {
                 states: currentTab.automaton.states.map((state) =>
                     state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
                 ),
-            },
+            } as AutomatonModel,
         });
     };
     const addState = async (x: number, y: number) => {
@@ -106,7 +107,7 @@ export const useStateActions = () => {
                     transitions: currentTab.automaton.transitions.filter(
                         (t) => !connectedIds.includes(t.id),
                     ),
-                },
+                } as AutomatonModel,
             };
             updateTab(newTabData);
         } catch (error) {

@@ -1,11 +1,13 @@
 import { IAutomatonService } from "./IAutomatonService";
 import { faService } from "./faService";
 import { AutomatonType } from "@/types/Payloads.ts";
+import { mealyService } from "@/services/MealyService.ts";
 
 export type AnyAutomatonService = IAutomatonService<any, any, any, any, any, any, any>;
 
 const services: Partial<Record<AutomatonType, AnyAutomatonService>> = {
     "FA": faService,
+    "MEALY": mealyService,
 };
 
 const isSupportedType = (type: string): type is AutomatonType => {
