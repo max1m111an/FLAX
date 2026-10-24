@@ -35,10 +35,7 @@ interface MenuItemProps extends HTMLAttributes<HTMLDivElement> {
 }
 const ContextMenuContext = createContext<ContextMenuContextType | null>(null);
 
-interface MenuInputProps extends InputHTMLAttributes<HTMLInputElement> {
-    children: ReactNode;
-
-}
+type MenuInputProps = InputHTMLAttributes<HTMLInputElement>;
 
 export const ContextMenuInput = (props: MenuInputProps) => {
     return <input className={ styles.input } { ...props } />;

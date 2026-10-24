@@ -1,154 +1,105 @@
-import {
-    addStateFA,
-    addTransitionFA,
-    createNewFA, deleteFAApi, deleteFAResponse,
-    generateInputs,
-    multiRunStrFA,
-    removeStateFA,
-    removeTransitFA,
-    runStrFA,
-    updateStateFA,
-    updateTransitFA,
-} from "@/api/faAPI.ts";
-import type {
-    addStateFARequest,
-    addStateFAResponse,
-    addTransitFARequest,
-    addTransitFAResponse,
-    createNewFAResponse,
-    deleteStateFARequest,
-    deleteStateFAResponse,
-    generateInputsRequest,
-    generateInputsResponse,
-    multiRunStrFARequest,
-    multiRunStrFAResponse,
-    removeTransitFARequest,
-    removeTransitFAResponse,
-    runStrFARequest,
-    runStrFAResponse,
-    updateStateFARequest,
-    updateStateFAResponse,
-    updateTransitFARequest,
-    updateTransitFAResponse,
-} from "@/api/faAPI.ts";
 import { markDirty } from "@/services/dirtyState.ts";
+import { IAutomatonService } from "@/services/IAutomatonService.ts";
+import { StatePayload, TransitionPayload } from "@/types/Payloads.ts";
+import { faApi } from "@/api/faAPI.ts";
+import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
+import { multiRunStrFAResponse, runStrFAResponse } from "@/types/api/fa.ts";
+import { jffAPI } from "@/api/jffAPI.ts";
 
-export type {
-    addStateFARequest,
-    addStateFAResponse,
-    addTransitFARequest,
-    addTransitFAResponse,
-    createNewFAResponse,
-    deleteStateFARequest,
-    deleteStateFAResponse,
-    generateInputsRequest,
-    generateInputsResponse,
-    lineTest,
-    multiRunStrFARequest,
-    multiRunStrFAResponse,
-    removeTransitFARequest,
-    removeTransitFAResponse,
-    RunStep,
-    runStrFARequest,
+
+export const faService: IAutomatonService<
+    AutomatonModel,
+    StateModel,
+    TransitionModel,
+    StatePayload,
+    TransitionPayload,
     runStrFAResponse,
-    Trace,
-    updateStateFARequest,
-    updateStateFAResponse,
-    updateTransitFARequest,
-    updateTransitFAResponse,
-} from "@/api/faAPI.ts";
+    multiRunStrFAResponse
+> = {
+    createAutomaton: async (name: string) => {
+        const response = await faApi.createAutomaton(name);
+        markDirty(response.automaton.id, true);
+        return response;
+    },
+    deleteAutomaton: async (id: number) => {
+        await faApi.deleteAutomaton(id);
+    },
 
-export const createFA = async (name: string): Promise<createNewFAResponse> => {
-    const response = await createNewFA(name);
-    if (response.status !== 200) {
-        throw new Error(`createNewFA: status ${response.status}`);
-    }
-    markDirty(response.automaton.id, true);
-    return response;
-};
+    saveAutomaton: async (automatonId: number, path: string) => {
+        await jffAPI.saveJFF({ automatonId, path });
+    },
 
-export const deleteFAService = async (automaton_id: number): Promise<deleteFAResponse> => {
-    const response = await deleteFAApi(automaton_id);
-    if (response.status !== 200) {
-        throw new Error(`deleteFA: status ${response.status}`);
-    }
-    return response;
-};
+    loadAutomaton: async (path: string) => {
+        return await jffAPI.loadJFF({ path });
+    },
 
-export const addState = async (params: addStateFARequest): Promise<addStateFAResponse> => {
-    const response = await addStateFA(params);
-    if (response.status !== 200) {
-        throw new Error(`addState: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+    addState: async (automatonId: number, payload: StatePayload) => {
+        if (payload.type !== "FA") throw new Error("Ожидался FA");
+        if (payload.label === undefined) throw new Error("Ожидался FA");
+        if (payload.x === undefined) throw new Error("Ожидался FA");
+        if (payload.y === undefined) throw new Error("Ожидался FA");
+        if (payload.isInitial === undefined) throw new Error("Ожидался FA");
+        if (payload.isFinal === undefined) throw new Error("Ожидался FA");
+        const response = await faApi.addState({
+            automatonId,
+            label: payload.label,
+            x: payload.x,
+            y: payload.y,
+            isInitial: payload.isInitial,
+            isFinal: payload.isFinal,
+        });
+        markDirty(automatonId, true);
 
-export const removeState = async (params: deleteStateFARequest): Promise<deleteStateFAResponse> => {
-    const response = await removeStateFA(params);
-    if (response.status !== 200) {
-        throw new Error(`removeState: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+        return response;
+    },
 
-export const updateState = async (params: updateStateFARequest): Promise<updateStateFAResponse> => {
-    const response = await updateStateFA(params);
-    if (response.status !== 200) {
-        throw new Error(`updateState: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+    updateState: async (automatonId: number, stateId: number, payload: StatePayload) => {
+        if (payload.type !== "FA") throw new Error("Ожидался FA");
 
-export const addTransition = async (params: addTransitFARequest): Promise<addTransitFAResponse> => {
-    const response = await addTransitionFA(params);
-    if (response.status !== 200) {
-        throw new Error(`addTransition: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+        const response = await faApi.updateState({
+            automatonId,
+            stateId,
+            x: payload.x,
+            y: payload.y,
+            isInitial: payload.isInitial,
+            isFinal: payload.isFinal,
+            label: payload.label,
+        });
+        markDirty(automatonId, true);
+        return response;
+    },
 
-export const updateTransition = async (params: updateTransitFARequest): Promise<updateTransitFAResponse> => {
-    const response = await updateTransitFA(params);
-    if (response.status !== 200) {
-        throw new Error(`updateTransition: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+    removeState: async (automatonId: number, stateId: number) => {
+        await faApi.removeState({ automatonId, stateId });
+        markDirty(automatonId, true);
+    },
 
-export const removeTransitionService = async (params: removeTransitFARequest): Promise<removeTransitFAResponse> => {
-    const response = await removeTransitFA(params);
-    if (response.status !== 200) {
-        throw new Error(`removeTransition: status ${response.status}`);
-    }
-    markDirty(params.automatonId, true);
-    return response;
-};
+    addTransition: async (automatonId: number, payload: TransitionPayload) => {
+        if (payload.type !== "FA") throw new Error("Ожидался FA");
 
-export const runString = async (params: runStrFARequest): Promise<runStrFAResponse> => {
-    const response = await runStrFA(params);
-    if (![ 200, 401, 402 ].includes(response.status)) {
-        throw new Error(`runString: status ${response.status}`);
-    }
-    return response;
-};
+        const response = await faApi.addTransition({
+            automatonId,
+            from: payload.from,
+            to: payload.to,
+            symbols: payload.symbol.split(""),
+        });
+        markDirty(automatonId, true);
+        return response;
+    },
 
-export const runMultipleStrings = async (params: multiRunStrFARequest): Promise<multiRunStrFAResponse> => {
-    const response = await multiRunStrFA(params);
-    if (response.status !== 200) {
-        throw new Error(`runMultipleStrings: status ${response.status}`);
-    }
-    return response;
-};
+    removeTransition: async (automatonId: number, transitionId: number) => {
+        await faApi.removeTransit({ automatonId, transitionId });
+        markDirty(automatonId, true);
+    },
 
-export const generateTestInputs = async (params: generateInputsRequest): Promise<generateInputsResponse> => {
-    const response = await generateInputs(params);
-    if (response.status !== 200) {
-        throw new Error(`generateTestInputs: status ${response.status}`);
-    }
-    return response;
+    runStr: async (automatonId: number, input: string) => {
+        return await faApi.runStr({ automatonId, input });
+    },
+    runMultipleStrings: async (automatonId: number, inputs: string[]) => {
+        return await faApi.multiRunStr({ automatonId, inputs });
+    },
+    generateTestInputs: async (automatonId: number) => {
+        return await faApi.generateInputs({ automatonId });
+    },
+
 };

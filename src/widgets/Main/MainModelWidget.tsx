@@ -1,4 +1,4 @@
-import { models } from "@/data/models.ts";
+import { models } from "@/data/Models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
 
@@ -11,12 +11,12 @@ export default function MainModelWidget() {
         >
             {models.map((model) => (
                 <div
-                    key={ model.type }
+                    key={ model.title }
                     className={ styles.cardType }
-                    onClick={ (_e) => addTab(model) }
+                    onClick={ () => addTab(model) }
                 >
                     <model.icon className={ styles.iconContainer } />
-                    <p className={ styles.cardTitleType }>{model.type}</p>
+                    <p className={ styles.cardTitleType }>{model.title}</p>
                     <p className={ styles.cardDescriptionType }>{model.description}</p>
                 </div>
             ))}
