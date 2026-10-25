@@ -1,6 +1,6 @@
 import { markDirty } from "@/services/dirtyState.ts";
 import { IAutomatonService } from "@/services/IAutomatonService.ts";
-import { StatePayload, TransitionPayload } from "@/types/Payloads.ts";
+import { StatePayload } from "@/types/Payloads.ts";
 import { faApi } from "@/api/faAPI.ts";
 import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
 import { multiRunStrFAResponse, runStrFAResponse } from "@/types/api/fa.ts";
@@ -12,7 +12,6 @@ export const faService: IAutomatonService<
     StateModel,
     TransitionModel,
     StatePayload,
-    TransitionPayload,
     runStrFAResponse,
     multiRunStrFAResponse
 > = {
@@ -74,14 +73,16 @@ export const faService: IAutomatonService<
         markDirty(automatonId, true);
     },
 
-    addTransition: async (automatonId: number, payload: TransitionPayload) => {
-        if (payload.type !== "FA") throw new Error("Ожидался FA");
-
+    addTransition: async (automatonId: number, from: number, to: number, symbolStr: string) => {
+        let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
+        if (symbols.length === 0) {
+            symbols = [ "$" ];
+        }
         const response = await faApi.addTransition({
             automatonId,
-            from: payload.from,
-            to: payload.to,
-            symbols: payload.symbol.split(""),
+            from,
+            to,
+            symbols,
         });
         markDirty(automatonId, true);
         return response;
