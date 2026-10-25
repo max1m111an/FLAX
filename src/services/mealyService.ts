@@ -14,7 +14,7 @@ export const mealyService: IAutomatonService<
     TransitionPayload,
     runStrFAResponse,
     multiRunStrFAResponse> = {
-        async createAutomaton (name: string) {
+        async createAutomaton(name: string) {
             const response = await mealyApi.createAutomaton(name);
             if (response.status !== 200) {
                 throw new Error(`createNewMealy: status ${response.status}`);
@@ -23,11 +23,11 @@ export const mealyService: IAutomatonService<
             return response;
         },
 
-        async deleteAutomaton (automaton_id: number) {
+        async deleteAutomaton(automaton_id: number) {
             mealyApi.deleteAutomaton(automaton_id);
         },
 
-        async addState (automatonId: number, payload: StatePayload) {
+        async addState(automatonId: number, payload: StatePayload) {
             if (payload.type !== "MEALY") throw new Error("Ожидался MEALY");
             if (payload.label === undefined) throw new Error("Ожидался MEALY");
             if (payload.x === undefined) throw new Error("Ожидался MEALY");
@@ -44,11 +44,13 @@ export const mealyService: IAutomatonService<
 
             return response;
         },
-        async removeState (automatonId: number, stateId: number) {
+
+        async removeState(automatonId: number, stateId: number) {
             await mealyApi.removeState({ automatonId, stateId });
             markDirty(automatonId, true);
         },
-        async updateState (automatonId: number, stateId: number, payload: StatePayload) {
+
+        async updateState(automatonId: number, stateId: number, payload: StatePayload) {
             if (payload.type !== "MEALY") throw new Error("Ожидался MEALY");
 
             const response = await mealyApi.updateState({
@@ -61,6 +63,34 @@ export const mealyService: IAutomatonService<
             });
             markDirty(automatonId, true);
             return response;
+        },
+
+        async addTransition(automatonId: number, from: number, to: number, symbolStr: string) {
+            const chunks = symbolStr.trim().split(/\s+/);
+            const newTransitions = [];
+            for (const chunk of chunks) {
+                const input = chunk[0];
+                const output = chunk[1];
+
+                if (input && output) {
+                    const response = await mealyApi.addTransition({
+                        automatonId,
+                        from,
+                        to,
+                        input,
+                        output,
+                    });
+                    newTransitions.push(...response.transition);
+                }
+            }
+
+            markDirty(automatonId, true);
+            return { transition: newTransitions };
+        },
+
+        async removeTransition (automatonId: number, transitionId: number) {
+            await mealyApi.removeTransit({ automatonId, transitionId });
+            markDirty(automatonId, true);
         },
     };
 
