@@ -1,9 +1,9 @@
 import { IAutomatonService } from "./IAutomatonService";
 import { faService } from "./faService";
 import { AutomatonType } from "@/types/Payloads.ts";
-import { mealyService } from "@/services/MealyService.ts";
+import { mealyService } from "@/services/mealyService.ts";
 
-export type AnyAutomatonService = IAutomatonService<any, any, any, any, any, any, any>;
+export type AnyAutomatonService = IAutomatonService<any, any, any, any, any, any>;
 
 const services: Partial<Record<AutomatonType, AnyAutomatonService>> = {
     "FA": faService,

@@ -2,7 +2,6 @@ import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { useSnackbar } from "@/context/SnackbarContext.tsx";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { AppTab } from "@/types/Tabs.ts";
-import { TransitionPayload } from "@/types/Payloads.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
 
 export const useTransitionAction = () => {
@@ -29,20 +28,8 @@ export const useTransitionAction = () => {
     const addTransition = async (startState: number, endState: number, symbolStr: string) => {
         if (!currentTab || currentTab.type === "SETTINGS") return;
 
-        let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
-        if (symbols.length === 0) {
-            symbols = [ "$" ];
-        }
-
-        const payload: TransitionPayload = {
-            type: currentTab.type,
-            from: startState,
-            to: endState,
-            symbol: symbolStr,
-        } as TransitionPayload;
-
         try {
-            const response = await service.addTransition(currentTab.id, payload);
+            const response = await service.addTransition(currentTab.id, startState, endState, symbolStr);
             const newTabData: AppTab = {
                 ...currentTab,
                 automaton: {

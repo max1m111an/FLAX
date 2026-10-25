@@ -5,7 +5,6 @@ export interface IAutomatonService<
     TState,
     TTransition,
     TStatePayload,
-    TTransitionPayload,
     TRunResponse,
     TMultiRunResponse
 > {
@@ -19,7 +18,7 @@ export interface IAutomatonService<
     updateState(automatonId: number, stateId: number, payload: Partial<TStatePayload>): Promise<ApiResponse<{ state: TState }>>;
     removeState(automatonId: number, stateId: number): Promise<void>;
 
-    addTransition(automatonId: number, payload: TTransitionPayload): Promise<ApiResponse<{ transition: TTransition[] }>>;
+    addTransition(automatonId: number, from: number, to: number, symbolStr: string): Promise<ApiResponse<{ transition: TTransition[] }>>;
     removeTransition(automatonId: number, transitionId: number): Promise<void>;
 
     runStr(automatonId: number, input: string): Promise<TRunResponse>;
