@@ -49,7 +49,12 @@ export default function ModelCanvasWidget() {
             }, {} as Record<string, typeof transitions>),
         ).map((group) => ({
             ...group[0],
-            allSymbols: group.map((t) => t.symbol),
+            allSymbols: group.map((t) => {
+                if ("output" in t) {
+                    return `${t.symbol}⭢${t.output}`;
+                }
+                return t.symbol;
+            }),
         }));
 
         const keys = new Set(transitions.map((t) => `${t.from}-${t.to}`));
@@ -270,8 +275,7 @@ export default function ModelCanvasWidget() {
                             textX={ points.textX }
                             textY={ points.textY }
                             angle={ points.angle }
-                            label={ edgeGroup.allSymbols.join("") }
-
+                            label={ edgeGroup.allSymbols.join(", ") }
                             activeControl={ currentTab.activeControl }
                             highlightStatus={ highlightStatus }
                             isSelected={ isSelected }
@@ -357,6 +361,7 @@ export default function ModelCanvasWidget() {
                         key="draft-edge-input"
                         autoFocus
                         onEdge
+                        placeholder={ currentTab.type === "MEALY" ? "ab cd" : "a b c" }
                         style={ {
                             position: "absolute",
                             left: inputX,

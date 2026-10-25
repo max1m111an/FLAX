@@ -50,7 +50,7 @@ export const mealyApi = {
             throw error;
         }
     },
-    async addTransitionMealy (params: addTransitMealyRequest): Promise<addTransitMealyResponse> {
+    async addTransition (params: addTransitMealyRequest): Promise<addTransitMealyResponse> {
         try {
             const response = await invoke<addTransitMealyResponse>("mealy_add_transition", params);
             return response;
@@ -68,7 +68,7 @@ export const mealyApi = {
             throw error;
         }
     },
-    async removeTransitMealy (params: removeTransitMealyRequest): Promise<removeTransitMealyResponse> {
+    async removeTransit (params: removeTransitMealyRequest): Promise<removeTransitMealyResponse> {
         try {
             return await invoke<removeTransitMealyResponse>("mealy_remove_transition", params);
         } catch (error) {
