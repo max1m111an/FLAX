@@ -258,12 +258,13 @@ fn alphabet_from_transitions_skips_epsilon_and_duplicates() {
 }
 
 #[test]
-fn serializes_derived_alphabet() {
+fn serialization_omits_derived_alphabet() {
     let mut entry = make_store().create("Test".to_string(), "q0");
     entry.transitions = vec![trans(1, 0, 1, 'a')];
 
     let value = serde_json::to_value(&entry).unwrap();
-    assert_eq!(value["alphabet"], serde_json::json!(["a"]));
+    assert!(value.get("alphabet").is_none());
+    assert_eq!(value["id"], 1);
 }
 
 fn temp_file(name: &str, contents: &str) -> std::path::PathBuf {

@@ -6,7 +6,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Mutex;
 
-use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use tauri::http::StatusCode;
 
@@ -38,7 +37,7 @@ pub struct TransitionData {
     pub output: Option<char>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct AutomatonData {
     pub id: i32,
     pub name: String,
@@ -62,6 +61,7 @@ pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
 impl AutomatonData {
     /// Входной алфавит, выведенный из переходов (единый источник правды —
     /// отдельное поле не хранится; алфавит всегда отражает текущие переходы).
+    #[allow(dead_code)]
     pub fn get_alphabet(&self) -> Vec<char> {
         alphabet_from_transitions(&self.transitions)
     }
