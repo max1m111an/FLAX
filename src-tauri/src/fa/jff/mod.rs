@@ -49,7 +49,7 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
     let is_automaton = read_type(root) == "fa";
     if !is_automaton {
         return Ok(JffParsed {
-            is_automaton: false,
+            isAutomaton: false,
             states: Vec::new(),
             transitions: Vec::new(),
         });
@@ -93,7 +93,7 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
     }
 
     Ok(JffParsed {
-        is_automaton,
+        isAutomaton: is_automaton,
         states,
         transitions,
     })

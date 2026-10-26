@@ -237,7 +237,7 @@ fn writes_example_files_to_target() {
 fn parses_even_a_jff() {
     let parsed = parse_jff(EVEN_A_JFF).unwrap();
 
-    assert!(parsed.is_automaton);
+    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), 2);
     assert_eq!(parsed.states[0].id, 0);
     assert_eq!(parsed.states[0].label, "q0");
@@ -337,7 +337,7 @@ fn non_fa_type_returns_empty_formal_language_mock() {
     </structure>"#;
 
     let parsed = parse_jff(xml).unwrap();
-    assert!(!parsed.is_automaton);
+    assert!(!parsed.isAutomaton);
     assert!(parsed.states.is_empty());
     assert!(parsed.transitions.is_empty());
 }
@@ -352,7 +352,7 @@ fn non_fa_type_ignores_automaton_content() {
     </structure>"#;
 
     let parsed = parse_jff(xml).unwrap();
-    assert!(!parsed.is_automaton);
+    assert!(!parsed.isAutomaton);
     assert!(parsed.states.is_empty());
     assert!(parsed.transitions.is_empty());
 }
@@ -382,7 +382,7 @@ fn roundtrip_to_jff_then_parse() {
     let xml = to_jff(&original);
     let parsed = parse_jff(&xml).unwrap();
 
-    assert!(parsed.is_automaton);
+    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), original.states.len());
     for (ps, os) in parsed.states.iter().zip(original.states.iter()) {
         assert_eq!(ps.id, os.id);

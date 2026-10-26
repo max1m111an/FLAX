@@ -292,7 +292,7 @@ fn load_via_file_reads_parses_names_and_inserts() {
     })
     .unwrap();
 
-    assert!(loaded.is_automaton);
+    assert!(loaded.isAutomaton);
     assert_eq!(loaded.data.id, 1);
     assert_eq!(loaded.data.name, expected_name);
     assert!(store.get(1).is_some());
@@ -318,7 +318,7 @@ fn load_via_file_with_preserves_formal_language_flag() {
     })
     .unwrap();
 
-    assert!(!loaded.is_automaton);
+    assert!(!loaded.isAutomaton);
     assert!(loaded.data.states.is_empty());
     assert!(loaded.data.transitions.is_empty());
     assert!(store.get(loaded.data.id).is_some());
@@ -361,7 +361,7 @@ fn load_result_serializes_is_automaton_and_data() {
     let result = crate::core::types::LoadResult {
         status: tauri::http::StatusCode::OK,
         message: "loaded".to_string(),
-        is_automaton: Some(true),
+        isAutomaton: Some(true),
         data: Some(AutomatonData {
             id: 1,
             name: "Test".to_string(),

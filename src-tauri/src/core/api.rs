@@ -82,5 +82,8 @@ where
 
     let data = store.insert(data);
 
-    Ok(LoadedFile { is_automaton, data })
+    Ok(LoadedFile {
+        isAutomaton: is_automaton,
+        data,
+    })
 }

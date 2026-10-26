@@ -67,21 +67,6 @@ impl AutomatonData {
     }
 }
 
-impl Serialize for AutomatonData {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("AutomatonData", 5)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("states", &self.states)?;
-        state.serialize_field("transitions", &self.transitions)?;
-        state.serialize_field("alphabet", &self.get_alphabet())?;
-        state.end()
-    }
-}
-
 #[derive(Debug, Clone, Serialize)]
 pub struct OperationResult {
     #[serde(with = "http_serde::status_code")]
