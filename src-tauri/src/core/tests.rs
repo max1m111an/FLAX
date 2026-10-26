@@ -1,5 +1,6 @@
 //! Unit tests for the shared in-memory automaton registry.
 
+use crate::core::api::load_via_file_with;
 use crate::core::types::{
     AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
 };
@@ -263,4 +264,113 @@ fn serializes_derived_alphabet() {
 
     let value = serde_json::to_value(&entry).unwrap();
     assert_eq!(value["alphabet"], serde_json::json!(["a"]));
+}
+
+fn temp_file(name: &str, contents: &str) -> std::path::PathBuf {
+    let path = std::env::temp_dir().join(format!("flax_{}_{}", std::process::id(), name));
+    std::fs::write(&path, contents).unwrap();
+    path
+}
+
+#[test]
+fn load_via_file_reads_parses_names_and_inserts() {
+    let path = temp_file("load_ok.jff", "payload");
+    let expected_name = path.file_stem().unwrap().to_string_lossy().to_string();
+    let store = make_store();
+
+    let loaded = load_via_file_with(&store, path.to_str().unwrap(), "Fallback", |content| {
+        assert_eq!(content, "payload");
+        Ok((
+            true,
+            AutomatonData {
+                id: 999,
+                name: "ignored".to_string(),
+                states: Vec::new(),
+                transitions: Vec::new(),
+            },
+        ))
+    })
+    .unwrap();
+
+    assert!(loaded.is_automaton);
+    assert_eq!(loaded.data.id, 1);
+    assert_eq!(loaded.data.name, expected_name);
+    assert!(store.get(1).is_some());
+
+    std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn load_via_file_with_preserves_formal_language_flag() {
+    let path = temp_file("load_formal.jff", "payload");
+    let store = make_store();
+
+    let loaded = load_via_file_with(&store, path.to_str().unwrap(), "Fallback", |_| {
+        Ok((
+            false,
+            AutomatonData {
+                id: 0,
+                name: String::new(),
+                states: Vec::new(),
+                transitions: Vec::new(),
+            },
+        ))
+    })
+    .unwrap();
+
+    assert!(!loaded.is_automaton);
+    assert!(loaded.data.states.is_empty());
+    assert!(loaded.data.transitions.is_empty());
+    assert!(store.get(loaded.data.id).is_some());
+
+    std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn load_via_file_reports_read_error() {
+    let store = make_store();
+    let path = std::env::temp_dir().join(format!("flax_{}_missing_file.jff", std::process::id()));
+
+    let err = load_via_file_with(&store, path.to_str().unwrap(), "Fallback", |_| {
+        panic!("parser must not run for an unreadable file")
+    })
+    .unwrap_err();
+
+    assert!(err.contains("Не удалось прочитать файл"));
+    assert!(store.list_ids().is_empty());
+}
+
+#[test]
+fn load_via_file_propagates_parser_error() {
+    let path = temp_file("load_bad.jff", "bad");
+    let store = make_store();
+
+    let err = load_via_file_with(&store, path.to_str().unwrap(), "Fallback", |_| {
+        Err("Некорректный формат".to_string())
+    })
+    .unwrap_err();
+
+    assert_eq!(err, "Некорректный формат");
+    assert!(store.list_ids().is_empty());
+
+    std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn load_result_serializes_is_automaton_and_data() {
+    let result = crate::core::types::LoadResult {
+        status: tauri::http::StatusCode::OK,
+        message: "loaded".to_string(),
+        is_automaton: Some(true),
+        data: Some(AutomatonData {
+            id: 1,
+            name: "Test".to_string(),
+            states: Vec::new(),
+            transitions: Vec::new(),
+        }),
+    };
+
+    let value = serde_json::to_value(&result).unwrap();
+    assert_eq!(value["isAutomaton"], true);
+    assert_eq!(value["data"]["id"], 1);
 }

@@ -4,9 +4,9 @@ use crate::core::types::{StateData, TransitionData};
 
 #[derive(Debug)]
 pub struct JffParsed {
-    /// Raw JFLAP automaton type as written in `<type>` (always `fa`).
-    #[allow(dead_code)]
-    pub kind: String,
+    /// Whether the JFLAP `<type>` describes an automaton rather than another
+    /// formal language.
+    pub isAutomaton: bool,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
 }

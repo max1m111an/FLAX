@@ -2,6 +2,7 @@ mod core;
 mod fa;
 mod mealy;
 
+use crate::core::api::load_via_file;
 use crate::core::types::AutomatonStore;
 use crate::fa::api::*;
 use crate::mealy::api::*;
@@ -27,7 +28,7 @@ pub fn run() {
             fa_generate_inputs,
             fa_remove_automaton,
             fa_save,
-            fa_load,
+            load_via_file,
             mealy_create_new,
             mealy_add_state,
             mealy_update_state,

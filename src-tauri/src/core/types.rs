@@ -90,6 +90,26 @@ pub struct OperationResult {
     pub automaton: Option<AutomatonData>,
 }
 
+/// Результат разбора файла: признак автомата и общие данные.
+#[derive(Debug, Clone)]
+#[allow(non_snake_case)]
+pub struct LoadedFile {
+    pub isAutomaton: bool,
+    pub data: AutomatonData,
+}
+
+/// Ответ команды загрузки файла. Содержит и признак типа, и данные объекта.
+#[derive(Debug, Clone, Serialize)]
+#[allow(non_snake_case)]
+pub struct LoadResult {
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isAutomaton: Option<bool>,
+    pub data: Option<AutomatonData>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StatusResult {
     #[serde(with = "http_serde::status_code")]
