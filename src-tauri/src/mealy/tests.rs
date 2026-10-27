@@ -13,8 +13,9 @@ use crate::mealy::types::{MM, MealyTransition};
 
 fn mealy_entry() -> AutomatonData {
     AutomatonData {
-        id: 1,
-        name: "Мили".to_string(),
+        id: 2,
+        name: "R".to_string(),
+        automatonType: crate::core::types::AutomatonType::MEALY,
         states: vec![
             StateData {
                 id: 0,

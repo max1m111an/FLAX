@@ -6,7 +6,6 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::sync::Mutex;
 
-use serde::ser::SerializeStruct;
 use serde::{Deserialize, Serialize};
 use tauri::http::StatusCode;
 
@@ -38,15 +37,31 @@ pub struct TransitionData {
     pub output: Option<char>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub enum AutomatonType {
+    FA,
+    MEALY,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct AutomatonData {
     pub id: i32,
     pub name: String,
+    #[serde(default)]
+    pub automatonType: AutomatonType,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
 }
 
-/// Собирает входной алфавит из переходов: уникальные не-ε `symbol` в порядке
+impl Default for AutomatonType {
+    fn default() -> Self {
+        AutomatonType::FA
+    }
+}
+
+/// Собирает входной алфавит из переходов: уникальные не-eps `symbol` в порядке
 /// первого появления.
 pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
     let mut seen: HashSet<char> = HashSet::new();
@@ -62,23 +77,9 @@ pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
 impl AutomatonData {
     /// Входной алфавит, выведенный из переходов (единый источник правды —
     /// отдельное поле не хранится; алфавит всегда отражает текущие переходы).
+    #[allow(dead_code)]
     pub fn get_alphabet(&self) -> Vec<char> {
         alphabet_from_transitions(&self.transitions)
-    }
-}
-
-impl Serialize for AutomatonData {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("AutomatonData", 5)?;
-        state.serialize_field("id", &self.id)?;
-        state.serialize_field("name", &self.name)?;
-        state.serialize_field("states", &self.states)?;
-        state.serialize_field("transitions", &self.transitions)?;
-        state.serialize_field("alphabet", &self.get_alphabet())?;
-        state.end()
     }
 }
 
@@ -88,6 +89,26 @@ pub struct OperationResult {
     pub status: StatusCode,
     pub message: String,
     pub automaton: Option<AutomatonData>,
+}
+
+/// Результат разбора файла: признак автомата и общие данные.
+#[derive(Debug, Clone)]
+#[allow(non_snake_case)]
+pub struct LoadedFile {
+    pub isAutomaton: bool,
+    pub data: AutomatonData,
+}
+
+/// Ответ команды загрузки файла. Содержит и признак типа, и данные объекта.
+#[derive(Debug, Clone, Serialize)]
+#[allow(non_snake_case)]
+pub struct LoadResult {
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub isAutomaton: Option<bool>,
+    pub data: Option<AutomatonData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -223,6 +244,7 @@ impl AutomatonStore {
         let entry = AutomatonData {
             id: 0,
             name,
+            automatonType: AutomatonType::FA,
             states: vec![StateData {
                 id: 0,
                 label: initial_label.to_string(),

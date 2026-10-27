@@ -1,9 +1,10 @@
 //! JFLAP XML (`.jff`) для конечных автоматов: экспорт (`to_jff`) и импорт
 //! (`parse_jff`).
 //!
-//! Поддерживается только `<type>fa</type>`; пустой или отсутствующий
-//! `<read>` декодируется как эпсилон-переход (`$`). Каркас документа,
-//! состояния и концы переходов берутся из `crate::core::jff`.
+//! Полностью разбирается `<type>fa</type>`; пустой или отсутствующий
+//! `<read>` декодируется как эпсилон-переход (`$`). Остальные типы временно
+//! возвращаются как пустая заглушка формального языка (`is_automaton = false`).
+//! Каркас документа, состояния и концы переходов берутся из `crate::core::jff`.
 
 pub mod types;
 
@@ -45,12 +46,13 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
         return Err("Ожидался корневой элемент <structure>".to_string());
     }
 
-    let kind = read_type(root);
-    if kind != "fa" {
-        return Err(format!(
-            "Поддерживается только конечный автомат (type=\"fa\"), найден type=\"{}\"",
-            kind
-        ));
+    let is_automaton = read_type(root) == "fa";
+    if !is_automaton {
+        return Ok(JffParsed {
+            isAutomaton: false,
+            states: Vec::new(),
+            transitions: Vec::new(),
+        });
     }
 
     let automaton = find_automaton(root)?;
@@ -91,7 +93,7 @@ pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
     }
 
     Ok(JffParsed {
-        kind,
+        isAutomaton: is_automaton,
         states,
         transitions,
     })

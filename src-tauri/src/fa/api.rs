@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 
 use tauri::{
     http::StatusCode,
@@ -8,11 +7,11 @@ use tauri::{
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult,
-    RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
+    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
-use crate::fa::jff::{parse_jff, to_jff};
+use crate::fa::jff::to_jff;
 use crate::fa::types::{EPSILON, FA, FABuilder};
 
 /// Creates a new finite automaton with a single initial state `q0`.
@@ -585,45 +584,3 @@ pub fn fa_save(state: State<'_, AutomatonStore>, automaton_id: i32, path: String
     }
 }
 
-#[tauri::command]
-pub fn fa_load(state: State<'_, AutomatonStore>, path: String) -> OperationResult {
-    let content = match fs::read_to_string(&path) {
-        Ok(c) => c,
-        Err(err) => {
-            return OperationResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Не удалось прочитать файл: {}", err),
-                automaton: None,
-            };
-        }
-    };
-
-    let parsed = match parse_jff(&content) {
-        Ok(p) => p,
-        Err(err) => {
-            return OperationResult {
-                status: StatusCode::BAD_REQUEST,
-                message: err,
-                automaton: None,
-            };
-        }
-    };
-
-    let name = Path::new(&path)
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_else(|| "Автомат".to_string());
-
-    let entry = state.insert(AutomatonData {
-        id: 0,
-        name,
-        states: parsed.states,
-        transitions: parsed.transitions,
-    });
-
-    OperationResult {
-        status: StatusCode::OK,
-        message: "Автомат загружен из файла".to_string(),
-        automaton: Some(entry),
-    }
-}

@@ -3,7 +3,9 @@
 use std::fs;
 use std::path::Path;
 
-use crate::core::types::{AutomatonData, StateData, TransitionData, alphabet_from_transitions};
+use crate::core::types::{
+    AutomatonData, StateData, TransitionData, alphabet_from_transitions,
+};
 use crate::fa::jff::{is_deterministic, parse_jff, to_jff};
 
 const EVEN_A_JFF: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>&#13;
@@ -48,6 +50,7 @@ fn even_a_data() -> AutomatonData {
     AutomatonData {
         id: 1,
         name: "Even A".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: vec![
             StateData {
                 id: 0,
@@ -190,6 +193,7 @@ fn no_states_and_transitions_yields_empty_automaton() {
     let data = AutomatonData {
         id: 2,
         name: "Empty".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: Vec::new(),
         transitions: Vec::new(),
     };
@@ -235,7 +239,7 @@ fn writes_example_files_to_target() {
 fn parses_even_a_jff() {
     let parsed = parse_jff(EVEN_A_JFF).unwrap();
 
-    assert_eq!(parsed.kind, "fa");
+    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), 2);
     assert_eq!(parsed.states[0].id, 0);
     assert_eq!(parsed.states[0].label, "q0");
@@ -329,14 +333,30 @@ fn decodes_xml_entities_in_name_and_read() {
 }
 
 #[test]
-fn rejects_non_fa_type() {
+fn non_fa_type_returns_empty_formal_language_mock() {
     let xml = r#"<?xml version="1.0"?><structure>
         <type>turing</type>
-        <automaton></automaton>
     </structure>"#;
 
-    let err = parse_jff(xml).unwrap_err();
-    assert!(err.contains("turing"));
+    let parsed = parse_jff(xml).unwrap();
+    assert!(!parsed.isAutomaton);
+    assert!(parsed.states.is_empty());
+    assert!(parsed.transitions.is_empty());
+}
+
+#[test]
+fn non_fa_type_ignores_automaton_content() {
+    let xml = r#"<?xml version="1.0"?><structure>
+        <type>grammar</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+        </automaton>
+    </structure>"#;
+
+    let parsed = parse_jff(xml).unwrap();
+    assert!(!parsed.isAutomaton);
+    assert!(parsed.states.is_empty());
+    assert!(parsed.transitions.is_empty());
 }
 
 #[test]
@@ -364,7 +384,7 @@ fn roundtrip_to_jff_then_parse() {
     let xml = to_jff(&original);
     let parsed = parse_jff(&xml).unwrap();
 
-    assert_eq!(parsed.kind, "fa");
+    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), original.states.len());
     for (ps, os) in parsed.states.iter().zip(original.states.iter()) {
         assert_eq!(ps.id, os.id);
