@@ -143,6 +143,7 @@ fn insert_assigns_fresh_id_and_stores() {
     let data = AutomatonData {
         id: 99,
         name: "Loaded".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: Vec::new(),
         transitions: Vec::new(),
     };
@@ -157,7 +158,8 @@ fn insert_assigns_fresh_id_and_stores() {
 
     let again = store.insert(AutomatonData {
         id: 100,
-        name: "Second".to_string(),
+        name: "X".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: Vec::new(),
         transitions: Vec::new(),
     });
@@ -286,6 +288,7 @@ fn load_via_file_reads_parses_names_and_inserts() {
             AutomatonData {
                 id: 999,
                 name: "ignored".to_string(),
+                automatonType: crate::core::types::AutomatonType::FA,
                 states: Vec::new(),
                 transitions: Vec::new(),
             },
@@ -310,10 +313,11 @@ fn load_via_file_with_preserves_formal_language_flag() {
         Ok((
             false,
             AutomatonData {
-                id: 0,
-                name: String::new(),
-                states: Vec::new(),
-                transitions: Vec::new(),
+            id: 0,
+            name: String::new(),
+            automatonType: crate::core::types::AutomatonType::FA,
+            states: Vec::new(),
+            transitions: Vec::new(),
             },
         ))
     })
@@ -366,6 +370,7 @@ fn load_result_serializes_is_automaton_and_data() {
         data: Some(AutomatonData {
             id: 1,
             name: "Test".to_string(),
+            automatonType: crate::core::types::AutomatonType::FA,
             states: Vec::new(),
             transitions: Vec::new(),
         }),

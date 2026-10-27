@@ -37,15 +37,31 @@ pub struct TransitionData {
     pub output: Option<char>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub enum AutomatonType {
+    FA,
+    MEALY,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
 pub struct AutomatonData {
     pub id: i32,
     pub name: String,
+    #[serde(default)]
+    pub automatonType: AutomatonType,
     pub states: Vec<StateData>,
     pub transitions: Vec<TransitionData>,
 }
 
-/// Собирает входной алфавит из переходов: уникальные не-ε `symbol` в порядке
+impl Default for AutomatonType {
+    fn default() -> Self {
+        AutomatonType::FA
+    }
+}
+
+/// Собирает входной алфавит из переходов: уникальные не-eps `symbol` в порядке
 /// первого появления.
 pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
     let mut seen: HashSet<char> = HashSet::new();
@@ -228,6 +244,7 @@ impl AutomatonStore {
         let entry = AutomatonData {
             id: 0,
             name,
+            automatonType: AutomatonType::FA,
             states: vec![StateData {
                 id: 0,
                 label: initial_label.to_string(),

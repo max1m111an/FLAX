@@ -50,6 +50,7 @@ fn even_a_data() -> AutomatonData {
     AutomatonData {
         id: 1,
         name: "Even A".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: vec![
             StateData {
                 id: 0,
@@ -192,6 +193,7 @@ fn no_states_and_transitions_yields_empty_automaton() {
     let data = AutomatonData {
         id: 2,
         name: "Empty".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
         states: Vec::new(),
         transitions: Vec::new(),
     };

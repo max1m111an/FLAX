@@ -30,6 +30,7 @@ pub fn load_via_file(state: State<'_, AutomatonStore>, path: String) -> LoadResu
             AutomatonData {
                 id: 0,
                 name: String::new(),
+                automatonType: crate::core::types::AutomatonType::FA,
                 states: parsed.states,
                 transitions: parsed.transitions,
             },
