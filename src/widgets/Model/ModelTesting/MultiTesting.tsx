@@ -7,13 +7,14 @@ import { TextArea } from "@/components/ui/Textfield/Textfield.tsx";
 import { Typography } from "@/components/ui/Typography/Typography.tsx";
 import styles from "./ModelTestWidget.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { generateTestInputs, lineTest, runMultipleStrings, runString } from "@/services/faService.ts";
 import Steps from "@/assets/svg/Steps.svg?react";
 import clsx from "clsx";
 import React, { useState } from "react";
 import Reset from "@/assets/svg/Reset.svg?react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
+import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
+import { lineTest } from "@/types/api/fa.ts";
 
 export default function MultiTesting() {
     const currentTab = useCurrentTab();
@@ -21,21 +22,21 @@ export default function MultiTesting() {
     const [ isPlay, setIsPlay ] = useState(false);
     const [ traces, setTraces ] = useState<lineTest[]>([]);
     const [ isLoading, setIsLoading ] = useState<boolean>(false);
-    const testLine = currentTab?.testInput ?? "";
     const setTestInput = (value: string) => {
         if (currentTab) {
             updateTab({ ...currentTab, testInput: value });
         }
     };
-
-    if (!currentTab) return null;
+    if (!currentTab || currentTab.type === "SETTINGS") return null;
+    const testLine = currentTab?.testInput ?? "";
+    const service = modelServiceRegistry.getService(currentTab.type);
 
     const handleOpenStep = async (line: string) => {
         try {
-            const response = await runString({
-                automatonId: currentTab.id,
-                input: line,
-            });
+            const response = await service.runStr(
+                currentTab.id,
+                line,
+            );
             updateTab({
                 ...currentTab,
                 testMode: "solo",
@@ -50,11 +51,7 @@ export default function MultiTesting() {
     const handleMultiRun = async () => {
         setIsLoading(true);
         try {
-            const request = {
-                automatonId: currentTab.id,
-                inputs: testLine?.split(/\r?\n/) || [],
-            };
-            const response = await runMultipleStrings(request);
+            const response = await service.runMultipleStrings(currentTab.id, testLine?.split(/\r?\n/) || []);
             setTraces(response.traces);
             setIsPlay(true);
         } catch (error) {
@@ -67,7 +64,7 @@ export default function MultiTesting() {
     };
     const handleGenerate = async () => {
         try {
-            const response = await generateTestInputs({ automatonId: currentTab.id });
+            const response = await service.generateTestInputs(currentTab.id);
             setTestInput(response.inputs.join("\n"));
         } catch (error) {
             console.error("Ошибка при генерации тестовых входов:", error);

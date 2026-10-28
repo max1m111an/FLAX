@@ -2,21 +2,28 @@ import React, { useLayoutEffect, useRef } from "react";
 import ChevronsRight from "@/assets/svg/ChevronsRight.svg?react";
 import clsx from "clsx";
 import styles from "./StateNode.module.scss";
-import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { EDGE_ATTACH_TOLERANCE, NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
+import { ActiveControl } from "@/types/Tabs.ts";
 
 interface StateProps {
-    isFinal?: boolean;
-    isInitial?: boolean;
+    id: number;
     label: string;
     initialPosition?: { x: number; y: number };
+    isInitial?: boolean;
+    isFinal?: boolean;
+
+    activeControl: ActiveControl;
+    highlightStatus?: "success" | "error" | null;
+
+    onDeleteNode?: (id: number) => void;
+
+    onEndMoveNode?: (id: number, pos: { x: number; y: number }) => void;
+
     onStartEdge?: (pos: { x: number; y: number }) => void;
     onMoveEdge?: (pos: { x: number; y: number }) => void;
     onEndEdge?: (hoveredNodeId: number | undefined) => void;
-    id: number;
     onMoveNode?: (id: number, pos: { x: number; y: number }) => void;
-    onEndMoveNode?: (id: number, pos: { x: number; y: number }) => void;
-    onDeleteNode?: (id: number) => void;
+
     getCanvasRect: () => DOMRect;
     onContextMenu?: (e: React.MouseEvent<HTMLDivElement>) => void;
 }
@@ -36,13 +43,14 @@ export function State(
         onEndMoveNode,
         getCanvasRect,
         onContextMenu,
+        activeControl,
+        highlightStatus,
     }: StateProps) {
     const nodeRef = useRef<HTMLDivElement | null>(null);
     const position = useRef(initialPosition);
     const offset = useRef({ x: 0, y: 0 });
     const dragging = useRef(false);
-    const currentTab = useCurrentTab();
-    const { updateTab } = useTabs();
+
 
     const { x: initialX, y: initialY } = initialPosition;
 
@@ -54,11 +62,9 @@ export function State(
         }
     }, [ initialX, initialY ]);
 
-    const highlight = currentTab?.selectedState?.find((s) => s.id === id);
-    const isSelected = currentTab?.selectedNodeId === id;
 
     const getCursorStyle = () => {
-        if (currentTab?.activeControl === "move") {
+        if (activeControl === "move") {
             return dragging ? "grabbing" : "grab";
         }
         return "default";
@@ -71,7 +77,7 @@ export function State(
         if (e.button !== 0) return;
         e.stopPropagation();
         e.preventDefault();
-        if (currentTab?.activeControl === "move") {
+        if (activeControl === "move") {
             dragging.current = true;
 
             const canvasRect = getCanvasRect();
@@ -84,12 +90,12 @@ export function State(
             document.addEventListener("mouseup", onMouseUp);
             return;
         }
-        if (currentTab?.activeControl === "edge") {
+        if (activeControl === "edge") {
             document.addEventListener("mousemove", onMouseMove);
             document.addEventListener("mouseup", onMouseUp);
             return;
         }
-        if (currentTab?.activeControl === "trashcan") {
+        if (activeControl === "trashcan") {
             onDeleteNode?.(id);
             return;
         }
@@ -98,7 +104,7 @@ export function State(
     const onMouseMove = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (currentTab?.activeControl === "edge") {
+        if (activeControl === "edge") {
             if (!nodeRef.current) return;
 
             const canvasRect = getCanvasRect();
@@ -131,7 +137,7 @@ export function State(
             onStartEdge?.(start);
             onMoveEdge?.(point);
         }
-        if (currentTab?.activeControl === "move") {
+        if (activeControl === "move") {
             if (!dragging.current) return;
 
             const canvasRect = getCanvasRect();
@@ -153,17 +159,16 @@ export function State(
     const onMouseUp = (e: MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
-        if (currentTab?.activeControl === "edge") {
+        if (activeControl === "edge") {
             const element = document.elementFromPoint(e.clientX, e.clientY);
             const hoveredNode = element?.closest("[data-node-id]");
             const hoveredId = hoveredNode ? Number(hoveredNode.getAttribute("data-node-id")) : undefined;
-
             onEndEdge?.(hoveredId);
 
             document.removeEventListener("mousemove", onMouseMove);
             document.removeEventListener("mouseup", onMouseUp);
         }
-        if (currentTab?.activeControl === "move") {
+        if (activeControl === "move") {
             dragging.current = false;
             onEndMoveNode?.(id, position.current);
             document.removeEventListener("mousemove", onMouseMove);
@@ -174,41 +179,22 @@ export function State(
     return (
         <div
             ref={ nodeRef }
-            className={ clsx(styles.stateNodeWrapper, currentTab?.activeControl === "trashcan" && styles.deleteMode) }
+            className={ clsx(styles.stateNodeWrapper, activeControl === "trashcan" && styles.deleteMode) }
             style={ {
                 cursor: getCursorStyle(),
                 zIndex: getZIndex(),
             } }
             data-node-id={ id }
-            onClick={
-                currentTab?.activeControl === "cursor"
-                    ? (e: React.MouseEvent) => {
-                        e.stopPropagation();
-                        if (currentTab) {
-                            updateTab({
-                                ...currentTab,
-                                selectedNodeId: currentTab.selectedNodeId === id ? null : id,
-                            });
-                        }
-                    }
-                    : undefined
-            }>
+        >
             {isInitial && <ChevronsRight className={ styles.stateInitial }
             />}
             <div
                 className={ clsx(
                     styles.stateNode,
                     isFinal && styles.stateFinal,
-                    currentTab?.activeControl === "trashcan" && styles.deleteMode,
-                    isSelected
-                        ? styles.selected
-                        : (highlight
-                            ? (highlight.status === "success"
-                                ? styles.traceSuccess
-                                : highlight.status === "error"
-                                    ? styles.traceError
-                                    : "")
-                            : ""),
+                    activeControl === "trashcan" && styles.deleteMode,
+                    highlightStatus === "success" && styles.traceSuccess,
+                    highlightStatus === "error" && styles.traceError,
                 ) }
                 onMouseDown={ onMouseDown }
                 onContextMenu={ onContextMenu }
