@@ -25,10 +25,10 @@ npm install
 npm run tauri dev
 ```
 
-Или используйте скрипт `run.sh` / `run.bat` для запуска (они принудительно используют stable):
+Запуск скриптов осуществляется через `Makefile`:
 
 ```bash
-./run.sh
+make help
 ```
 
 Также в доступных [релизах](https://github.com/max1m111an/FLAX/releases) находится архив с исполняемым файлом приложения.
@@ -56,14 +56,14 @@ npm install
 npm run tauri dev
 ```
 
-Или используйте скрипт `run.dev.bat` / `run.dev.sh` для запуска:
+Или используйте `make dev` для запуска:
 
 ```bash
-.\run.dev.bat
+make dev
 ```
 
 ## Тесты
-Для запуска `cargo` тестов используйте скрипт:
+Для запуска `cargo` тестов используйте `make test`.
 ```bash
-.\run.tests.bat
+make test
 ```
