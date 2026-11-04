@@ -99,12 +99,36 @@ pub fn write_states(out: &mut String, states: &[StateData]) {
 /// Один `<transition>`. `read: None` пишет пустой `<read></read>`
 /// (эпсилон у FA, отсутствие входа у других типов).
 pub fn write_transition(out: &mut String, from: i32, to: i32, read: Option<&str>) {
+    write_transition_parts(out, from, to, read, None);
+}
+
+/// Один `<transition>` с выходным символом `<transout>` (машина Мили).
+pub fn write_transition_with_output(
+    out: &mut String,
+    from: i32,
+    to: i32,
+    read: &str,
+    output: &str,
+) {
+    write_transition_parts(out, from, to, Some(read), Some(output));
+}
+
+fn write_transition_parts(
+    out: &mut String,
+    from: i32,
+    to: i32,
+    read: Option<&str>,
+    output: Option<&str>,
+) {
     out.push_str("\t\t<transition>\n");
     out.push_str(&format!("\t\t\t<from>{}</from>\n", from));
     out.push_str(&format!("\t\t\t<to>{}</to>\n", to));
     match read {
         Some(text) => out.push_str(&format!("\t\t\t<read>{}</read>\n", escape(text))),
         None => out.push_str("\t\t\t<read></read>\n"),
+    }
+    if let Some(text) = output {
+        out.push_str(&format!("\t\t\t<transout>{}</transout>\n", escape(text)));
     }
     out.push_str("\t\t</transition>\n");
 }

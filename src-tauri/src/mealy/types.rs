@@ -33,7 +33,7 @@ impl MealyTransition {
     }
 }
 
-/// Mealy machine. Fields are private; use the accessors or `MMBuilder`.
+/// Mealy machine. Fields are private; use the accessors or `MealyBuilder`.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct MM {
@@ -108,8 +108,8 @@ impl MM {
         })
     }
 
-    pub fn builder() -> MMBuilder {
-        MMBuilder::new()
+    pub fn builder() -> MealyBuilder {
+        MealyBuilder::new()
     }
 
     pub fn states(&self) -> &HashSet<i32> {
@@ -170,7 +170,7 @@ impl MM {
 /// can be described by its initial state and transitions alone.
 #[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
-pub struct MMBuilder {
+pub struct MealyBuilder {
     states: HashSet<i32>,
     input_alphabet: HashSet<char>,
     output_alphabet: HashSet<char>,
@@ -179,9 +179,9 @@ pub struct MMBuilder {
 }
 
 #[allow(dead_code)]
-impl MMBuilder {
+impl MealyBuilder {
     pub fn new() -> Self {
-        MMBuilder::default()
+        MealyBuilder::default()
     }
 
     pub fn state(mut self, state: i32) -> Self {

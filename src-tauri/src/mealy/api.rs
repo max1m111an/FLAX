@@ -1,21 +1,26 @@
 use std::collections::HashSet;
+use std::fs;
 
 use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, MealyRunResult, OperationResult, StateData, StateResult,
-    StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, AutomatonType, MealyRunResult, OperationResult, StateData,
+    StateResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
-use crate::mealy::types::MMBuilder;
+use crate::mealy::jff::to_jff;
+use crate::mealy::types::MealyBuilder;
 
-/// Creates a new mealy machine in the store with a single initial state `q0`.
+/// Creates a new mealy machine in the store with a single initial state `q0`
+/// and `automatonType = MEALY`.
 ///
 /// Kept separate from the Tauri command so it can be unit-tested without a
 /// `tauri::State` (the same convention as `data_to_fa` / `test_line` in `fa`).
 pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
-    let entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
+    let mut entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
+    entry.automatonType = AutomatonType::MEALY;
+    state.update(entry.clone());
     OperationResult {
         status: StatusCode::OK,
         message: "Автомат Мили создан".to_string(),
@@ -140,7 +145,7 @@ pub(crate) fn data_to_mm(
     states: &[StateData],
     transitions: &[TransitionData],
 ) -> Result<crate::mealy::types::MM, String> {
-    let mut builder = MMBuilder::new();
+    let mut builder = MealyBuilder::new();
 
     let mut has_initial = false;
     for state in states {
@@ -412,4 +417,36 @@ pub fn mealy_run_str(
 #[tauri::command]
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     crate::fa::api::fa_remove_automaton(state, automaton_id)
+}
+
+/// Serializes a mealy machine from the store to a JFLAP XML (`.jff`) file.
+#[tauri::command]
+pub fn mealy_save(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    path: String,
+) -> StatusResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return StatusResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Автомат с id {} не найден", automaton_id),
+            };
+        }
+    };
+
+    let content = to_jff(&entry);
+
+    if let Err(err) = fs::write(&path, content) {
+        return StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Не удалось сохранить файл: {}", err),
+        };
+    }
+
+    StatusResult {
+        status: StatusCode::OK,
+        message: format!("Автомат сохранён в {}", path),
+    }
 }
