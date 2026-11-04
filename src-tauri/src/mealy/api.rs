@@ -8,7 +8,7 @@ use crate::core::types::{
     StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
-use crate::mealy::types::MMBuilder;
+use crate::mealy::types::MealyBuilder;
 
 /// Creates a new mealy machine in the store with a single initial state `q0`.
 ///
@@ -140,7 +140,7 @@ pub(crate) fn data_to_mm(
     states: &[StateData],
     transitions: &[TransitionData],
 ) -> Result<crate::mealy::types::MM, String> {
-    let mut builder = MMBuilder::new();
+    let mut builder = MealyBuilder::new();
 
     let mut has_initial = false;
     for state in states {
