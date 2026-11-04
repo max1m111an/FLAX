@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fs;
 
 use tauri::{State, http::StatusCode};
 
@@ -8,6 +9,7 @@ use crate::core::types::{
     StateResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
+use crate::mealy::jff::to_jff;
 use crate::mealy::types::MealyBuilder;
 
 /// Creates a new mealy machine in the store with a single initial state `q0`
@@ -415,4 +417,36 @@ pub fn mealy_run_str(
 #[tauri::command]
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     crate::fa::api::fa_remove_automaton(state, automaton_id)
+}
+
+/// Serializes a mealy machine from the store to a JFLAP XML (`.jff`) file.
+#[tauri::command]
+pub fn mealy_save(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    path: String,
+) -> StatusResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return StatusResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Автомат с id {} не найден", automaton_id),
+            };
+        }
+    };
+
+    let content = to_jff(&entry);
+
+    if let Err(err) = fs::write(&path, content) {
+        return StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Не удалось сохранить файл: {}", err),
+        };
+    }
+
+    StatusResult {
+        status: StatusCode::OK,
+        message: format!("Автомат сохранён в {}", path),
+    }
 }
