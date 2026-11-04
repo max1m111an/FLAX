@@ -195,6 +195,10 @@ fn create_new_returns_ok_with_single_initial_state() {
         .automaton
         .expect("созданный автомат должен присутствовать");
     assert_eq!(automaton.name, "Мили");
+    assert!(matches!(
+        automaton.automatonType,
+        crate::core::types::AutomatonType::MEALY
+    ));
     assert_eq!(automaton.states.len(), 1);
     assert_eq!(automaton.states[0].label, "q0");
     assert!(automaton.states[0].isInitial);

@@ -4,18 +4,21 @@ use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, MealyRunResult, OperationResult, StateData, StateResult,
-    StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, AutomatonType, MealyRunResult, OperationResult, StateData,
+    StateResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
 
-/// Creates a new mealy machine in the store with a single initial state `q0`.
+/// Creates a new mealy machine in the store with a single initial state `q0`
+/// and `automatonType = MEALY`.
 ///
 /// Kept separate from the Tauri command so it can be unit-tested without a
 /// `tauri::State` (the same convention as `data_to_fa` / `test_line` in `fa`).
 pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
-    let entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
+    let mut entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
+    entry.automatonType = AutomatonType::MEALY;
+    state.update(entry.clone());
     OperationResult {
         status: StatusCode::OK,
         message: "Автомат Мили создан".to_string(),
