@@ -2,8 +2,9 @@ import { markDirty } from "@/services/dirtyState.ts";
 import { IAutomatonService } from "@/services/IAutomatonService.ts";
 import { AutomatonModel, StateMealyModel, TransitionMealyModel } from "@/types/Automaton.ts";
 import { StatePayload, TransitionPayload } from "@/types/Payloads.ts";
-import { multiRunStrFAResponse, runStrFAResponse } from "@/types/api/fa.ts";
+import { multiRunStrFAResponse } from "@/types/api/fa.ts";
 import { mealyApi } from "@/api/MealyAPI.ts";
+import { runStrMealyResponse } from "@/types/api/mealy.ts";
 
 // @ts-expect-error: todo: add insufficient Api
 export const mealyService: IAutomatonService<
@@ -12,7 +13,7 @@ export const mealyService: IAutomatonService<
     TransitionMealyModel,
     StatePayload,
     TransitionPayload,
-    runStrFAResponse,
+    runStrMealyResponse,
     multiRunStrFAResponse> = {
         async createAutomaton(name: string) {
             const response = await mealyApi.createAutomaton(name);
@@ -24,7 +25,7 @@ export const mealyService: IAutomatonService<
         },
 
         async deleteAutomaton(automaton_id: number) {
-            mealyApi.deleteAutomaton(automaton_id);
+            await mealyApi.deleteAutomaton(automaton_id);
         },
 
         async addState(automatonId: number, payload: StatePayload) {
@@ -92,5 +93,9 @@ export const mealyService: IAutomatonService<
             await mealyApi.removeTransit({ automatonId, transitionId });
             markDirty(automatonId, true);
         },
+        async runStr(automatonId: number, input: string) {
+            return await mealyApi.runStr({ automatonId, input });
+        },
+
     };
 
