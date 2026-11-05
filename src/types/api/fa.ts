@@ -1,5 +1,6 @@
 import { ApiResponse } from "@/types/api/common.ts";
 import { FAAutomatonModel, StateFAModel, TransitionFAModel } from "@/types/Automaton.ts";
+import { RunStepFA, Trace } from "@/types/Testing.ts";
 
 export type createFAResponse = ApiResponse<{ automaton: FAAutomatonModel }>;
 
@@ -61,23 +62,13 @@ export type removeTransitFARequest = {
 
 export type removeTransitFAResponse = ApiResponse;
 
-export type RunStep = {
-    from: number;
-    symbol: string;
-    to: number;
-}
-
-export type Trace = {
-    steps: RunStep[];
-    isFinal: boolean;
-}
 
 export type runStrFARequest = {
     automatonId: number;
     input: string;
 }
 
-export type runStrFAResponse = ApiResponse<{ traces: Trace[] }>;
+export type runStrFAResponse = ApiResponse<{ traces: Trace<RunStepFA>[] }>;
 
 export type lineTest = {
     line: string;

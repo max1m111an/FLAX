@@ -1,7 +1,7 @@
 import { AutomatonModel } from "@/types/Automaton.ts";
 import { ComponentType, SVGProps } from "react";
 import { AutomatonType } from "@/types/Payloads.ts";
-import { Trace } from "@/types/api/fa.ts";
+import { RunStepFA, Trace } from "@/types/Testing.ts";
 
 
 export interface TraceHighlight {
@@ -28,7 +28,7 @@ export interface FATab extends BaseTab{
     testMode: string;
     testInput: string;
     pendingTestLine: string | null;
-    pendingTraces: Trace[] | null;
+    pendingTraces: Trace<RunStepFA>[] | null;
 }
 
 export interface SettingsTab extends BaseTab {

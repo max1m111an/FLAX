@@ -1,11 +1,21 @@
 import { invoke } from "@tauri-apps/api/core";
 import {
     addStateMealyRequest,
-    addStateMealyResponse, addTransitMealyRequest, addTransitMealyResponse,
+    addStateMealyResponse,
+    addTransitMealyRequest,
+    addTransitMealyResponse,
     createMealyResponse,
-    deleteMealyResponse, removeStateMealyRequest, removeStateMealyResponse,
-    removeTransitMealyRequest, removeTransitMealyResponse, updateStateMealyRequest,
-    updateStateMealyResponse, updateTransitMealyRequest, updateTransitMealyResponse,
+    deleteMealyResponse,
+    removeStateMealyRequest,
+    removeStateMealyResponse,
+    removeTransitMealyRequest,
+    removeTransitMealyResponse,
+    runStrMealyRequest,
+    runStrMealyResponse,
+    updateStateMealyRequest,
+    updateStateMealyResponse,
+    updateTransitMealyRequest,
+    updateTransitMealyResponse,
 } from "@/types/api/mealy.ts";
 
 
@@ -73,6 +83,14 @@ export const mealyApi = {
             return await invoke<removeTransitMealyResponse>("mealy_remove_transition", params);
         } catch (error) {
             console.error("Ошибка при вызове mealy_remove_transition:", error);
+            throw error;
+        }
+    },
+    async runStr (params: runStrMealyRequest): Promise<runStrMealyResponse> {
+        try {
+            return await invoke<runStrMealyResponse>("mealy_run_str", params);
+        } catch (error) {
+            console.error("Ошибка при вызове mealy_run_str:", error);
             throw error;
         }
     },
