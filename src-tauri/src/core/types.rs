@@ -173,6 +173,23 @@ pub struct MealyRunResult {
     pub steps: Vec<MealyRunStep>,
 }
 
+/// Результат одной строки пакетного прогона машины Мили (без шагов).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[allow(non_snake_case)]
+pub struct MealyLineTest {
+    pub line: String,
+    pub output: String,
+    pub isComplete: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MealyMultiRunResult {
+    #[serde(with = "http_serde::status_code")]
+    pub status: StatusCode,
+    pub message: String,
+    pub results: Vec<MealyLineTest>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(non_snake_case)]
 pub struct LineTest {

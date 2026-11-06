@@ -5,8 +5,9 @@ use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, AutomatonType, MealyRunResult, OperationResult, StateData,
-    StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, AutomatonType, MealyLineTest, MealyMultiRunResult,
+    MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
+    TransitionResult,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::jff::to_jff;
@@ -226,6 +227,43 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
     }
 }
 
+/// Runs several strings on a mealy machine and returns one record per line
+/// without step traces. A partial run is reported through `isComplete`, not a
+/// per-line status: the request status is `200` for a valid machine and `400`
+/// when the machine itself is invalid.
+pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
+    let mm = match data_to_mm(&entry.states, &entry.transitions) {
+        Ok(mm) => mm,
+        Err(err) => {
+            return MealyMultiRunResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Некорректный автомат: {}", err),
+                results: Vec::new(),
+            };
+        }
+    };
+
+    let results = inputs
+        .iter()
+        .map(|line| {
+            let chars: Vec<char> = line.chars().collect();
+            let (steps, output) = mm.run(&chars);
+            let processed = steps.len();
+            MealyLineTest {
+                line: line.clone(),
+                output,
+                isComplete: processed == chars.len(),
+            }
+        })
+        .collect();
+
+    MealyMultiRunResult {
+        status: StatusCode::OK,
+        message: String::new(),
+        results,
+    }
+}
+
 /// Creates a new mealy machine with a single initial state `q0`.
 #[tauri::command]
 pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
@@ -410,6 +448,29 @@ pub fn mealy_run_str(
     };
 
     run_mealy(&entry, &input)
+}
+
+/// Runs several strings at once and returns only the per-line output and
+/// completeness fact (without step traces). Uses the same algorithm as
+/// `mealy_run_str`.
+#[tauri::command]
+pub fn mealy_multi_run(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    inputs: Vec<String>,
+) -> MealyMultiRunResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return MealyMultiRunResult {
+                status: StatusCode::NOT_FOUND,
+                message: format!("Автомат с id {} не найден", automaton_id),
+                results: Vec::new(),
+            };
+        }
+    };
+
+    multi_run_mealy(&entry, &inputs)
 }
 
 /// Removes a mealy machine from the store. Delegates to `fa_remove_automaton`
