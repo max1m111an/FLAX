@@ -6,8 +6,8 @@ use tauri::http::StatusCode;
 
 use crate::core::types::{AutomatonData, AutomatonStore, MealyRunStep, StateData, TransitionData};
 use crate::mealy::api::{
-    add_mealy_transition, create_new_mealy, data_to_mm, remove_mealy_transition, run_mealy,
-    update_mealy_transition,
+    add_mealy_transition, create_new_mealy, data_to_mm, multi_run_mealy, remove_mealy_transition,
+    run_mealy, update_mealy_transition,
 };
 use crate::mealy::types::{MM, MealyTransition};
 
@@ -598,4 +598,72 @@ fn run_mealy_invalid_automaton_returns_400() {
     assert_eq!(result.status, StatusCode::BAD_REQUEST);
     assert!(result.output.is_empty());
     assert!(result.steps.is_empty());
+}
+
+#[test]
+fn multi_run_mealy_reports_full_and_partial_lines_in_order() {
+    let entry = run_entry();
+    let inputs = ["", "a", "ab", "ac"].map(String::from);
+
+    let result = multi_run_mealy(&entry, &inputs);
+
+    assert_eq!(result.status, StatusCode::OK);
+    assert!(result.message.is_empty());
+    assert_eq!(result.results.len(), 4);
+
+    let lines: Vec<&str> = result.results.iter().map(|r| r.line.as_str()).collect();
+    assert_eq!(lines, ["", "a", "ab", "ac"]);
+
+    assert_eq!(result.results[0].output, "");
+    assert_eq!(result.results[0].processedSymbols, 0);
+    assert!(result.results[0].isComplete);
+
+    assert_eq!(result.results[1].output, "1");
+    assert_eq!(result.results[1].processedSymbols, 1);
+    assert!(result.results[1].isComplete);
+
+    assert_eq!(result.results[2].output, "10");
+    assert_eq!(result.results[2].processedSymbols, 2);
+    assert!(result.results[2].isComplete);
+
+    assert_eq!(result.results[3].output, "1");
+    assert_eq!(result.results[3].processedSymbols, 1);
+    assert!(!result.results[3].isComplete);
+}
+
+#[test]
+fn multi_run_mealy_partial_run_does_not_change_request_status() {
+    let entry = run_entry();
+
+    let result = multi_run_mealy(&entry, &["z".to_string()]);
+
+    assert_eq!(result.status, StatusCode::OK);
+    assert_eq!(result.results.len(), 1);
+    assert_eq!(result.results[0].output, "");
+    assert_eq!(result.results[0].processedSymbols, 0);
+    assert!(!result.results[0].isComplete);
+}
+
+#[test]
+fn multi_run_mealy_invalid_automaton_returns_400() {
+    let mut entry = mealy_entry();
+    for state in &mut entry.states {
+        state.isInitial = false;
+    }
+
+    let result = multi_run_mealy(&entry, &["a".to_string()]);
+
+    assert_eq!(result.status, StatusCode::BAD_REQUEST);
+    assert!(result.message.contains("Некорректный автомат"));
+    assert!(result.results.is_empty());
+}
+
+#[test]
+fn multi_run_mealy_empty_inputs_returns_200_and_no_results() {
+    let entry = run_entry();
+
+    let result = multi_run_mealy(&entry, &[]);
+
+    assert_eq!(result.status, StatusCode::OK);
+    assert!(result.results.is_empty());
 }
