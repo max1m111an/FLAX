@@ -30,14 +30,14 @@ endif
 
 help:
 	@echo FLAX - available make targets
-	@echo   make run               start app on stable toolchain
-	@echo   make run-upd           update dependencies, then start
-	@echo   make dev               start app on nightly with Cranelift
-	@echo   make dev-upd           update nightly and Cranelift, then start
-	@echo   make dev-clean         clean src-tauri before starting
-	@echo   make dev-upd-clean     full update and clean, then start
-	@echo   make test              run Rust unit tests
-	@echo   make test ARGS=mealy   run only tests matching a filter
+	@echo   make run               -- start app on stable toolchain
+	@echo   make run-upd           -- update dependencies, then start
+	@echo   make dev               -- start app on nightly with Cranelift
+	@echo   make dev-upd           -- update nightly and Cranelift, then start
+	@echo   make dev-clean         -- clean src-tauri before starting
+	@echo   make dev-upd-clean     -- full update and clean, then start
+	@echo   make test              -- run Rust unit tests
+	@echo   make test ARGS=mealy   -- run only tests matching a filter
 	@echo Scripts live in scripts/ - .bat on Windows, .sh elsewhere.
 
 run:
