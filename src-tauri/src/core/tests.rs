@@ -1,6 +1,6 @@
 //! Unit tests for the shared in-memory automaton registry.
 
-use crate::core::api::load_via_file_with;
+use crate::core::api::{load_via_file_with, save_file};
 use crate::core::types::{
     AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
 };
@@ -359,6 +359,33 @@ fn load_via_file_propagates_parser_error() {
     assert!(store.list_ids().is_empty());
 
     std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn save_file_writes_content_and_reports_success() {
+    let path = std::env::temp_dir().join(format!("flax_{}_save_ok.jff", std::process::id()));
+    let path_str = path.to_str().unwrap();
+
+    let result = save_file(path_str, "payload");
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.message.contains(path_str));
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "payload");
+
+    std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn save_file_reports_write_error() {
+    let path = std::env::temp_dir()
+        .join(format!("flax_{}_missing_dir", std::process::id()))
+        .join("save.jff");
+
+    let result = save_file(path.to_str().unwrap(), "payload");
+
+    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
+    assert!(result.message.contains("Не удалось сохранить файл"));
+    assert!(!path.exists());
 }
 
 #[test]

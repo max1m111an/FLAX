@@ -5,7 +5,7 @@ use std::path::Path;
 use rand::Rng;
 use tauri::{State, http::StatusCode};
 
-use crate::core::types::{AutomatonData, AutomatonStore, LoadResult, LoadedFile};
+use crate::core::types::{AutomatonData, AutomatonStore, LoadResult, LoadedFile, StatusResult};
 use crate::fa::jff::parse_jff;
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -87,4 +87,19 @@ where
         isAutomaton: is_automaton,
         data,
     })
+}
+
+/// Записывает содержимое в файл, инкапсулируя работу с файловой системой
+/// и формирование ответа об успехе/ошибке.
+pub(crate) fn save_file(path: &str, content: &str) -> StatusResult {
+    match fs::write(path, content) {
+        Ok(()) => StatusResult {
+            status: StatusCode::OK,
+            message: format!("Автомат сохранён в {}", path),
+        },
+        Err(err) => StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Не удалось сохранить файл: {}", err),
+        },
+    }
 }

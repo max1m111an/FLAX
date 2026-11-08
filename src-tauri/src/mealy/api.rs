@@ -1,9 +1,8 @@
 use std::collections::HashSet;
-use std::fs;
 
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::generate_id;
+use crate::core::api::{generate_id, save_file};
 use crate::core::types::{
     AutomatonData, AutomatonStore, AutomatonType, MealyLineTest, MealyMultiRunResult,
     MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
@@ -499,15 +498,5 @@ pub fn mealy_save(
 
     let content = to_jff(&entry);
 
-    if let Err(err) = fs::write(&path, content) {
-        return StatusResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Не удалось сохранить файл: {}", err),
-        };
-    }
-
-    StatusResult {
-        status: StatusCode::OK,
-        message: format!("Автомат сохранён в {}", path),
-    }
+    save_file(&path, &content)
 }

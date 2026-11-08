@@ -1,11 +1,6 @@
-use std::fs;
+use tauri::{State, http::StatusCode};
 
-use tauri::{
-    http::StatusCode,
-    State,
-};
-
-use crate::core::api::generate_id;
+use crate::core::api::{generate_id, save_file};
 use crate::core::types::{
     AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
     StateData, StateResult, StatusResult, TransitionData, TransitionResult,
@@ -571,16 +566,5 @@ pub fn fa_save(state: State<'_, AutomatonStore>, automaton_id: i32, path: String
 
     let content = to_jff(&entry);
 
-    if let Err(err) = fs::write(&path, content) {
-        return StatusResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Не удалось сохранить файл: {}", err),
-        };
-    }
-
-    StatusResult {
-        status: StatusCode::OK,
-        message: format!("Автомат сохранён в {}", path),
-    }
+    save_file(&path, &content)
 }
-
