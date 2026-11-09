@@ -477,15 +477,3 @@ pub fn mealy_multi_run(
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     crate::fa::api::fa_remove_automaton(state, automaton_id)
 }
-
-/// Serializes a mealy machine from the store to a JFLAP XML (`.jff`) file.
-/// Delegates to the unified `save_file` endpoint: it dispatches on the stored
-/// automaton type, so the behaviour stays identical to `fa_save`.
-#[tauri::command]
-pub fn mealy_save(
-    state: State<'_, AutomatonStore>,
-    automaton_id: i32,
-    path: String,
-) -> StatusResult {
-    save_file(state, automaton_id, path)
-}

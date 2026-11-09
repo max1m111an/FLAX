@@ -550,8 +550,3 @@ pub(crate) fn data_to_fa(
 
     builder.build()
 }
-
-#[tauri::command]
-pub fn fa_save(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {
-    save_file(state, automaton_id, path)
-}

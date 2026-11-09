@@ -15,6 +15,8 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .manage(AutomatonStore::new())
         .invoke_handler(tauri::generate_handler![
+            load_file,
+            save_file,
             fa_create_new,
             fa_get,
             fa_add_state,
@@ -27,9 +29,6 @@ pub fn run() {
             fa_multi_run_str,
             fa_generate_inputs,
             fa_remove_automaton,
-            fa_save,
-            load_file,
-            save_file,
             mealy_create_new,
             mealy_add_state,
             mealy_update_state,
@@ -38,7 +37,6 @@ pub fn run() {
             mealy_update_transition,
             mealy_remove_transition,
             mealy_remove_automaton,
-            mealy_save,
             mealy_run_str,
             mealy_multi_run,
         ])
