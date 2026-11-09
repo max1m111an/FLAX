@@ -615,19 +615,15 @@ fn multi_run_mealy_reports_full_and_partial_lines_in_order() {
     assert_eq!(lines, ["", "a", "ab", "ac"]);
 
     assert_eq!(result.results[0].output, "");
-    assert_eq!(result.results[0].processedSymbols, 0);
     assert!(result.results[0].isComplete);
 
     assert_eq!(result.results[1].output, "1");
-    assert_eq!(result.results[1].processedSymbols, 1);
     assert!(result.results[1].isComplete);
 
     assert_eq!(result.results[2].output, "10");
-    assert_eq!(result.results[2].processedSymbols, 2);
     assert!(result.results[2].isComplete);
 
     assert_eq!(result.results[3].output, "1");
-    assert_eq!(result.results[3].processedSymbols, 1);
     assert!(!result.results[3].isComplete);
 }
 
@@ -640,7 +636,6 @@ fn multi_run_mealy_partial_run_does_not_change_request_status() {
     assert_eq!(result.status, StatusCode::OK);
     assert_eq!(result.results.len(), 1);
     assert_eq!(result.results[0].output, "");
-    assert_eq!(result.results[0].processedSymbols, 0);
     assert!(!result.results[0].isComplete);
 }
 

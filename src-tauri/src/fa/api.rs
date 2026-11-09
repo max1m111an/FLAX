@@ -1,9 +1,4 @@
-use std::fs;
-
-use tauri::{
-    http::StatusCode,
-    State,
-};
+use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
@@ -11,7 +6,6 @@ use crate::core::types::{
     StateData, StateResult, StatusResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
-use crate::fa::jff::to_jff;
 use crate::fa::types::{EPSILON, FA, FABuilder};
 
 /// Creates a new finite automaton with a single initial state `q0`.
@@ -22,22 +16,6 @@ pub fn fa_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> 
         status: StatusCode::OK,
         message: "Конечный автомат создан".to_string(),
         automaton: Some(entry),
-    }
-}
-
-#[tauri::command]
-pub fn fa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
-    match state.get(automaton_id) {
-        Some(entry) => OperationResult {
-            status: StatusCode::OK,
-            message: "Автомат получен".to_string(),
-            automaton: Some(entry),
-        },
-        None => OperationResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            automaton: None,
-        },
     }
 }
 
@@ -556,31 +534,3 @@ pub(crate) fn data_to_fa(
 
     builder.build()
 }
-
-#[tauri::command]
-pub fn fa_save(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return StatusResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-            };
-        }
-    };
-
-    let content = to_jff(&entry);
-
-    if let Err(err) = fs::write(&path, content) {
-        return StatusResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Не удалось сохранить файл: {}", err),
-        };
-    }
-
-    StatusResult {
-        status: StatusCode::OK,
-        message: format!("Автомат сохранён в {}", path),
-    }
-}
-
