@@ -1,0 +1,21 @@
+name: Add Milestone to Issue
+
+on:
+  issues:
+    types: [opened] # Срабатывает при создании нового Issue
+
+jobs:
+  add-milestone:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add Milestone
+        uses: benelan/milestone-action@v3
+        with:
+          # Если true, будет выбран Milestone с самым дальним дедлайном
+          farthest: false
+          # Если true, будет перезаписан уже установленный Milestone
+          overwrite: false
+          # Если true, будет добавлен единственный открытый Milestone, даже если у него нет дедлайна
+          single: false

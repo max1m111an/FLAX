@@ -1,0 +1,25 @@
+name: Add Issue to Project by Label
+
+on:
+  issues:
+    types: [opened, labeled] # Срабатывает при создании Issue или добавлении метки
+
+jobs:
+  add-to-project:
+    runs-on: ubuntu-latest
+    steps:
+      # Шаг 1: Если есть метка API -> добавить в FLAX_API
+      - name: Add to FLAX_API
+        if: contains(github.event.issue.labels.*.name, 'API')
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/users/max1m111an/projects/9
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
+
+      # Шаг 2: Если метки API НЕТ -> добавить в FLAX_project
+      - name: Add to FLAX_project
+        if: ${{ !contains(github.event.issue.labels.*.name, 'API') }}
+        uses: actions/add-to-project@v1.0.2
+        with:
+          project-url: https://github.com/users/max1m111an/projects/8
+          github-token: ${{ secrets.ADD_TO_PROJECT_PAT }}
