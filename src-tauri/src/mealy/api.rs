@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::{generate_id, save_file};
+use crate::core::api::generate_id;
 use crate::core::types::{
     AutomatonData, AutomatonStore, AutomatonType, MealyLineTest, MealyMultiRunResult,
     MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,

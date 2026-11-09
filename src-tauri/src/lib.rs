@@ -18,7 +18,6 @@ pub fn run() {
             load_file,
             save_file,
             fa_create_new,
-            fa_get,
             fa_add_state,
             fa_update_state,
             fa_remove_state,

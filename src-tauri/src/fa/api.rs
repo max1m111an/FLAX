@@ -1,6 +1,6 @@
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::{generate_id, save_file};
+use crate::core::api::generate_id;
 use crate::core::types::{
     AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
     StateData, StateResult, StatusResult, TransitionData, TransitionResult,
@@ -16,22 +16,6 @@ pub fn fa_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> 
         status: StatusCode::OK,
         message: "Конечный автомат создан".to_string(),
         automaton: Some(entry),
-    }
-}
-
-#[tauri::command]
-pub fn fa_get(state: State<'_, AutomatonStore>, automaton_id: i32) -> OperationResult {
-    match state.get(automaton_id) {
-        Some(entry) => OperationResult {
-            status: StatusCode::OK,
-            message: "Автомат получен".to_string(),
-            automaton: Some(entry),
-        },
-        None => OperationResult {
-            status: StatusCode::BAD_REQUEST,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            automaton: None,
-        },
     }
 }
 
