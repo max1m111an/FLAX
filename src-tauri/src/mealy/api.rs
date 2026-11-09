@@ -9,7 +9,6 @@ use crate::core::types::{
     TransitionResult,
 };
 use crate::fa::types::EPSILON;
-use crate::mealy::jff::to_jff;
 use crate::mealy::types::MealyBuilder;
 
 /// Creates a new mealy machine in the store with a single initial state `q0`
@@ -480,23 +479,13 @@ pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i3
 }
 
 /// Serializes a mealy machine from the store to a JFLAP XML (`.jff`) file.
+/// Delegates to the unified `save_file` endpoint: it dispatches on the stored
+/// automaton type, so the behaviour stays identical to `fa_save`.
 #[tauri::command]
 pub fn mealy_save(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     path: String,
 ) -> StatusResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return StatusResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-            };
-        }
-    };
-
-    let content = to_jff(&entry);
-
-    save_file(&path, &content)
+    save_file(state, automaton_id, path)
 }

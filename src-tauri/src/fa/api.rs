@@ -6,7 +6,6 @@ use crate::core::types::{
     StateData, StateResult, StatusResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
-use crate::fa::jff::to_jff;
 use crate::fa::types::{EPSILON, FA, FABuilder};
 
 /// Creates a new finite automaton with a single initial state `q0`.
@@ -554,17 +553,5 @@ pub(crate) fn data_to_fa(
 
 #[tauri::command]
 pub fn fa_save(state: State<'_, AutomatonStore>, automaton_id: i32, path: String) -> StatusResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return StatusResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-            };
-        }
-    };
-
-    let content = to_jff(&entry);
-
-    save_file(&path, &content)
+    save_file(state, automaton_id, path)
 }

@@ -5,7 +5,9 @@ use std::path::Path;
 use rand::Rng;
 use tauri::{State, http::StatusCode};
 
-use crate::core::types::{AutomatonData, AutomatonStore, LoadResult, LoadedFile, StatusResult};
+use crate::core::types::{
+    AutomatonData, AutomatonStore, AutomatonType, LoadResult, LoadedFile, StatusResult,
+};
 use crate::fa::jff::parse_jff;
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -22,7 +24,7 @@ pub fn generate_id(used: &HashSet<i32>) -> i32 {
 
 /// Загружает JFLAP-файл и регистрирует объект в хранилище.
 #[tauri::command]
-pub fn load_via_file(state: State<'_, AutomatonStore>, path: String) -> LoadResult {
+pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> LoadResult {
     match load_via_file_with(&state, &path, "Автомат", |content| {
         let parsed = parse_jff(content)?;
         Ok((
@@ -89,9 +91,41 @@ where
     })
 }
 
-/// Записывает содержимое в файл, инкапсулируя работу с файловой системой
-/// и формирование ответа об успехе/ошибке.
-pub(crate) fn save_file(path: &str, content: &str) -> StatusResult {
+/// Универсальный эндпоинт сохранения: берёт объект из хранилища и пишет его
+/// в файл в формате, соответствующем типу автомата.
+#[tauri::command]
+pub fn save_file(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    path: String,
+) -> StatusResult {
+    let entry = match state.get(automaton_id) {
+        Some(e) => e,
+        None => {
+            return StatusResult {
+                status: StatusCode::BAD_REQUEST,
+                message: format!("Автомат с id {} не найден", automaton_id),
+            };
+        }
+    };
+
+    save_automaton(&entry, &path)
+}
+
+/// Сериализует автомат в формате его типа и записывает результат в `path`.
+/// Новый тип автомата подключается добавлением ветки в `match`.
+pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> StatusResult {
+    let content = match entry.automatonType {
+        AutomatonType::FA => crate::fa::jff::to_jff(entry),
+        AutomatonType::MEALY => crate::mealy::jff::to_jff(entry),
+    };
+
+    save_file_with(path, &content)
+}
+
+/// Записывает готовое содержимое в файл, инкапсулируя работу с файловой
+/// системой и формирование ответа об успехе/ошибке.
+pub(crate) fn save_file_with(path: &str, content: &str) -> StatusResult {
     match fs::write(path, content) {
         Ok(()) => StatusResult {
             status: StatusCode::OK,

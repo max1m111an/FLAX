@@ -1,6 +1,6 @@
 //! Unit tests for the shared in-memory automaton registry.
 
-use crate::core::api::{load_via_file_with, save_file};
+use crate::core::api::{load_via_file_with, save_automaton, save_file_with};
 use crate::core::types::{
     AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
 };
@@ -362,11 +362,11 @@ fn load_via_file_propagates_parser_error() {
 }
 
 #[test]
-fn save_file_writes_content_and_reports_success() {
+fn save_file_with_writes_content_and_reports_success() {
     let path = std::env::temp_dir().join(format!("flax_{}_save_ok.jff", std::process::id()));
     let path_str = path.to_str().unwrap();
 
-    let result = save_file(path_str, "payload");
+    let result = save_file_with(path_str, "payload");
 
     assert_eq!(result.status, tauri::http::StatusCode::OK);
     assert!(result.message.contains(path_str));
@@ -376,16 +376,53 @@ fn save_file_writes_content_and_reports_success() {
 }
 
 #[test]
-fn save_file_reports_write_error() {
+fn save_file_with_reports_write_error() {
     let path = std::env::temp_dir()
         .join(format!("flax_{}_missing_dir", std::process::id()))
         .join("save.jff");
 
-    let result = save_file(path.to_str().unwrap(), "payload");
+    let result = save_file_with(path.to_str().unwrap(), "payload");
 
     assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
     assert!(result.message.contains("Не удалось сохранить файл"));
     assert!(!path.exists());
+}
+
+#[test]
+fn save_automaton_dispatches_fa_serializer() {
+    let path = std::env::temp_dir().join(format!("flax_{}_save_fa.jff", std::process::id()));
+    let entry = make_store().create("FA".to_string(), "q0");
+
+    let result = save_automaton(&entry, path.to_str().unwrap());
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    let written = std::fs::read_to_string(&path).unwrap();
+    assert!(written.contains("<type>fa</type>"));
+
+    std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn save_automaton_dispatches_mealy_serializer() {
+    let path = std::env::temp_dir().join(format!("flax_{}_save_mealy.jff", std::process::id()));
+    let mut entry = make_store().create("Mealy".to_string(), "q0");
+    entry.automatonType = crate::core::types::AutomatonType::MEALY;
+    entry.transitions = vec![TransitionData {
+        id: 1,
+        from: 0,
+        to: 0,
+        symbol: 'a',
+        output: Some('1'),
+    }];
+
+    let result = save_automaton(&entry, path.to_str().unwrap());
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    let written = std::fs::read_to_string(&path).unwrap();
+    assert!(written.contains("<type>mealy</type>"));
+    assert!(written.contains("<transout>1</transout>"));
+
+    std::fs::remove_file(&path).unwrap();
 }
 
 #[test]
