@@ -6,7 +6,8 @@ use rand::Rng;
 use tauri::{State, http::StatusCode};
 
 use crate::core::types::{
-    AutomatonData, AutomatonStore, AutomatonType, LoadResult, LoadedFile, StatusResult,
+    AutomatonData, AutomatonStore, AutomatonType, LoadResult, LoadedFile, StateData, StatusResult,
+    TransitionData,
 };
 use crate::fa::jff::parse_jff;
 
@@ -136,4 +137,27 @@ pub(crate) fn save_file_with(path: &str, content: &str) -> StatusResult {
             message: format!("Не удалось сохранить файл: {}", err),
         },
     }
+}
+
+/// Общий драйвер пакетного прогона: строит автомат один раз (`build`) и
+/// прогоняет по нему все строки (`run_line`), сохраняя порядок `inputs`.
+///
+/// `core` ничего не знает о конкретном типе автомата и формате ответа:
+/// построение (`data_to_fa` / `data_to_mm`) и обработка одной строки
+/// передаются замыканиями, а ошибка построения пробрасывается как `Err`.
+pub(crate) fn multi_run_automaton<A, T, B, R>(
+    data: &AutomatonData,
+    inputs: &[String],
+    build: B,
+    run_line: R,
+) -> Result<Vec<T>, String>
+where
+    B: FnOnce(&[StateData], &[TransitionData]) -> Result<A, String>,
+    R: Fn(&A, &str) -> T,
+{
+    let automaton = build(&data.states, &data.transitions)?;
+    Ok(inputs
+        .iter()
+        .map(|line| run_line(&automaton, line))
+        .collect())
 }
