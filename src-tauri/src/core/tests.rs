@@ -1,6 +1,6 @@
 //! Unit tests for the shared in-memory automaton registry.
 
-use crate::core::api::{load_via_file_with, save_automaton, save_file_with};
+use crate::core::api::{load_via_file_with, multi_run_automaton, save_automaton, save_file_with};
 use crate::core::types::{
     AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
 };
@@ -423,6 +423,42 @@ fn save_automaton_dispatches_mealy_serializer() {
     assert!(written.contains("<transout>1</transout>"));
 
     std::fs::remove_file(&path).unwrap();
+}
+
+#[test]
+fn multi_run_automaton_builds_once_and_maps_every_line() {
+    let entry = make_store().create("Test".to_string(), "q0");
+    let inputs = ["a".to_string(), "bb".to_string(), String::new()];
+    let builds = std::cell::Cell::new(0);
+
+    let results = multi_run_automaton(
+        &entry,
+        &inputs,
+        |_, _| {
+            builds.set(builds.get() + 1);
+            Ok(3usize)
+        },
+        |prefix, line| format!("{}{}", prefix, line),
+    )
+    .unwrap();
+
+    assert_eq!(builds.get(), 1);
+    assert_eq!(results, ["3a", "3bb", "3"]);
+}
+
+#[test]
+fn multi_run_automaton_propagates_build_error() {
+    let entry = make_store().create("Test".to_string(), "q0");
+
+    let err = multi_run_automaton::<(), (), _, _>(
+        &entry,
+        &["a".to_string()],
+        |_, _| Err("bad automaton".to_string()),
+        |_, _| (),
+    )
+    .unwrap_err();
+
+    assert_eq!(err, "bad automaton");
 }
 
 #[test]

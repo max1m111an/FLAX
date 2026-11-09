@@ -230,35 +230,25 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
 /// per-line status: the request status is `200` for a valid machine and `400`
 /// when the machine itself is invalid.
 pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
-    let mm = match data_to_mm(&entry.states, &entry.transitions) {
-        Ok(mm) => mm,
-        Err(err) => {
-            return MealyMultiRunResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Некорректный автомат: {}", err),
-                results: Vec::new(),
-            };
+    match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
+        let chars: Vec<char> = line.chars().collect();
+        let (steps, output) = mm.run(&chars);
+        MealyLineTest {
+            line: line.to_string(),
+            output,
+            isComplete: steps.len() == chars.len(),
         }
-    };
-
-    let results = inputs
-        .iter()
-        .map(|line| {
-            let chars: Vec<char> = line.chars().collect();
-            let (steps, output) = mm.run(&chars);
-            let processed = steps.len();
-            MealyLineTest {
-                line: line.clone(),
-                output,
-                isComplete: processed == chars.len(),
-            }
-        })
-        .collect();
-
-    MealyMultiRunResult {
-        status: StatusCode::OK,
-        message: String::new(),
-        results,
+    }) {
+        Ok(results) => MealyMultiRunResult {
+            status: StatusCode::OK,
+            message: String::new(),
+            results,
+        },
+        Err(err) => MealyMultiRunResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Некорректный автомат: {}", err),
+            results: Vec::new(),
+        },
     }
 }
 

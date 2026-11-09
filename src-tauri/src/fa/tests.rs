@@ -3,9 +3,9 @@
 use std::collections::{HashMap, HashSet};
 
 use crate::core::types::{
-    Automaton, NondeterministicAutomaton, RunStep, StateData, Trace, TransitionData,
+    Automaton, AutomatonData, NondeterministicAutomaton, RunStep, StateData, Trace, TransitionData,
 };
-use crate::fa::api::{data_to_fa, test_line};
+use crate::fa::api::{data_to_fa, multi_run_fa, test_line};
 use crate::fa::types::{EPSILON, FA};
 
 #[test]
@@ -1247,6 +1247,101 @@ fn test_line_counts_only_non_epsilon_steps() {
         .unwrap();
 
     assert_eq!(test_line(&fa, "a"), (true, 1));
+}
+
+fn multi_run_state(id: i32, is_initial: bool, is_final: bool) -> StateData {
+    StateData {
+        id,
+        label: format!("q{}", id),
+        x: 0.0,
+        y: 0.0,
+        isInitial: is_initial,
+        isFinal: is_final,
+    }
+}
+
+fn multi_run_transition(id: i32, from: i32, to: i32, symbol: char) -> TransitionData {
+    TransitionData {
+        id,
+        from,
+        to,
+        symbol,
+        output: None,
+    }
+}
+
+fn multi_run_entry(states: Vec<StateData>, transitions: Vec<TransitionData>) -> AutomatonData {
+    AutomatonData {
+        id: 1,
+        name: "multi-run".to_string(),
+        automatonType: crate::core::types::AutomatonType::FA,
+        states,
+        transitions,
+    }
+}
+
+#[test]
+fn multi_run_fa_reports_results_in_input_order() {
+    let entry = multi_run_entry(
+        vec![
+            multi_run_state(0, true, false),
+            multi_run_state(1, false, false),
+            multi_run_state(2, false, true),
+        ],
+        vec![
+            multi_run_transition(1, 0, 1, 'a'),
+            multi_run_transition(2, 1, 2, 'a'),
+        ],
+    );
+    let inputs = ["", "a", "aa", "aaa"].map(String::from);
+
+    let result = multi_run_fa(&entry, &inputs);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.message.is_empty());
+    assert_eq!(result.traces.len(), 4);
+
+    let lines: Vec<&str> = result.traces.iter().map(|t| t.line.as_str()).collect();
+    assert_eq!(lines, ["", "a", "aa", "aaa"]);
+
+    assert_eq!(
+        (result.traces[0].isFinal, result.traces[0].correctSymbols),
+        (false, 0)
+    );
+    assert_eq!(
+        (result.traces[1].isFinal, result.traces[1].correctSymbols),
+        (false, 1)
+    );
+    assert_eq!(
+        (result.traces[2].isFinal, result.traces[2].correctSymbols),
+        (true, 2)
+    );
+    assert_eq!(
+        (result.traces[3].isFinal, result.traces[3].correctSymbols),
+        (false, 2)
+    );
+}
+
+#[test]
+fn multi_run_fa_invalid_automaton_returns_400() {
+    let entry = multi_run_entry(vec![multi_run_state(0, false, true)], Vec::new());
+
+    let result = multi_run_fa(&entry, &["a".to_string()]);
+
+    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
+    assert_eq!(result.message, "Некорректный автомат");
+    assert!(result.traces.is_empty());
+}
+
+#[test]
+fn multi_run_fa_empty_inputs_returns_200_and_no_traces() {
+    let entry = multi_run_entry(vec![multi_run_state(0, true, true)], Vec::new());
+
+    let result = multi_run_fa(&entry, &[]);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.message.is_empty());
+    assert!(result.traces.is_empty());
 }
 
 #[test]

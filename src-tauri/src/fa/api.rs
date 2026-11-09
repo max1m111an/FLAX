@@ -2,8 +2,8 @@ use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
 use crate::core::types::{
-    AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
-    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult,
+    RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
 use crate::fa::types::{EPSILON, FA, FABuilder};
@@ -401,31 +401,30 @@ pub fn fa_multi_run_str(
         }
     };
 
-    let traces: Vec<LineTest> = match data_to_fa(&entry.states, &entry.transitions) {
-        Ok(fa) => inputs
-            .into_iter()
-            .map(|line| {
-                let (is_final, correct_symbols) = test_line(&fa, &line);
-                LineTest {
-                    line,
-                    isFinal: is_final,
-                    correctSymbols: correct_symbols,
-                }
-            })
-            .collect(),
-        Err(_) => {
-            return MultiRunResult {
-                status: StatusCode::BAD_REQUEST,
-                message: "Некорректный автомат".to_string(),
-                traces: Vec::new(),
-            };
-        }
-    };
+    multi_run_fa(&entry, &inputs)
+}
 
-    MultiRunResult {
-        status: StatusCode::OK,
-        message: String::new(),
-        traces,
+/// Testable batch runner: builds the FA once and maps every input through
+/// `test_line`, preserving the input order. An invalid automaton yields `400`.
+pub(crate) fn multi_run_fa(entry: &AutomatonData, inputs: &[String]) -> MultiRunResult {
+    match crate::core::api::multi_run_automaton(entry, inputs, data_to_fa, |fa, line| {
+        let (is_final, correct_symbols) = test_line(fa, line);
+        LineTest {
+            line: line.to_string(),
+            isFinal: is_final,
+            correctSymbols: correct_symbols,
+        }
+    }) {
+        Ok(traces) => MultiRunResult {
+            status: StatusCode::OK,
+            message: String::new(),
+            traces,
+        },
+        Err(_) => MultiRunResult {
+            status: StatusCode::BAD_REQUEST,
+            message: "Некорректный автомат".to_string(),
+            traces: Vec::new(),
+        },
     }
 }
 
