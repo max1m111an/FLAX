@@ -36,6 +36,22 @@
   border-radius: 4px;
 }
 
+.statesWrapperMealy {
+  height: 72px;
+  padding: 0;
+  flex-direction: column;
+  gap: 0;
+
+  .state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    line-height: 1;
+  }
+}
+
 .statesWrapperRead {
   background: var(--bg-surface);
 }
@@ -43,7 +59,7 @@
 .statesWrapperCurrent {
   border: 2px solid var(--accent-primary);
   background: var(--accent-bg);
-  
+
   .state {
     color: var(--accent-primary);
   }
@@ -52,7 +68,7 @@
 .statesWrapperSuccess {
   border: 2px solid var(--green-main);
   background: var(--green-bg);
-  
+
   .state {
     color: var(--green-main);
   }
@@ -61,7 +77,7 @@
 .statesWrapperError {
   border: 2px solid var(--red-main);
   background: var(--red-bg);
-  
+
   .state {
     color: var(--red-main);
   }
@@ -76,6 +92,10 @@
 .stateCurrent { color: var(--accent-primary); }
 .stateSuccess { color: var(--green-main); }
 .stateError { color: var(--red-main); }
+
+.stateOutput {
+  border-top: 2px solid currentColor;
+}
 
 .stateRead {
   color: var(--bg-base);
@@ -115,6 +135,17 @@
   font-size: 14px;
 }
 
+.historyMealy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
 .historyState {
   display: inline-flex;
   flex-direction: row;
@@ -144,7 +175,7 @@
 .historyCardSuccess {
   border: 1px solid var(--green-main);
   background: var(--green-bg);
-  
+
   .historySymbol {
     color: var(--green-main);
   }
@@ -153,7 +184,7 @@
 .historyCardError {
   border: 1px solid var(--red-main);
   background: var(--red-bg);
-  
+
   .historySymbol {
     color: var(--red-main);
   }
