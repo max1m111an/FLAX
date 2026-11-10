@@ -3,8 +3,8 @@ import clsx from "clsx";
 import { AutomatonModel } from "@/types/Automaton.ts";
 import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
-import {RunStepMealy, Trace} from "@/types/Testing.ts";
-import {AutomatonType} from "@/types/Payloads.ts";
+import { RunStepMealy, Trace } from "@/types/Testing.ts";
+import { AutomatonType } from "@/types/Payloads.ts";
 
 interface TraceCardProps {
     traceSteps: Trace;
@@ -24,6 +24,7 @@ export function TraceCard({
     type,
 }: TraceCardProps) {
 
+    const isMealy = type === "MEALY";
     const activeIndex = Math.min(currentIndex, traceSteps.steps.length);
     const currentStateId = activeIndex < traceSteps.steps.length
         ? traceSteps.steps[activeIndex]?.from
@@ -33,6 +34,9 @@ export function TraceCard({
 
     const currentStateLabel = currentAutomaton.states.find((n) => n.id === currentStateId)?.label;
     const historyCount = Math.min(currentIndex, traceSteps.steps.length + 1);
+    const showTraceStatus = isMealy
+        ? currentIndex === symbols.length
+        : currentIndex === traceSteps.steps.length;
 
     return (
         <div className={ styles.wrapper }>
@@ -49,25 +53,33 @@ export function TraceCard({
                     const isPassed = index < currentIndex && isActiveForTrace;
                     const isCurrent = index === currentIndex && isActiveForTrace;
                     const isOk = traceSteps.steps[index] !== undefined;
+                    const step = traceSteps.steps[index] as RunStepMealy | undefined;
+                    const output = isPassed ? (step?.output ?? "—") : "";
+
+                    const statusClass = isPassed
+                        ? (isOk ? styles.statesWrapperSuccess : styles.statesWrapperError)
+                        : (isCurrent ? styles.statesWrapperCurrent : "");
+                    const textClass = isPassed
+                        ? (isOk ? styles.stateSuccess : styles.stateError)
+                        : (isCurrent ? styles.stateCurrent : "");
 
                     return (
                         <div
                             key={ index }
                             className={ clsx(
                                 styles.statesWrapper,
-                                isPassed
-                                    ? (isOk ? styles.statesWrapperSuccess : styles.statesWrapperError)
-                                    : (isCurrent ? styles.statesWrapperCurrent : ""),
+                                isMealy && styles.statesWrapperMealy,
+                                statusClass,
                             ) }
                         >
-                            <p className={ clsx(
-                                styles.state,
-                                isPassed
-                                    ? (isOk ? styles.stateSuccess : styles.stateError)
-                                    : (isCurrent ? styles.stateCurrent : ""),
-                            ) }>
+                            <p className={ clsx(styles.state, textClass) }>
                                 {char}
                             </p>
+                            {isMealy && (
+                                <p className={ clsx(styles.state, styles.stateOutput, textClass) }>
+                                    {output || "\u00A0"}
+                                </p>
+                            )}
                         </div>
                     );
                 })}
@@ -77,7 +89,7 @@ export function TraceCard({
                 <p className={ styles.stateLbl }>
                     Состояние: {currentStateLabel || "—"}
                 </p>
-                {currentIndex === traceSteps.steps.length && (
+                {showTraceStatus && (
                     <p
                         className={ clsx(
                             styles.stateLbl,
@@ -103,6 +115,7 @@ export function TraceCard({
                             ? step.from
                             : (prevStep ? prevStep.to : currentAutomaton.states.find((s) => s.isInitial)?.id);
                         const toNodeId = step ? step.to : undefined;
+                        const mealyOutput = step ? (step as RunStepMealy).output : "—";
 
                         return (
                             <div
@@ -114,25 +127,27 @@ export function TraceCard({
                             >
                                 <span className={ styles.historyActive }>{index + 1}.</span>
                                 {
-                                    type === "FA" && (
+                                    (type === "FA" || isMealy) && (
                                         <span className={ styles.historyState }>
-                                    {currentAutomaton.states.find((n) => n.id === fromNodeId)?.label || "—"}
+                                            {currentAutomaton.states.find((n) => n.id === fromNodeId)?.label || "—"}
                                             <ArrowRight />
                                             {toNodeId !== undefined
                                                 ? currentAutomaton.states.find((n) => n.id === toNodeId)?.label
                                                 : "—"}
                                             <ArrowRightToLine />
-                                </span>
+                                        </span>
                                     )
                                 }
                                 { type === "FA" && (
                                     <span className={ styles.historySymbol }>
-                                    {symbols[index]}
-                                </span>
+                                        {symbols[index]}
+                                    </span>
                                 )}
                                 { type === "MEALY" && (
-                                    <span className={ styles.historySymbol }>
-                                        {symbols[index]} / {(step as RunStepMealy)?.output}
+                                    <span className={ clsx(styles.historySymbol, styles.historyMealy) }>
+                                        {symbols[index]}
+                                        <ArrowRight />
+                                        {mealyOutput}
                                     </span>
                                 )}
                             </div>

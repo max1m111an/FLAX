@@ -36,6 +36,22 @@
   border-radius: 4px;
 }
 
+.statesWrapperMealy {
+  height: 72px;
+  padding: 0;
+  flex-direction: column;
+  gap: 0;
+
+  .state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    line-height: 1;
+  }
+}
+
 .statesWrapperRead {
   background: var(--bg-surface);
 }
@@ -77,6 +93,10 @@
 .stateSuccess { color: var(--green-main); }
 .stateError { color: var(--red-main); }
 
+.stateOutput {
+  border-top: 2px solid currentColor;
+}
+
 .stateRead {
   color: var(--bg-base);
 }
@@ -113,6 +133,17 @@
   color: var(--accent-primary);
   font-weight: 400;
   font-size: 14px;
+}
+
+.historyMealy {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  svg {
+    width: 16px;
+    height: 16px;
+  }
 }
 
 .historyState {

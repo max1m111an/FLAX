@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api/common.ts";
 import { MealyAutomatonModel, StateMealyModel, TransitionMealyModel } from "@/types/Automaton.ts";
-import { RunStepFA, Trace } from "@/types/Testing.ts";
+import { RunStepMealy, Trace } from "@/types/Testing.ts";
 
 export type createMealyResponse = ApiResponse<{ automaton: MealyAutomatonModel }>;
 
@@ -68,4 +68,11 @@ export type runStrMealyRequest = {
     input: string;
 }
 
-export type runStrMealyResponse = ApiResponse<{ traces: Trace<RunStepFA>[] }>;
+export type runStrMealyResponse = ApiResponse<{
+    output: string;
+    steps: RunStepMealy[];
+}>;
+
+export type runStrMealyTracesResponse = ApiResponse<{
+    traces: Trace<RunStepMealy>[];
+}>;

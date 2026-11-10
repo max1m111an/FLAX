@@ -13,7 +13,7 @@ export type RunStepMealy = {
 
 export type RunStep = RunStepFA | RunStepMealy
 
-export type Trace<T extends RunStep> = {
+export type Trace<T extends RunStep = RunStep> = {
     steps: T[];
     isFinal: boolean;
 }

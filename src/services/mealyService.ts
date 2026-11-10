@@ -4,7 +4,7 @@ import { AutomatonModel, StateMealyModel, TransitionMealyModel } from "@/types/A
 import { StatePayload, TransitionPayload } from "@/types/Payloads.ts";
 import { multiRunStrFAResponse } from "@/types/api/fa.ts";
 import { mealyApi } from "@/api/MealyAPI.ts";
-import { runStrMealyResponse } from "@/types/api/mealy.ts";
+import { runStrMealyTracesResponse } from "@/types/api/mealy.ts";
 
 // @ts-expect-error: todo: add insufficient Api
 export const mealyService: IAutomatonService<
@@ -13,7 +13,7 @@ export const mealyService: IAutomatonService<
     TransitionMealyModel,
     StatePayload,
     TransitionPayload,
-    runStrMealyResponse,
+    runStrMealyTracesResponse,
     multiRunStrFAResponse> = {
         async createAutomaton(name: string) {
             const response = await mealyApi.createAutomaton(name);
@@ -93,8 +93,17 @@ export const mealyService: IAutomatonService<
             await mealyApi.removeTransit({ automatonId, transitionId });
             markDirty(automatonId, true);
         },
-        async runStr(automatonId: number, input: string) {
-            return await mealyApi.runStr({ automatonId, input });
+        async runStr(automatonId: number, input: string): Promise<runStrMealyTracesResponse> {
+            const response = await mealyApi.runStr({ automatonId, input });
+
+            return {
+                status: response.status,
+                message: response.message,
+                traces: [ {
+                    steps: response.steps,
+                    isFinal: response.status === 200,
+                } ],
+            };
         },
 
     };

@@ -115,8 +115,9 @@ export function useTesting() {
 
         try {
             const response = await service.runStr(currentTab.automaton.id, testLine);
-            setTraces(response.traces);
-            applyHighlights(0, response.traces);
+            const nextTraces = Array.isArray(response.traces) ? response.traces : [];
+            setTraces(nextTraces);
+            applyHighlights(0, nextTraces);
         } catch {
             setTraces([]);
             applyHighlights(0, []);
