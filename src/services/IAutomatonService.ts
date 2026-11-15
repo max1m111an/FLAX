@@ -12,7 +12,7 @@ export interface IAutomatonService<
     deleteAutomaton(id: number): Promise<void>;
 
     saveAutomaton(automatonId: number, path: string): Promise<void>;
-    loadAutomaton(path: string): Promise<ApiResponse<{ automaton: TAutomaton }>>;
+    loadAutomaton(path: string): Promise<ApiResponse<{ data: TAutomaton, isAutomaton: boolean }>>;
 
     addState(automatonId: number, payload: TStatePayload): Promise<ApiResponse<{ state: TState }>>;
     updateState(automatonId: number, stateId: number, payload: Partial<TStatePayload>): Promise<ApiResponse<{ state: TState }>>;

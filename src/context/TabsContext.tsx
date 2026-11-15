@@ -65,18 +65,18 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
-    const loadTab = async (path: string) => { //todo hardcode, incorrect API loadJFF
+    const loadTab = async (path: string) => {
         const response = await jffService.loadJff({ path });
         const currentModel = models.find((model) => model.type === "FA");
 
-        if (!response.automaton) {
+        if (!response.data) {
             throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
         }
         if (!currentModel) {
             throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
         }
 
-        const newTab = buildTab(response.automaton, currentModel?.icon, "FA", true, path);
+        const newTab = buildTab(response.data, currentModel?.icon, "FA", true, path);
 
         setTabs([ ...tabs, newTab ]);
         navigate(`/models/${newTab.id}`);

@@ -5,7 +5,7 @@ import { loadJFFRequest, loadJFFResponse, saveJFFRequest, saveJFFResponse } from
 export const jffAPI = {
     async loadJFF (params: loadJFFRequest): Promise<loadJFFResponse> {
         try {
-            const response = await invoke<loadJFFResponse>("fa_load", params);
+            const response = await invoke<loadJFFResponse>("load_file", params);
             return response;
         } catch (error) {
             console.error("Ошибка при вызове fa_load:", error);

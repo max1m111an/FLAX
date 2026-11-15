@@ -35,6 +35,7 @@ export type TransitionModel = TransitionFAModel | TransitionMealyModel;
 
 export interface BaseAutomatonModel<TState, TTransition> {
     id: number;
+    automatonType: AutomatonType;
     name: string;
     states: TState[];
     transitions: TTransition[];
