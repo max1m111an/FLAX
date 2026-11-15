@@ -69,7 +69,7 @@ fn update_modifies_automaton() {
         x: 200.0,
         y: 300.0,
         isInitial: false,
-        isFinal: true,
+        isFinal: Some(true),
     });
     store.update(entry);
 
@@ -181,7 +181,7 @@ fn create_and_modify_full_workflow() {
         x: 300.0,
         y: 200.0,
         isInitial: false,
-        isFinal: true,
+        isFinal: Some(true),
     });
     store.update(entry.clone());
     let fetched = store.get(1).unwrap();

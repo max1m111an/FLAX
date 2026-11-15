@@ -49,7 +49,7 @@ pub fn fa_add_state(
         x: x.unwrap_or(100.0),
         y: y.unwrap_or(200.0),
         isInitial: is_initial.unwrap_or(false),
-        isFinal: is_final.unwrap_or(false),
+        isFinal: Some(is_final.unwrap_or(false)),
     });
 
     let created = entry.states.last().unwrap().clone();
@@ -112,7 +112,7 @@ pub fn fa_update_state(
         entry.states[idx].isInitial = init;
     }
     if let Some(fin) = is_final {
-        entry.states[idx].isFinal = fin;
+        entry.states[idx].isFinal = Some(fin);
     }
 
     state.update(entry.clone());
@@ -508,7 +508,7 @@ pub(crate) fn data_to_fa(
         if state.isInitial {
             builder = builder.set_initial(state.id);
         }
-        if state.isFinal {
+        if state.isFinal.unwrap() {
             builder = builder.set_final(state.id);
         }
     }

@@ -24,7 +24,8 @@ pub struct StateData {
     pub x: f32,
     pub y: f32,
     pub isInitial: bool,
-    pub isFinal: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub isFinal: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,6 +43,9 @@ pub struct TransitionData {
 pub enum AutomatonType {
     FA,
     MEALY,
+    //MOORE
+    //PDA,
+    //TURING,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -268,7 +272,7 @@ impl AutomatonStore {
                 x: 100.0,
                 y: 200.0,
                 isInitial: true,
-                isFinal: false,
+                isFinal: Some(false),
             }],
             transitions: Vec::new(),
         };

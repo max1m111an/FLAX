@@ -22,7 +22,7 @@ pub fn to_jff(data: &AutomatonData) -> String {
         .iter()
         .cloned()
         .map(|mut st| {
-            st.isFinal = false;
+            st.isFinal = Some(false);
             st
         })
         .collect();

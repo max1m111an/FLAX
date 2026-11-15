@@ -58,7 +58,7 @@ fn even_a_data() -> AutomatonData {
                 x: 154.0,
                 y: 136.0,
                 isInitial: true,
-                isFinal: true,
+                isFinal: Some(true),
             },
             StateData {
                 id: 1,
@@ -66,7 +66,7 @@ fn even_a_data() -> AutomatonData {
                 x: 308.0,
                 y: 147.0,
                 isInitial: false,
-                isFinal: false,
+                isFinal: Some(false),
             },
         ],
         transitions: vec![

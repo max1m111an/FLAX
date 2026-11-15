@@ -89,7 +89,7 @@ pub fn write_states(out: &mut String, states: &[StateData]) {
         if st.isInitial {
             out.push_str("\t\t\t<initial/>\n");
         }
-        if st.isFinal {
+        if st.isFinal.unwrap() {
             out.push_str("\t\t\t<final/>\n");
         }
         out.push_str("\t\t</state>\n");
@@ -177,7 +177,7 @@ pub fn parse_states(automaton: Node) -> Result<Vec<StateData>, String> {
             x,
             y,
             isInitial: is_initial,
-            isFinal: is_final,
+            isFinal: Some(is_final),
         });
     }
 
