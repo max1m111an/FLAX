@@ -62,7 +62,7 @@ fn uses_mealy_type_in_serialization() {
 #[test]
 fn serializes_states_without_final_flag() {
     let mut data = mealy_data();
-    data.states[0].isFinal = true;
+    data.states[0].isFinal = Some(true);
 
     let xml = to_jff(&data);
     assert!(xml.contains("<state id=\"0\" name=\"q0\">"));

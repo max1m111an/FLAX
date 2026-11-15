@@ -513,7 +513,7 @@ fn run_partial_full_acceptance() {
                     to: 2
                 },
             ],
-            isFinal: Some(true),
+            isFinal: true,
         }
     );
 }
@@ -538,7 +538,7 @@ fn run_partial_rejected_no_path() {
         traces,
         vec![Trace {
             steps: vec![],
-            isFinal: Some(false)
+            isFinal: false
         }]
     );
 }
@@ -561,7 +561,7 @@ fn run_partial_rejected_empty_on_non_final() {
         traces,
         vec![Trace {
             steps: vec![],
-            isFinal: Some(false)
+            isFinal: false
         }]
     );
 }
@@ -581,7 +581,7 @@ fn run_partial_full_accepts_empty_when_initial_final() {
         traces,
         vec![Trace {
             steps: vec![],
-            isFinal: Some(true)
+            isFinal: true
         }]
     );
 }
@@ -613,7 +613,7 @@ fn run_partial_stuck_mid_string() {
                 symbol: 'a',
                 to: 1
             }],
-            isFinal: Some(false),
+            isFinal: false,
         }
     );
 }
@@ -673,7 +673,7 @@ fn run_partial_with_epsilon() {
                     to: 2
                 },
             ],
-            isFinal: Some(true),
+            isFinal: true,
         }
     );
 }
@@ -712,7 +712,7 @@ fn run_partial_closes_after_last_symbol() {
                     to: 2
                 },
             ],
-            isFinal: Some(true),
+            isFinal: true,
         }
     );
 }
@@ -750,7 +750,7 @@ fn run_partial_transitive_epsilon_closure_recorded() {
                     to: 2
                 },
             ],
-            isFinal: Some(true),
+            isFinal: true,
         }
     );
 }
@@ -826,7 +826,7 @@ fn run_partial_nondeterministic_parallel() {
             symbol: 'a',
             to: 0
         }],
-        isFinal: Some(false),
+        isFinal: false,
     }));
     assert!(traces.contains(&Trace {
         steps: vec![RunStep {
@@ -834,7 +834,7 @@ fn run_partial_nondeterministic_parallel() {
             symbol: 'a',
             to: 1
         }],
-        isFinal: Some(true),
+        isFinal: true,
     }));
 }
 
@@ -876,7 +876,7 @@ fn run_partial_converging_branches_keep_separate_histories() {
                 to: 3,
             },
         ],
-        isFinal: Some(true),
+        isFinal: true,
     };
     let t2 = Trace {
         steps: vec![
@@ -891,7 +891,7 @@ fn run_partial_converging_branches_keep_separate_histories() {
                 to: 3,
             },
         ],
-        isFinal: Some(true),
+        isFinal: true,
     };
     assert!(traces.contains(&t1));
     assert!(traces.contains(&t2));
@@ -1080,7 +1080,7 @@ fn run_partial_explores_all_branches() {
                 to: 4
             },
         ],
-        isFinal: Some(true),
+        isFinal: true,
     }));
     assert!(traces.contains(&Trace {
         steps: vec![
@@ -1095,7 +1095,7 @@ fn run_partial_explores_all_branches() {
                 to: 4
             },
         ],
-        isFinal: Some(true),
+        isFinal: true,
     }));
     assert!(traces.contains(&Trace {
         steps: vec![
@@ -1110,7 +1110,7 @@ fn run_partial_explores_all_branches() {
                 to: 4
             },
         ],
-        isFinal: Some(true),
+        isFinal: true,
     }));
 }
 
@@ -1133,7 +1133,7 @@ fn run_partial_symbol_not_in_alphabet() {
         traces,
         vec![Trace {
             steps: vec![],
-            isFinal: Some(false)
+            isFinal: false
         }]
     );
 }
@@ -1174,7 +1174,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
                     to: 2
                 },
             ],
-            isFinal: Some(true),
+            isFinal: true,
         }
     );
 }

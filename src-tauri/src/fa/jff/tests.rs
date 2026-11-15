@@ -246,10 +246,10 @@ fn parses_even_a_jff() {
     assert_eq!(parsed.states[0].x, 154.0);
     assert_eq!(parsed.states[0].y, 136.0);
     assert!(parsed.states[0].isInitial);
-    assert!(parsed.states[0].isFinal);
+    assert!(parsed.states[0].isFinal.unwrap());
     assert_eq!(parsed.states[1].label, "q1");
     assert!(!parsed.states[1].isInitial);
-    assert!(!parsed.states[1].isFinal);
+    assert!(!parsed.states[1].isFinal.unwrap());
 
     assert_eq!(parsed.transitions.len(), 4);
     assert_eq!(
@@ -311,7 +311,7 @@ fn state_name_defaults_to_q_prefix() {
 
     let parsed = parse_jff(xml).unwrap();
     assert_eq!(parsed.states[0].label, "q5");
-    assert!(parsed.states[0].isFinal);
+    assert!(parsed.states[0].isFinal.unwrap());
     assert_eq!(parsed.states[0].x, 1.0);
     assert_eq!(parsed.states[0].y, 2.0);
 }
