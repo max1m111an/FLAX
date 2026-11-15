@@ -1,5 +1,6 @@
-//! Unit tests for Mealy machine JFLAP XML (`.jff`) serialization.
+//! Unit tests for Mealy machine JFLAP XML (`.jff`) serialization and parsing.
 
+use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{AutomatonData, AutomatonType, StateData, TransitionData};
 use crate::mealy::jff::to_jff;
 
@@ -106,6 +107,90 @@ fn missing_output_is_written_as_empty_transout() {
 
     let xml = to_jff(&data);
     assert!(xml.contains("<transout></transout>"));
+}
+
+#[test]
+fn parses_mealy_jff_with_input_and_output_symbols() {
+    let xml = to_jff(&mealy_data());
+
+    match parse_jff(&xml).unwrap() {
+        JffParsed::Automaton(AutomatonType::MEALY, automaton) => {
+            assert_eq!(automaton.states.len(), 2);
+            assert!(automaton.states[0].isInitial);
+            assert_eq!(automaton.transitions.len(), 2);
+            assert_eq!(
+                automaton
+                    .transitions
+                    .iter()
+                    .map(|t| (t.from, t.to, t.symbol, t.output))
+                    .collect::<Vec<_>>(),
+                vec![(0, 1, 'a', Some('1')), (1, 0, 'b', Some('0'))]
+            );
+        }
+        other => panic!("ожидался автомат MEALY, получено {:?}", other),
+    }
+}
+
+#[test]
+fn missing_transout_is_rejected() {
+    let xml = r#"<?xml version="1.0"?><structure>
+        <type>mealy</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+            <transition><from>0</from><to>0</to><read>a</read></transition>
+        </automaton>
+    </structure>"#;
+
+    let err = parse_jff(xml).unwrap_err();
+    assert!(err.contains("Выходной символ"));
+}
+
+#[test]
+fn empty_transout_is_rejected() {
+    let xml = r#"<?xml version="1.0"?><structure>
+        <type>mealy</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+            <transition><from>0</from><to>0</to><read>a</read><transout></transout></transition>
+        </automaton>
+    </structure>"#;
+
+    assert!(parse_jff(xml).is_err());
+}
+
+#[test]
+fn empty_read_is_rejected() {
+    let xml = r#"<?xml version="1.0"?><structure>
+        <type>mealy</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+            <transition><from>0</from><to>0</to><read></read><transout>1</transout></transition>
+        </automaton>
+    </structure>"#;
+
+    let err = parse_jff(xml).unwrap_err();
+    assert!(err.contains("Входной символ"));
+}
+
+#[test]
+fn multi_char_input_and_output_are_rejected() {
+    let multi_input = r#"<?xml version="1.0"?><structure>
+        <type>mealy</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+            <transition><from>0</from><to>0</to><read>ab</read><transout>1</transout></transition>
+        </automaton>
+    </structure>"#;
+    assert!(parse_jff(multi_input).is_err());
+
+    let multi_output = r#"<?xml version="1.0"?><structure>
+        <type>mealy</type>
+        <automaton>
+            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
+            <transition><from>0</from><to>0</to><read>a</read><transout>01</transout></transition>
+        </automaton>
+    </structure>"#;
+    assert!(parse_jff(multi_output).is_err());
 }
 
 #[test]

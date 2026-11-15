@@ -5,11 +5,11 @@ use std::path::Path;
 use rand::Rng;
 use tauri::{State, http::StatusCode};
 
+use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
     AutomatonData, AutomatonStore, AutomatonType, LoadResult, LoadedFile, StateData, StatusResult,
     TransitionData,
 };
-use crate::fa::jff::parse_jff;
 
 pub const MAX_ID: i32 = 10_000_000;
 
@@ -27,15 +27,23 @@ pub fn generate_id(used: &HashSet<i32>) -> i32 {
 #[tauri::command]
 pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> LoadResult {
     match load_via_file_with(&state, &path, "Автомат", |content| {
-        let parsed = parse_jff(content)?;
+        let (is_automaton, automaton_type, states, transitions) = match parse_jff(content)? {
+            JffParsed::Automaton(automaton_type, automaton) => (
+                true,
+                automaton_type,
+                automaton.states,
+                automaton.transitions,
+            ),
+            JffParsed::Grammar(_) => (false, AutomatonType::FA, Vec::new(), Vec::new()),
+        };
         Ok((
-            parsed.isAutomaton,
+            is_automaton,
             AutomatonData {
                 id: 0,
                 name: String::new(),
-                automatonType: crate::core::types::AutomatonType::FA,
-                states: parsed.states,
-                transitions: parsed.transitions,
+                automatonType: automaton_type,
+                states,
+                transitions,
             },
         ))
     }) {

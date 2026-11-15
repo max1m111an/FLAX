@@ -1,14 +1,24 @@
 //! Общая логика JFLAP XML (`.jff`): XML-утилиты, каркас документа,
-//! разбор и запись состояний и концов переходов.
+//! разбор и запись состояний и концов переходов, а также диспетчер
+//! `parse_jff` по элементу `<type>`.
 //!
 //! Здесь живёт только то, что одинаково для всех типов автоматов.
-//! Специфика формата конкретного типа (допустимый `<type>`, символы
-//! переходов, эпсилон, алфавиты) — в модуле этого типа, например
-//! `crate::fa::jff`.
+//! Специфика формата конкретного типа (символы переходов, эпсилон,
+//! алфавиты) — в модуле этого типа, например `crate::fa::jff`.
+
+pub mod types;
+
+#[cfg(test)]
+mod tests;
+
+use std::collections::HashSet;
 
 use roxmltree::Node;
 
-use crate::core::types::StateData;
+use crate::core::api::generate_id;
+use crate::core::types::{AutomatonType, StateData, TransitionData};
+
+pub use types::{JffAutomaton, JffGrammar, JffParsed};
 
 pub fn escape(s: &str) -> String {
     s.replace('&', "&amp;")
@@ -61,6 +71,32 @@ pub fn document_footer() -> &'static str {
 /// Сырое содержимое `<type>` (пустая строка, если элемент отсутствует).
 pub fn read_type(root: Node) -> String {
     element_text(root, "type").unwrap_or_default()
+}
+
+/// Разбирает JFLAP-документ и решает по `<type>`, автомат это или другой
+/// формальный язык.
+///
+/// Тип `fa` разбирается модулем `crate::fa::jff`, `mealy` — модулем
+/// `crate::mealy::jff`. Для всех остальных типов возвращается заглушка
+/// [`JffParsed::Grammar`].
+pub fn parse_jff(xml: &str) -> Result<JffParsed, String> {
+    let doc = roxmltree::Document::parse(xml).map_err(|e| format!("Некорректный XML: {}", e))?;
+    let root = doc.root_element();
+    if root.tag_name().name() != "structure" {
+        return Err("Ожидался корневой элемент <structure>".to_string());
+    }
+
+    match read_type(root).as_str() {
+        "fa" => Ok(JffParsed::Automaton(
+            AutomatonType::FA,
+            crate::fa::jff::parse_automaton(root)?,
+        )),
+        "mealy" => Ok(JffParsed::Automaton(
+            AutomatonType::MEALY,
+            crate::mealy::jff::parse_automaton(root)?,
+        )),
+        _ => Ok(JffParsed::Grammar(JffGrammar {})),
+    }
 }
 
 /// Первый прямой потомок `<automaton>`.
@@ -200,4 +236,54 @@ pub fn transition_read(node: Node) -> String {
     element_text(node, "read")
         .map(|t| t.trim().to_string())
         .unwrap_or_default()
+}
+
+/// Обрезанный текст `<transout>`; отсутствие элемента — пустая строка.
+pub fn transition_output(node: Node) -> String {
+    element_text(node, "transout")
+        .map(|t| t.trim().to_string())
+        .unwrap_or_default()
+}
+
+/// Единственный символ `text`. `what` описывает поле в сообщении об ошибке.
+pub fn one_char(text: &str, what: &str) -> Result<char, String> {
+    let mut chars = text.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Ok(c),
+        _ => Err(format!("{} '{}' должен быть одним символом", what, text)),
+    }
+}
+
+/// Обходит `<transition>`-потомков `<automaton>` и собирает
+/// [`TransitionData`]: `<from>`/`<to>` и идентификаторы общие, а символ и
+/// необязательный выход определяет замыкание `read`, получающее узел перехода
+/// и обрезанный текст `<read>`.
+pub fn parse_transitions<F>(automaton: Node, mut read: F) -> Result<Vec<TransitionData>, String>
+where
+    F: FnMut(Node, &str) -> Result<(char, Option<char>), String>,
+{
+    let mut used: HashSet<i32> = HashSet::new();
+    let mut transitions: Vec<TransitionData> = Vec::new();
+
+    for child in automaton.children().filter(|n| n.is_element()) {
+        if child.tag_name().name() != "transition" {
+            continue;
+        }
+
+        let (from, to) = parse_transition_endpoints(child)?;
+        let text = transition_read(child);
+        let (symbol, output) = read(child, &text)?;
+
+        let id = generate_id(&used);
+        used.insert(id);
+        transitions.push(TransitionData {
+            id,
+            from,
+            to,
+            symbol,
+            output,
+        });
+    }
+
+    Ok(transitions)
 }

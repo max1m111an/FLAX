@@ -43,7 +43,7 @@ pub struct TransitionData {
 pub enum AutomatonType {
     FA,
     MEALY,
-    //MOORE
+    //MOORE,
     //PDA,
     //TURING,
 }
