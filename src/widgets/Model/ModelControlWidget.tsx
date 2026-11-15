@@ -12,44 +12,15 @@ import styles from "../../scenes/ModelScene.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { save } from "@tauri-apps/plugin-dialog";
 import { isDirty } from "@/services/dirtyState.ts";
-import { basename } from "@tauri-apps/api/path";
 
 
 export default function ModelControlWidget() {
     const currentTab = useCurrentTab();
     const { updateTab, saveTab } = useTabs();
     const { addFile } = useRecentFiles();
-    if (!currentTab || currentTab.type === "SETTINGS") return null;
+    if ( currentTab.type === "SETTINGS") return null;
 
-    const fetchSave = async (): Promise<boolean> => {
-        try {
-            const filePath = await save({
-                defaultPath: `${currentTab?.title}.jff`,
-                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
-            });
-
-            if (!filePath || currentTab === undefined) return false;
-
-            const fileName = await basename(filePath);
-            const nameWithoutExt = fileName.replace(/\.jff$/i, "");
-
-            saveTab(currentTab);
-
-            updateTab({
-                ...currentTab,
-                title: nameWithoutExt,
-                isSaved: true,
-                savedPath: filePath,
-            });
-            addFile(filePath);
-            return true;
-        } catch (error) {
-            console.error("Ошибка при сохранении файла:", error);
-            return false;
-        }
-    };
     const handleSaveJFF = async () => {
         if (currentTab?.isSaved && !isDirty(currentTab.id)) {
             return;
@@ -60,10 +31,10 @@ export default function ModelControlWidget() {
             addFile(filePath);
             return;
         }
-        fetchSave();
+        saveTab(currentTab);
     };
     const handleSaveAsJFF = async () => {
-        fetchSave();
+        saveTab(currentTab, true);
     };
     return (
         <div className={ styles.modelLeftControlWrapper }>

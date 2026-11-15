@@ -11,6 +11,7 @@ import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { buildTab } from "@/utils/tabFactory.ts";
 import { models } from "@/data/Models.ts";
 import { jffService } from "@/services/jffService.ts";
+import { markDirty } from "@/services/dirtyState.ts";
 
 
 interface TabsContextProps {
@@ -20,7 +21,7 @@ interface TabsContextProps {
     removeTab: (tab: AppTab) => void;
     updateTab: (updatedTab: AppTab) => void;
     loadTab: (path: string) => void;
-    saveTab: (currentTab: AppTab) => Promise<boolean>;
+    saveTab: (currentTab: AppTab, isSaveAs?: boolean) => Promise<boolean>;
 }
 
 const TabsContext = createContext<TabsContextProps | undefined>(undefined);
@@ -36,7 +37,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         try {
             const service = modelServiceRegistry.getService(model.type);
 
-            const response = await service.createAutomaton("Без названия*");
+            const response = await service.createAutomaton("Без названия");
 
             const newTab = buildTab(response.automaton, model.icon, model.type);
 
@@ -85,17 +86,20 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         setTabs((prev) => prev.map((t) => t.id === updatedTab.id ? updatedTab : t));
     };
 
-    const saveTab = async (currentTab: AppTab): Promise<boolean> => {
+    const saveTab = async (currentTab: AppTab, isSaveAs: boolean = false): Promise<boolean> => {
         if (currentTab.type === "SETTINGS") return false;
 
         const service = modelServiceRegistry.getService(currentTab.type);
+        let filePath = currentTab.savedPath;
         try {
-            const filePath = await save({
-                defaultPath: `${currentTab?.title}.jff`,
-                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
-            });
+            if (isSaveAs || filePath === null) {
+                filePath = await save({
+                    defaultPath: `${currentTab?.title}.jff`,
+                    filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
+                });
+            }
 
-            if (!filePath || currentTab === undefined) return false;
+            if (!filePath) return false;
 
             const fileName = await basename(filePath);
             const nameWithoutExt = fileName.replace(/\.jff$/i, "");
@@ -110,6 +114,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             });
 
             addFile(filePath);
+            markDirty(currentTab.id, false);
 
             return true;
 
@@ -197,8 +202,10 @@ export const useTabs = () => {
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
-export const useCurrentTab = (): AppTab | undefined => {
+export const useCurrentTab = (): AppTab => {
     const { tabs } = useTabs();
     const { id } = useParams();
-    return tabs.find((tab) => String(tab.id) === id);
+    const currentTab = tabs.find((tab) => String(tab.id) === id);
+
+    return currentTab ?? tabs[0];
 };

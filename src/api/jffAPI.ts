@@ -14,7 +14,7 @@ export const jffAPI = {
     },
     async saveJFF  (params: saveJFFRequest): Promise<saveJFFResponse> {
         try {
-            const response = await invoke<saveJFFResponse>("fa_save", params);
+            const response = await invoke<saveJFFResponse>("save_file", params);
             return response;
         } catch (error) {
             console.error("Ошибка при вызове fa_save:", error);
