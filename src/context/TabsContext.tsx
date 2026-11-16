@@ -67,7 +67,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
 
     const loadTab = async (path: string) => {
         const response = await jffService.loadJff({ path });
-        const currentModel = models.find((model) => model.type === "FA");
+        const currentModel = models.find((model) => model.type === response.data.automatonType);
 
         if (!response.data) {
             throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
@@ -75,10 +75,10 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         if (!currentModel) {
             throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
         }
-        const newTab = buildTab(response.data, currentModel?.icon, "FA", true, path);
+        const newTab = buildTab(response.data, currentModel?.icon, currentModel.type, true, path);
         navigate(`/models/${newTab.id}`);
 
-        addFile(path, currentModel.icon);
+        addFile(path, currentModel.type);
         setTabs([ ...tabs, newTab ]);
 
     };
@@ -115,7 +115,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 savedPath: filePath,
             });
 
-            addFile(filePath, currentTab.icon);
+            addFile(filePath, currentTab.type);
             markDirty(currentTab.id, false);
 
             return true;

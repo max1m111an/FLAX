@@ -1,8 +1,9 @@
-import { createContext, useContext, ReactNode, useState, ComponentType, SVGProps } from "react";
+import { createContext, useContext, ReactNode, useState } from "react";
+import { AutomatonType } from "@/types/Payloads.ts";
 
 interface RecentFilesContextProps {
     files: RecentFile[];
-    addFile: (path: string, icon: ComponentType<SVGProps<SVGSVGElement>>) => void;
+    addFile: (path: string, icon: AutomatonType) => void;
     clearFiles: () => void;
     removeFile: (path: string) => void;
 }
@@ -11,7 +12,7 @@ export interface RecentFile {
     path: string;
     name: string;
     timestamp: number;
-    icon: ComponentType<SVGProps<SVGSVGElement>>;
+    icon: AutomatonType;
 }
 
 const STORAGE_KEY = "recent-files";
@@ -33,7 +34,7 @@ export const RecentFilesProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     };
 
-    const addFile = (path: string, icon: ComponentType<SVGProps<SVGSVGElement>>) => {
+    const addFile = (path: string, icon: AutomatonType) => {
         const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
         const updated = [
             {

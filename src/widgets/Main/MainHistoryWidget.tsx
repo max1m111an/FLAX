@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import History from "@/assets/svg/History.svg?react";
+import FileDown from "@/assets/svg/CircleAlert.svg?react";
 import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import { useRecentFiles, RecentFile } from "@/context/RecentFilesContext.tsx";
 import { useTabs } from "@/context/TabsContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
 import { useNavigate } from "react-router-dom";
+import { models } from "@/data/Models.ts";
 
 const pluralHours = (n: number): string => {
     const mod10 = n % 10;
@@ -133,21 +135,26 @@ export default function MainHistoryWidget() {
                 <p className={ styles.cleanText } onClick={ clearFiles }>Очистить список</p>
             </div>
             <div className={ styles.recentCardsWrapper }>
-                {files.map(({ path, name, timestamp, icon: Icon }) => (
-                    <div
-                        key={ path }
-                        className={ styles.recentCard }
-                        onClick={ () => openRecent(path) }
-                    >
-                        {Icon && <Icon className={ styles.recentIcon } />}
+                {files.map((file) => {
+                    const model = models.find((m) => m.type === file.icon);
+                    const Icon = model ? model.icon : FileDown;
 
-                        <div className={ styles.recentNameTimeCardWrapper }>
-                            <p className={ styles.recentName }>{displayNames.get(path) ?? name}</p>
-                            <p className={ styles.recentTime }>{formatTime(timestamp, now)}</p>
+                    return (
+                        <div
+                            key={ file.path }
+                            className={ styles.recentCard }
+                            onClick={ () => openRecent(file.path) }
+                        >
+                            <Icon className={ styles.recentIcon } />
+
+                            <div className={ styles.recentNameTimeCardWrapper }>
+                                <p className={ styles.recentName }>{displayNames.get(file.path) ?? file.name}</p>
+                                <p className={ styles.recentTime }>{formatTime(file.timestamp, now)}</p>
+                            </div>
+                            <ArrowRight className={ styles.recentArrow } />
                         </div>
-                        <ArrowRight className={ styles.recentArrow } />
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </>
     );
