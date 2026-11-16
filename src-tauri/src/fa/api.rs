@@ -49,7 +49,7 @@ pub fn fa_add_state(
         x: x.unwrap_or(100.0),
         y: y.unwrap_or(200.0),
         isInitial: is_initial.unwrap_or(false),
-        isFinal: Some(is_final.unwrap_or(false)),
+        isFinal: is_final,
     });
 
     let created = entry.states.last().unwrap().clone();

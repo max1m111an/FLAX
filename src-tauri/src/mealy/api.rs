@@ -270,7 +270,7 @@ pub fn mealy_add_state(
     is_initial: Option<bool>,
     is_final: Option<bool>,
 ) -> StateResult {
-    crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, is_final)
+    crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, None)
 }
 
 /// Updates a state of a mealy machine. Delegates to `fa_update_state`.
@@ -294,7 +294,7 @@ pub fn mealy_update_state(
         x,
         y,
         is_initial,
-        is_final,
+        None,
     )
 }
 

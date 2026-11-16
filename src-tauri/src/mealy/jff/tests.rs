@@ -16,7 +16,7 @@ fn mealy_data() -> AutomatonData {
                 x: 100.0,
                 y: 200.0,
                 isInitial: true,
-                isFinal: Some(false),
+                isFinal: None,
             },
             StateData {
                 id: 1,
@@ -24,7 +24,7 @@ fn mealy_data() -> AutomatonData {
                 x: 300.0,
                 y: 200.0,
                 isInitial: false,
-                isFinal: Some(false),
+                isFinal: None,
             },
         ],
         transitions: vec![
