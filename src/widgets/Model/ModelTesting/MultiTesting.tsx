@@ -14,7 +14,8 @@ import Reset from "@/assets/svg/Reset.svg?react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
-import { lineTest } from "@/types/api/fa.ts";
+import { lineTest } from "@/types/Testing.ts";
+import { TABLE_CONFIGS } from "@/widgets/Model/ModelTesting/multiTestingConfig.tsx";
 
 export default function MultiTesting() {
     const currentTab = useCurrentTab();
@@ -22,21 +23,20 @@ export default function MultiTesting() {
     const [ isPlay, setIsPlay ] = useState(false);
     const [ traces, setTraces ] = useState<lineTest[]>([]);
     const [ isLoading, setIsLoading ] = useState<boolean>(false);
+
+    if (currentTab?.type === "SETTINGS" || !currentTab) return null;
+
     const setTestInput = (value: string) => {
-        if (currentTab) {
-            updateTab({ ...currentTab, testInput: value });
-        }
+        updateTab({ ...currentTab, testInput: value });
     };
-    if (!currentTab || currentTab.type === "SETTINGS") return null;
-    const testLine = currentTab?.testInput ?? "";
+
+    const testLine = currentTab.testInput ?? "";
     const service = modelServiceRegistry.getService(currentTab.type);
+    const tableConfig = TABLE_CONFIGS[currentTab.type] || TABLE_CONFIGS.FA;
 
     const handleOpenStep = async (line: string) => {
         try {
-            const response = await service.runStr(
-                currentTab.id,
-                line,
-            );
+            const response = await service.runStr(currentTab.id, line);
             updateTab({
                 ...currentTab,
                 testMode: "solo",
@@ -51,17 +51,17 @@ export default function MultiTesting() {
     const handleMultiRun = async () => {
         setIsLoading(true);
         try {
-            const response = await service.runMultipleStrings(currentTab.id, testLine?.split(/\r?\n/) || []);
-            setTraces(response.traces);
+            const response = await service.runMultipleStr(currentTab.id, testLine?.split(/\r?\n/) || []);
+            setTraces(response.traces || (response as any).results);
             setIsPlay(true);
         } catch (error) {
             console.error("Ошибка при запуске мульти-теста:", error);
         }
         setIsLoading(false);
     };
-    const handleReset = () => {
-        setIsPlay(false);
-    };
+
+    const handleReset = () => setIsPlay(false);
+
     const handleGenerate = async () => {
         try {
             const response = await service.generateTestInputs(currentTab.id);
@@ -70,25 +70,18 @@ export default function MultiTesting() {
             console.error("Ошибка при генерации тестовых входов:", error);
         }
     };
+
     const handleExport = async () => {
         try {
             const filePath = await save({
                 title: "Экспорт тестовых строк",
                 defaultPath: "test_inputs.txt",
-                filters: [
-                    {
-                        name: "Текстовые файлы",
-                        extensions: [ "txt" ],
-                    },
-                ],
+                filters: [ { name: "Текстовые файлы", extensions: [ "txt" ] } ],
             });
 
-            if (!filePath || typeof filePath !== "string") {
-                return;
-            }
+            if (!filePath || typeof filePath !== "string") return;
 
-            const content = testLine || "";
-            await writeTextFile(filePath, content);
+            await writeTextFile(filePath, testLine || "");
         } catch (error) {
             console.error("Ошибка при экспорте:", error);
         }
@@ -100,17 +93,10 @@ export default function MultiTesting() {
                 multiple: false,
                 directory: false,
                 title: "Импорт тестовых строк",
-                filters: [
-                    {
-                        name: "Текстовые файлы",
-                        extensions: [ "txt" ],
-                    },
-                ],
+                filters: [ { name: "Текстовые файлы", extensions: [ "txt" ] } ],
             });
 
-            if (!filePath || typeof filePath !== "string") {
-                return;
-            }
+            if (!filePath || typeof filePath !== "string") return;
 
             const content = await readTextFile(filePath);
             setTestInput(content);
@@ -118,6 +104,7 @@ export default function MultiTesting() {
             console.error("Ошибка при импорте:", error);
         }
     };
+
     return (
         <>
             <Typography variant="pretitle">Входные строки</Typography>
@@ -125,77 +112,66 @@ export default function MultiTesting() {
                 rows={ 5 }
                 value={ testLine }
                 disabled={ isPlay }
-                onChange={ (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                    setTestInput(e.target.value);
-                } }
+                onChange={ (e: React.ChangeEvent<HTMLTextAreaElement>) => setTestInput(e.target.value) }
             />
-            {
-                !isPlay ? (
-                    <>
-                        <Button variant="main" onClick={ handleMultiRun }>
-                            <Play />
-                            Запустить все
-                        </Button>
-                        <div className={ styles.playExportWrapper }>
-                            <Button variant="control" fullWidth onClick={ handleExport }>
-                                <FileDown />
-                                Экспорт
-                            </Button>
-                            <Button variant="control" fullWidth onClick={ handleImport }>
-                                <Uploud />
-                                Импорт
-                            </Button>
-                        </div>
-                        <Button variant="control" fullWidth onClick={ handleGenerate }>
-                            <ListVideo />
-                            Сгенерировать
-                        </Button>
-                    </>
-                ) : (
-                    <Button variant="control" fullWidth onClick={ handleReset }>
-                        <Reset />
-                        Сброс
+            { !isPlay ? (
+                <>
+                    <Button variant="main" onClick={ handleMultiRun }>
+                        <Play />
+                        Запустить все
                     </Button>
-                )
-            }
-            {
-                isLoading && (
-                    (<Typography variant="label">Прогоняем...</Typography>)
-                )
-            }
-            {
-                isPlay && (
-                    <div>
-                        <table className={ styles.multiTable }>
-                            <thead className={ styles.tableHead }>
-                                <tr>
-                                    <th className={ styles.tableHeaderCell }>Строка</th>
-                                    <th className={ styles.tableHeaderCell }>Статус</th>
-                                    <th className={ clsx(styles.tableHeaderCell, styles.stepHeaderCell) }><Steps /></th>
-                                </tr>
-                            </thead>
-                            <tbody className={ styles.tableBody }>
-                                {traces.map((trace) => (
-                                    <tr className={ clsx(styles.tableRow, trace.isFinal ? styles.rowAccepted : styles.rowRejected) }>
-                                        <td className={ styles.tableCell }>
-                                            <div className={ styles.charCell }>
-                                                {trace.line.split("").map((symbol, index) => (
-                                                    <span key={ index }
-                                                        className={ clsx(styles.resultChar, index < trace.correctSymbols ? styles.charSuccess : styles.charError) }>{symbol}</span>
-                                                ))}
-                                            </div>
-                                        </td>
-                                        <td className={ trace.isFinal ? styles.statusAccepted : styles.statusRejected }>{trace.isFinal ? "Принята" : "Отклонена"}</td>
-                                        <td className={ styles.stepCell }>
-                                            <button className={ styles.openSoloBtn } onClick={ () => handleOpenStep(trace.line) }><Steps /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className={ styles.playExportWrapper }>
+                        <Button variant="control" fullWidth onClick={ handleExport }>
+                            <FileDown />
+                            Экспорт
+                        </Button>
+                        <Button variant="control" fullWidth onClick={ handleImport }>
+                            <Uploud />
+                            Импорт
+                        </Button>
                     </div>
-                )
-            }
+                    <Button variant="control" fullWidth onClick={ handleGenerate }>
+                        <ListVideo />
+                        Сгенерировать
+                    </Button>
+                </>
+            ) : (
+                <Button variant="control" fullWidth onClick={ handleReset }>
+                    <Reset />
+                    Сброс
+                </Button>
+            )}
+
+            { isLoading && <Typography variant="label">Прогоняем...</Typography> }
+
+            { isPlay && (
+                <div>
+                    <table className={ styles.multiTable }>
+                        <thead className={ styles.tableHead }>
+                            <tr>
+                                <th className={ styles.tableHeaderCell }>Строка</th>
+                                <th className={ styles.tableHeaderCell }>{tableConfig.header}</th>
+                                <th className={ clsx(styles.tableHeaderCell, styles.stepHeaderCell) }><Steps /></th>
+                            </tr>
+                        </thead>
+                        <tbody className={ styles.tableBody }>
+                            {traces.map((trace, idx) => (
+                                <tr key={ idx } className={ clsx(styles.tableRow, tableConfig.getRowClass(trace)) }>
+                                    <td className={ styles.tableCell }>
+                                        {tableConfig.renderInputCell(trace)}
+                                    </td>
+                                    {tableConfig.renderResultCell(trace)}
+                                    <td className={ styles.stepCell }>
+                                        <button className={ styles.openSoloBtn } onClick={ () => handleOpenStep(trace.line) }>
+                                            <Steps />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
         </>
     );
 }

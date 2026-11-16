@@ -4,7 +4,6 @@ import { StatePayload } from "@/types/Payloads.ts";
 import { faApi } from "@/api/faAPI.ts";
 import { AutomatonModel, StateModel, TransitionModel } from "@/types/Automaton.ts";
 import { multiRunStrFAResponse, runStrFAResponse } from "@/types/api/fa.ts";
-import { jffAPI } from "@/api/jffAPI.ts";
 
 
 export const faService: IAutomatonService<
@@ -22,14 +21,6 @@ export const faService: IAutomatonService<
     },
     deleteAutomaton: async (id: number) => {
         await faApi.deleteAutomaton(id);
-    },
-
-    saveAutomaton: async (automatonId: number, path: string) => {
-        await jffAPI.saveJFF({ automatonId, path });
-    },
-
-    loadAutomaton: async (path: string) => {
-        return await jffAPI.loadJFF({ path });
     },
 
     addState: async (automatonId: number, payload: StatePayload) => {
@@ -96,7 +87,7 @@ export const faService: IAutomatonService<
     runStr: async (automatonId: number, input: string) => {
         return await faApi.runStr({ automatonId, input });
     },
-    runMultipleStrings: async (automatonId: number, inputs: string[]) => {
+    runMultipleStr: async (automatonId: number, inputs: string[]) => {
         return await faApi.multiRunStr({ automatonId, inputs });
     },
     generateTestInputs: async (automatonId: number) => {

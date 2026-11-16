@@ -28,7 +28,7 @@ export default function ModelControlWidget() {
         const filePath = currentTab?.savedPath;
         if (filePath) {
             saveTab(currentTab);
-            addFile(filePath);
+            addFile(filePath, currentTab.icon);
             return;
         }
         saveTab(currentTab);

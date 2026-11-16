@@ -2,7 +2,6 @@ import FolderOpen from "@/assets/svg/FolderOpen.svg?react";
 import Settings from "@/assets/svg/Settings.svg?react";
 import Documentation from "@/assets/svg/Documentation.svg?react";
 import { useTabs } from "@/context/TabsContext.tsx";
-import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
 import { NavLink } from "react-router-dom";
 import { ROUTES } from "@/configs/RoutesConst.ts";
@@ -11,7 +10,6 @@ import { open } from "@tauri-apps/plugin-dialog";
 
 export default function MainControlWidget() {
     const { loadTab, addUtilTab } = useTabs();
-    const { addFile } = useRecentFiles();
     const isDebugEnabled = import.meta.env.VITE_ENABLE_DEBUG === "true";
 
     const selectFile = async () => {
@@ -32,8 +30,6 @@ export default function MainControlWidget() {
             }
 
             loadTab(filePath);
-            addFile(filePath);
-
         } catch (error) {
             console.error("Ошибка при выборе файла:", error);
         }

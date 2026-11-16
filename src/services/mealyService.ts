@@ -89,7 +89,7 @@ export const mealyService: IAutomatonService<
             return { transition: newTransitions };
         },
 
-        async removeTransition (automatonId: number, transitionId: number) {
+        async removeTransition(automatonId: number, transitionId: number) {
             await mealyApi.removeTransit({ automatonId, transitionId });
             markDirty(automatonId, true);
         },
@@ -105,6 +105,13 @@ export const mealyService: IAutomatonService<
                 } ],
             };
         },
-
+        async runMultipleStr (automatonId: number, inputs: string[]) {
+            const response = await mealyApi.multiRunStr({ automatonId, inputs });
+            return {
+                status: response.status,
+                message: response.message,
+                traces: response.results,
+            };
+        },
     };
 

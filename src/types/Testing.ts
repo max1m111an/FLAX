@@ -11,6 +11,19 @@ export type RunStepMealy = {
     output: string;
 }
 
+export type lineTestFA = {
+    line: string;
+    isFinal: boolean;
+    correctSymbols: number;
+}
+export type lineTestMealy= {
+    line: string;
+    output: string;
+    isComplete: boolean;
+}
+
+export type lineTest = lineTestFA | lineTestMealy
+
 export type RunStep = RunStepFA | RunStepMealy
 
 export type Trace<T extends RunStep = RunStep> = {

@@ -5,7 +5,7 @@ import {
     addTransitMealyRequest,
     addTransitMealyResponse,
     createMealyResponse,
-    deleteMealyResponse,
+    deleteMealyResponse, multiRunStrMealyRequest, multiRunStrMealyResponse,
     removeStateMealyRequest,
     removeStateMealyResponse,
     removeTransitMealyRequest,
@@ -91,6 +91,15 @@ export const mealyApi = {
             return await invoke<runStrMealyResponse>("mealy_run_str", params);
         } catch (error) {
             console.error("Ошибка при вызове mealy_run_str:", error);
+            throw error;
+        }
+    },
+    async multiRunStr (params: multiRunStrMealyRequest): Promise<multiRunStrMealyResponse> {
+        try {
+            const response = await invoke<multiRunStrMealyResponse>("mealy_multi_run", params);
+            return response;
+        } catch (error) {
+            console.error("Ошибка при вызове mealy_multi_run:", error);
             throw error;
         }
     },

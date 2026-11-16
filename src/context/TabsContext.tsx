@@ -75,11 +75,12 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
         if (!currentModel) {
             throw new Error("Ошибка загрузки: бэкенд не вернул данные автомата");
         }
-
         const newTab = buildTab(response.data, currentModel?.icon, "FA", true, path);
-
-        setTabs([ ...tabs, newTab ]);
         navigate(`/models/${newTab.id}`);
+
+        addFile(path, currentModel.icon);
+        setTabs([ ...tabs, newTab ]);
+
     };
 
     const updateTab = (updatedTab: AppTab) => {
@@ -89,7 +90,6 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const saveTab = async (currentTab: AppTab, isSaveAs: boolean = false): Promise<boolean> => {
         if (currentTab.type === "SETTINGS") return false;
 
-        const service = modelServiceRegistry.getService(currentTab.type);
         let filePath = currentTab.savedPath;
         try {
             if (isSaveAs || filePath === null) {
@@ -103,8 +103,10 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
 
             const fileName = await basename(filePath);
             const nameWithoutExt = fileName.replace(/\.jff$/i, "");
-
-            await service.saveAutomaton(currentTab.id, filePath);
+            await jffService.saveJff({
+                automatonId: currentTab.id,
+                path: filePath,
+            });
 
             updateTab({
                 ...currentTab,
@@ -113,7 +115,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
                 savedPath: filePath,
             });
 
-            addFile(filePath);
+            addFile(filePath, currentTab.icon);
             markDirty(currentTab.id, false);
 
             return true;

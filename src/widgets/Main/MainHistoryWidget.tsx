@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import History from "@/assets/svg/History.svg?react";
 import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
-import CircleDot from "@/assets/svg/CircleDot.svg?react";
 import { useRecentFiles, RecentFile } from "@/context/RecentFilesContext.tsx";
 import { useTabs } from "@/context/TabsContext.tsx";
 import styles from "../../scenes/MainScene.module.scss";
@@ -98,8 +97,8 @@ const getDisplayNames = (files: RecentFile[]): Map<string, string> => {
     return display;
 };
 
-export default function MainHistoryWidget () {
-    const { files, addFile, clearFiles } = useRecentFiles();
+export default function MainHistoryWidget() {
+    const { files, clearFiles } = useRecentFiles();
     const { loadTab, tabs } = useTabs();
     const [ now, setNow ] = useState(() => Date.now());
     const navigate = useNavigate();
@@ -116,17 +115,12 @@ export default function MainHistoryWidget () {
     const displayNames = getDisplayNames(files);
 
     const openRecent = async (path: string) => {
-        if (tabs.find((tab) => tab.savedPath === path)) {
-            const existingTab = tabs.find((tab) => tab.savedPath === path);
-            if (existingTab) {
-                navigate(`/models/${existingTab.id}`);
-                return;
-            }
+        const existingTab = tabs.find((tab) => tab.savedPath === path);
+        if (existingTab) {
+            navigate(`/models/${existingTab.id}`);
+            return;
         }
-
         loadTab(path);
-        addFile(path);
-
     };
 
     return (
@@ -139,12 +133,17 @@ export default function MainHistoryWidget () {
                 <p className={ styles.cleanText } onClick={ clearFiles }>Очистить список</p>
             </div>
             <div className={ styles.recentCardsWrapper }>
-                {files.map((file) => (
-                    <div key={ file.path } className={ styles.recentCard } onClick={ () => openRecent(file.path) }>
-                        <CircleDot className={ styles.recentIcon } />
+                {files.map(({ path, name, timestamp, icon: Icon }) => (
+                    <div
+                        key={ path }
+                        className={ styles.recentCard }
+                        onClick={ () => openRecent(path) }
+                    >
+                        {Icon && <Icon className={ styles.recentIcon } />}
+
                         <div className={ styles.recentNameTimeCardWrapper }>
-                            <p className={ styles.recentName }>{displayNames.get(file.path) ?? file.name}</p>
-                            <p className={ styles.recentTime }>{formatTime(file.timestamp, now)}</p>
+                            <p className={ styles.recentName }>{displayNames.get(path) ?? name}</p>
+                            <p className={ styles.recentTime }>{formatTime(timestamp, now)}</p>
                         </div>
                         <ArrowRight className={ styles.recentArrow } />
                     </div>

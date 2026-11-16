@@ -11,9 +11,6 @@ export interface IAutomatonService<
     createAutomaton(name: string): Promise<ApiResponse<{ automaton: TAutomaton }>>;
     deleteAutomaton(id: number): Promise<void>;
 
-    saveAutomaton(automatonId: number, path: string): Promise<void>;
-    loadAutomaton(path: string): Promise<ApiResponse<{ data: TAutomaton, isAutomaton: boolean }>>;
-
     addState(automatonId: number, payload: TStatePayload): Promise<ApiResponse<{ state: TState }>>;
     updateState(automatonId: number, stateId: number, payload: Partial<TStatePayload>): Promise<ApiResponse<{ state: TState }>>;
     removeState(automatonId: number, stateId: number): Promise<void>;
@@ -22,6 +19,6 @@ export interface IAutomatonService<
     removeTransition(automatonId: number, transitionId: number): Promise<void>;
 
     runStr(automatonId: number, input: string): Promise<TRunResponse>;
-    runMultipleStrings(automatonId: number, inputs: string[]): Promise<TMultiRunResponse>;
+    runMultipleStr(automatonId: number, inputs: string[]): Promise<TMultiRunResponse>;
     generateTestInputs(automatonId: number): Promise<ApiResponse<{ inputs: string[] }>>;
 }
