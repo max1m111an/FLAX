@@ -985,7 +985,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             x: 0.0,
             y: 0.0,
             isInitial: true,
-            isFinal: false,
+            isFinal: Some(false),
         },
         StateData {
             id: 1,
@@ -993,7 +993,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             x: 0.0,
             y: 0.0,
             isInitial: false,
-            isFinal: true,
+            isFinal: Some(true),
         },
     ];
     let transitions = vec![
@@ -1256,7 +1256,7 @@ fn multi_run_state(id: i32, is_initial: bool, is_final: bool) -> StateData {
         x: 0.0,
         y: 0.0,
         isInitial: is_initial,
-        isFinal: is_final,
+        isFinal: Some(is_final),
     }
 }
 

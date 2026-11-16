@@ -3,10 +3,20 @@
 use std::fs;
 use std::path::Path;
 
+use crate::core::jff::{JffAutomaton, JffParsed, parse_jff};
 use crate::core::types::{
-    AutomatonData, StateData, TransitionData, alphabet_from_transitions,
+    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions,
 };
-use crate::fa::jff::{is_deterministic, parse_jff, to_jff};
+use crate::fa::jff::{is_deterministic, to_jff};
+
+/// Unwraps the FA variant; FA tests should never receive another type or the
+/// grammar mock.
+fn parse_fa(xml: &str) -> JffAutomaton {
+    match parse_jff(xml).unwrap() {
+        JffParsed::Automaton(AutomatonType::FA, automaton) => automaton,
+        other => panic!("ожидался автомат FA, получено {:?}", other),
+    }
+}
 
 const EVEN_A_JFF: &str = r#"<?xml version="1.0" encoding="UTF-8" standalone="no"?><!--Created with JFLAP 7.1.--><structure>&#13;
 	<type>fa</type>&#13;
@@ -58,7 +68,7 @@ fn even_a_data() -> AutomatonData {
                 x: 154.0,
                 y: 136.0,
                 isInitial: true,
-                isFinal: true,
+                isFinal: Some(true),
             },
             StateData {
                 id: 1,
@@ -66,7 +76,7 @@ fn even_a_data() -> AutomatonData {
                 x: 308.0,
                 y: 147.0,
                 isInitial: false,
-                isFinal: false,
+                isFinal: Some(false),
             },
         ],
         transitions: vec![
@@ -228,7 +238,7 @@ fn writes_example_files_to_target() {
     fs::write(out_dir.join("fa_with_epsilon.jff"), fa).unwrap();
 
     let content = fs::read_to_string(out_dir.join("even_a_dfa.jff")).unwrap();
-    let parsed = parse_jff(&content).unwrap();
+    let parsed = parse_fa(&content);
     assert_eq!(parsed.states.len(), 2);
     assert!(parsed.states[0].isInitial);
     assert_eq!(parsed.transitions.len(), 4);
@@ -237,19 +247,18 @@ fn writes_example_files_to_target() {
 
 #[test]
 fn parses_even_a_jff() {
-    let parsed = parse_jff(EVEN_A_JFF).unwrap();
+    let parsed = parse_fa(EVEN_A_JFF);
 
-    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), 2);
     assert_eq!(parsed.states[0].id, 0);
     assert_eq!(parsed.states[0].label, "q0");
     assert_eq!(parsed.states[0].x, 154.0);
     assert_eq!(parsed.states[0].y, 136.0);
     assert!(parsed.states[0].isInitial);
-    assert!(parsed.states[0].isFinal);
+    assert!(parsed.states[0].isFinal.unwrap());
     assert_eq!(parsed.states[1].label, "q1");
     assert!(!parsed.states[1].isInitial);
-    assert!(!parsed.states[1].isFinal);
+    assert!(!parsed.states[1].isFinal.unwrap());
 
     assert_eq!(parsed.transitions.len(), 4);
     assert_eq!(
@@ -279,7 +288,7 @@ fn parses_epsilon_transition_as_dollar() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert_eq!(parsed.transitions.len(), 2);
     assert_eq!(parsed.transitions[0].symbol, '$');
     assert_eq!(parsed.transitions[1].symbol, 'a');
@@ -296,7 +305,7 @@ fn missing_read_is_epsilon() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert_eq!(parsed.transitions[0].symbol, '$');
 }
 
@@ -309,9 +318,9 @@ fn state_name_defaults_to_q_prefix() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert_eq!(parsed.states[0].label, "q5");
-    assert!(parsed.states[0].isFinal);
+    assert!(parsed.states[0].isFinal.unwrap());
     assert_eq!(parsed.states[0].x, 1.0);
     assert_eq!(parsed.states[0].y, 2.0);
 }
@@ -326,43 +335,10 @@ fn decodes_xml_entities_in_name_and_read() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert_eq!(parsed.states[0].label, "q&<1>");
     assert_eq!(parsed.transitions[0].symbol, '&');
     assert_eq!(alphabet_from_transitions(&parsed.transitions), vec!['&']);
-}
-
-#[test]
-fn non_fa_type_returns_empty_formal_language_mock() {
-    let xml = r#"<?xml version="1.0"?><structure>
-        <type>turing</type>
-    </structure>"#;
-
-    let parsed = parse_jff(xml).unwrap();
-    assert!(!parsed.isAutomaton);
-    assert!(parsed.states.is_empty());
-    assert!(parsed.transitions.is_empty());
-}
-
-#[test]
-fn non_fa_type_ignores_automaton_content() {
-    let xml = r#"<?xml version="1.0"?><structure>
-        <type>grammar</type>
-        <automaton>
-            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
-        </automaton>
-    </structure>"#;
-
-    let parsed = parse_jff(xml).unwrap();
-    assert!(!parsed.isAutomaton);
-    assert!(parsed.states.is_empty());
-    assert!(parsed.transitions.is_empty());
-}
-
-#[test]
-fn rejects_invalid_xml() {
-    assert!(parse_jff("not xml at all <").is_err());
-    assert!(parse_jff("").is_err());
 }
 
 #[test]
@@ -382,9 +358,8 @@ fn rejects_transition_symbol_with_multiple_chars() {
 fn roundtrip_to_jff_then_parse() {
     let original = even_a_data();
     let xml = to_jff(&original);
-    let parsed = parse_jff(&xml).unwrap();
+    let parsed = parse_fa(&xml);
 
-    assert!(parsed.isAutomaton);
     assert_eq!(parsed.states.len(), original.states.len());
     for (ps, os) in parsed.states.iter().zip(original.states.iter()) {
         assert_eq!(ps.id, os.id);
@@ -408,7 +383,7 @@ fn roundtrip_to_jff_then_parse() {
 
 #[test]
 fn even_a_is_deterministic() {
-    let parsed = parse_jff(EVEN_A_JFF).unwrap();
+    let parsed = parse_fa(EVEN_A_JFF);
     assert!(is_deterministic(&parsed.states, &parsed.transitions));
 }
 
@@ -423,7 +398,7 @@ fn epsilon_is_not_deterministic() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert!(!is_deterministic(&parsed.states, &parsed.transitions));
 }
 
@@ -439,6 +414,6 @@ fn nondeterministic_is_not_deterministic() {
         </automaton>
     </structure>"#;
 
-    let parsed = parse_jff(xml).unwrap();
+    let parsed = parse_fa(xml);
     assert!(!is_deterministic(&parsed.states, &parsed.transitions));
 }

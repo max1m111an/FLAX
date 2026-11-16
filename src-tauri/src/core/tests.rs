@@ -36,7 +36,7 @@ fn create_initial_state_is_correct() {
     assert_eq!(entry.states[0].id, 0);
     assert_eq!(entry.states[0].label, "q0");
     assert!(entry.states[0].isInitial);
-    assert!(!entry.states[0].isFinal);
+    assert!(!entry.states[0].isFinal.unwrap());
     assert!(entry.transitions.is_empty());
     assert!(entry.get_alphabet().is_empty());
 }
@@ -69,7 +69,7 @@ fn update_modifies_automaton() {
         x: 200.0,
         y: 300.0,
         isInitial: false,
-        isFinal: true,
+        isFinal: Some(true),
     });
     store.update(entry);
 
@@ -77,7 +77,7 @@ fn update_modifies_automaton() {
     assert_eq!(fetched.name, "Updated");
     assert_eq!(fetched.states.len(), 2);
     assert_eq!(fetched.states[1].id, 1);
-    assert!(fetched.states[1].isFinal);
+    assert!(fetched.states[1].isFinal.unwrap());
 }
 
 #[test]
@@ -181,7 +181,7 @@ fn create_and_modify_full_workflow() {
         x: 300.0,
         y: 200.0,
         isInitial: false,
-        isFinal: true,
+        isFinal: Some(true),
     });
     store.update(entry.clone());
     let fetched = store.get(1).unwrap();
