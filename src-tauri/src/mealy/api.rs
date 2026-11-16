@@ -19,6 +19,7 @@ use crate::mealy::types::MealyBuilder;
 pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
     let mut entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
     entry.automatonType = AutomatonType::MEALY;
+    entry.states[0].isFinal = None;
     state.update(entry.clone());
     OperationResult {
         status: StatusCode::OK,
