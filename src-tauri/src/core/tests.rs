@@ -1,4 +1,4 @@
-//! Unit tests for the shared in-memory automaton registry.
+//! Модульные тесты общего реестра автоматов в памяти.
 
 use crate::core::api::{load_via_file_with, multi_run_automaton, save_automaton, save_file_with};
 use crate::core::types::{
@@ -170,11 +170,11 @@ fn insert_assigns_fresh_id_and_stores() {
 fn create_and_modify_full_workflow() {
     let store = make_store();
 
-    // Create
+    // Создание
     let mut entry = store.create("Workflow Test".to_string(), "q0");
     assert_eq!(entry.states.len(), 1);
 
-    // Add state
+    // Добавление состояния
     entry.states.push(StateData {
         id: 1,
         label: "q1".to_string(),
@@ -187,10 +187,10 @@ fn create_and_modify_full_workflow() {
     let fetched = store.get(1).unwrap();
     assert_eq!(fetched.states.len(), 2);
 
-    // Add transition
+    // Добавление перехода
     store.update(entry);
 
-    // Remove
+    // Удаление
     let removed = store.remove(1).unwrap();
     assert_eq!(removed.name, "Workflow Test");
     assert!(store.get(1).is_none());

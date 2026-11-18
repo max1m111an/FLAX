@@ -1,4 +1,4 @@
-// Prevents additional console window on Windows in release, DO NOT REMOVE!!
+// Убирает лишнее окно консоли в Windows в релизной сборке, НЕ УДАЛЯТЬ!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {

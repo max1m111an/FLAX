@@ -1,18 +1,18 @@
-//! Mealy machine: a deterministic transducer that emits an output symbol on
-//! every transition.
+//! Машина Мили: детерминированный преобразователь, выдающий выходной символ на
+//! каждом переходе.
 //!
-//! The output belongs to the transition (not to the state), so the machine has
-//! neither accepting states nor epsilon transitions: it is defined by
-//! `(states, input alphabet, output alphabet, transitions, initial state)` and
-//! is deterministic — for every `(state, input)` pair there is at most one
-//! transition.
+//! Выход принадлежит переходу (а не состоянию), поэтому у машины нет ни
+//! допускающих состояний, ни eps-переходов: она задаётся набором
+//! `(состояния, входной алфавит, выходной алфавит, переходы, начальное состояние)`
+//! и детерминирована — для каждой пары `(state, input)` есть не более одного
+//! перехода.
 
 use std::collections::{HashMap, HashSet};
 
 use crate::core::types::MealyRunStep;
 
-/// One Mealy transition: in state `from`, reading `input`, move to `to` and
-/// emit `output`.
+/// Один переход машины Мили: в состоянии `from`, прочитав `input`, перейти в
+/// `to` и выдать `output`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct MealyTransition {
     pub from: i32,
@@ -33,24 +33,24 @@ impl MealyTransition {
     }
 }
 
-/// Mealy machine. Fields are private; use the accessors or `MealyBuilder`.
+/// Машина Мили. Поля приватные; используйте методы доступа или `MealyBuilder`.
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub struct MM {
     states: HashSet<i32>,
     input_alphabet: HashSet<char>,
     output_alphabet: HashSet<char>,
-    /// `((from, input) -> (to, output))`. The key is the determinism invariant:
-    /// a single entry per state/symbol pair.
+    /// `((from, input) -> (to, output))`. Ключ обеспечивает инвариант детерминизма:
+    /// одна запись на пару состояние/символ.
     transitions: HashMap<(i32, char), (i32, char)>,
     initial_state: i32,
 }
 
 #[allow(dead_code)]
 impl MM {
-    /// Validates and builds a machine. `transitions` is taken as a list so that
-    /// conflicting `(from, input)` pairs are reported instead of being silently
-    /// overwritten by `HashMap::insert`.
+    /// Проверяет данные и строит машину. `transitions` принимается списком, чтобы
+    /// конфликтующие пары `(from, input)` выдавались как ошибка, а не молча
+    /// перезаписывались через `HashMap::insert`.
     pub fn new(
         states: HashSet<i32>,
         input_alphabet: HashSet<char>,
@@ -132,15 +132,15 @@ impl MM {
         &self.transitions
     }
 
-    /// Target state and emitted output for one reading step; `None` when the
-    /// machine has no transition for that `(state, input)` pair.
+    /// Целевое состояние и выходной символ для одного шага чтения; `None`, если у
+    /// машины нет перехода для этой пары `(state, input)`.
     pub fn step(&self, from: i32, input: char) -> Option<(i32, char)> {
         self.transitions.get(&(from, input)).copied()
     }
 
-    /// Reads `input` from the initial state, emitting one output symbol per
-    /// transition. Stops as soon as a `(state, input)` pair has no transition
-    /// (partial run). Returns the trace and the produced output string.
+    /// Читает `input` из начального состояния, выдавая по одному выходному символу
+    /// на переход. Останавливается, как только для пары `(state, input)` нет
+    /// перехода (частичный прогон). Возвращает трассу и полученную выходную строку.
     pub fn run(&self, input: &[char]) -> (Vec<MealyRunStep>, String) {
         let mut steps: Vec<MealyRunStep> = Vec::new();
         let mut output = String::new();
@@ -164,10 +164,10 @@ impl MM {
     }
 }
 
-/// Fluent builder for [`MM`], mirroring `FABuilder`.
+/// Fluent-билдер для [`MM`], аналог `FABuilder`.
 ///
-/// `transition` registers its states and symbols automatically, so a machine
-/// can be described by its initial state and transitions alone.
+/// `transition` автоматически регистрирует свои состояния и символы, поэтому
+/// машину можно описать только начальным состоянием и переходами.
 #[allow(dead_code)]
 #[derive(Debug, Default, Clone)]
 pub struct MealyBuilder {

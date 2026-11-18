@@ -1,8 +1,8 @@
-//! Data produced by the JFLAP XML (`.jff`) parser.
+//! Данные, получаемые парсером JFLAP XML (`.jff`).
 
 use crate::core::types::{AutomatonType, StateData, TransitionData};
 
-/// Parsed contents of an automaton `<automaton>` block.
+/// Разобранное содержимое блока `<automaton>`.
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct JffAutomaton {
@@ -10,16 +10,17 @@ pub struct JffAutomaton {
     pub transitions: Vec<TransitionData>,
 }
 
-/// Placeholder for non-automaton formal languages (grammar, Turing machine,
-/// PDA, ...): they are recognised as "not an automaton" but not parsed yet.
+/// Заглушка для формальных языков, не являющихся автоматами (грамматика, машина
+/// Тьюринга, МП-автомат, ...): они распознаются как «не автомат», но пока не
+/// разбираются.
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub struct JffGrammar {
     // ...
 }
 
-/// Result of parsing a JFLAP `<structure>`: either a real automaton (with its
-/// [`AutomatonType`]) or a mock for every other formal-language `<type>`.
+/// Результат разбора JFLAP `<structure>`: либо настоящий автомат (с его
+/// [`AutomatonType`]), либо заглушка для любого другого `<type>` формального языка.
 #[derive(Debug)]
 #[allow(non_snake_case)]
 pub enum JffParsed {

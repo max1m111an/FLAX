@@ -1,5 +1,5 @@
-//! Finite automaton layer: the `FA` implementation, its JFLAP XML (`.jff`)
-//! import/export and the corresponding Tauri commands.
+//! Слой конечных автоматов: реализация `FA`, её импорт/экспорт в JFLAP XML
+//! (`.jff`) и соответствующие Tauri-команды.
 
 pub mod api;
 pub mod jff;

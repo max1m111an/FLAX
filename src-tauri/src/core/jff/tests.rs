@@ -1,4 +1,4 @@
-//! Tests for the JFLAP `<type>` dispatcher (`parse_jff`).
+//! Тесты диспетчера JFLAP по `<type>` (`parse_jff`).
 
 use super::{JffParsed, parse_jff};
 use crate::core::types::AutomatonType;

@@ -1,4 +1,4 @@
-//! Unit tests for the mealy machine implementation and its command helpers.
+//! Модульные тесты реализации машины Мили и вспомогательных функций её команд.
 
 use std::collections::HashSet;
 
@@ -38,7 +38,7 @@ fn mealy_entry() -> AutomatonData {
     }
 }
 
-/// Two-state machine: `0 --a/1--> 1 --b/0--> 0`.
+/// Машина из двух состояний: `0 --a/1--> 1 --b/0--> 0`.
 fn run_entry() -> AutomatonData {
     let mut entry = mealy_entry();
     add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход a");

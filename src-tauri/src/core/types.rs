@@ -1,5 +1,5 @@
-//! Shared domain types: serde DTOs (the Rust <-> frontend contract), automaton
-//! traits and the in-memory automaton registry.
+//! Общие доменные типы: serde DTO (контракт Rust <-> фронтенд), трейты
+//! автоматов и реестр автоматов в памяти.
 
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
@@ -13,7 +13,7 @@ use tauri::http::StatusCode;
 pub const EPSILON: char = '$';
 
 // ---------------------------------------------------------------------------
-// Serde DTOs (serialization contract with the frontend)
+// Serde DTO (контракт сериализации с фронтендом)
 // ---------------------------------------------------------------------------
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -219,7 +219,7 @@ pub struct GenerateInputsResult {
 }
 
 // ---------------------------------------------------------------------------
-// Automaton traits
+// Трейты автоматов
 // ---------------------------------------------------------------------------
 
 #[allow(dead_code)]
@@ -245,7 +245,7 @@ pub trait NondeterministicAutomaton: Automaton {
 }
 
 // ---------------------------------------------------------------------------
-// In-memory automaton registry
+// Реестр автоматов в памяти
 // ---------------------------------------------------------------------------
 
 pub struct AutomatonStore {

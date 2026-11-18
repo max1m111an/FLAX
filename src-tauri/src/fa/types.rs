@@ -4,9 +4,9 @@ use crate::core::types::{Automaton, NondeterministicAutomaton, RunStep, Trace};
 
 pub use crate::core::types::EPSILON;
 
-/// Hard cap on the number of parallel reading threads kept by `run_partial`.
-/// Set high enough to explore all branches of realistic (educational) FAs while
-/// still bounding worst-case (exponential) blowup.
+/// Жёсткое ограничение числа параллельных потоков чтения в `run_partial`.
+/// Достаточно велико, чтобы обойти все ветви реальных (учебных) КА, и при этом
+/// ограничивает экспоненциальный рост в худшем случае.
 const MAX_THREADS: usize = 1_000_000;
 
 #[allow(dead_code)]
@@ -112,10 +112,10 @@ impl FA {
         !reachable.iter().any(|s| self.final_states.contains(s))
     }
 
-    /// True if the automaton is deterministic: no eps-transitions and at most one
-    /// target per `(state, symbol)`. Determinism is a property of a finite
-    /// automaton (checked/semantics), not a separate type — the same structure
-    /// can be run either way.
+    /// `true`, если автомат детерминирован: нет eps-переходов и не более одного
+    /// целевого состояния на пару `(state, symbol)`. Детерминизм — свойство
+    /// конечного автомата (проверка/семантика), а не отдельный тип: одна и та же
+    /// структура может прогоняться любым способом.
     pub fn is_deterministic(&self) -> bool {
         !self.alphabet.contains(&EPSILON)
             && self.transitions.iter().all(|((_, symbol), targets)| {
@@ -202,33 +202,35 @@ impl FA {
         }
     }
 
-    /// JFLAP-style parallel run over FA threads (JFLAP "Step with Closure").
-    /// Returns (traces, accepted). Each element of the outer is one parallel
-    /// reading (thread): its step history plus whether it ended in a final
-    /// state. Every distinct path is kept as its own trace, so branches that
-    /// land in the same state (or split on the same symbol) produce separate
-    /// traces.
+    /// Параллельный прогон по потокам КА в стиле JFLAP (JFLAP «Step with Closure»).
+    /// Возвращает (traces, accepted). Каждый элемент внешнего вектора — одно
+    /// параллельное чтение (поток): история его шагов и признак завершения в
+    /// финальном состоянии. Каждый отдельный путь хранится как собственная трасса,
+    /// поэтому ветви, попавшие в одно состояние (или разветвившиеся по одному
+    /// символу), дают отдельные трассы.
     ///
-    /// eps-closure is computed before the first symbol, after every symbol and
-    /// after the last symbol, and every `$`-transition traversed during a
-    /// closure is recorded in that branch's history as a `RunStep` with symbol
-    /// "$". Closure expands the state set without branching; nondeterminism only
-    /// branches on symbol transitions.
+    /// eps-замыкание вычисляется перед первым символом, после каждого символа и
+    /// после последнего символа; каждый `$`-переход, пройденный при замыкании,
+    /// записывается в историю ветви как `RunStep` с символом "$". Замыкание
+    /// расширяет множество состояний без ветвления; недетерминизм ветвится только
+    /// по символьным переходам.
     ///
-    /// Every branch is reported, including ones that terminate early: a thread
-    /// that cannot read the current symbol is finalized (kept with its partial
-    /// history and `isFinal = false`) instead of being dropped. Only threads
-    /// that consumed the whole input, closed and landed in a final state drive
-    /// `accepted`.
+    /// Сообщается о каждой ветви, включая досрочно завершившиеся: поток, который
+    /// не может прочитать текущий символ, финализируется (сохраняется с частичной
+    /// историей и `isFinal = false`), а не отбрасывается. На `accepted` влияют
+    /// только потоки, прочитавшие весь вход, замкнутые и оказавшиеся в финальном
+    /// состоянии.
     ///
-    /// Semantics:
-    /// - If the automaton has no final states at all, any string is rejected.
-    /// - Every symbol is consumed along every thread that can read it; a symbol
-    ///   not present in the alphabet stops reading right before it and rejects.
-    /// - The thread count is capped to bound the worst-case (exponential) blowup.
+    /// Семантика:
+    /// - Если в автомате нет финальных состояний, любая строка отклоняется.
+    /// - Каждый символ читается всеми потоками, которые могут его прочитать;
+    ///   символ вне алфавита останавливает чтение прямо перед ним, и строка
+    ///   отклоняется.
+    /// - Число потоков ограничено, чтобы сдержать экспоненциальный рост в худшем
+    ///   случае.
     pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
-        // Finalize a thread at the end of input: apply the final eps-closure
-        // (recording its `$` steps) and mark isFinal if any state is final.
+        // Финализация потока в конце входа: применяем итоговое eps-замыкание
+        // (записывая его шаги `$`) и ставим isFinal, если хотя бы одно состояние финальное.
         let finalize_end = |fa: &Self, thread: (Vec<RunStep>, i32)| -> Trace {
             let (closure_set, closure_steps) = fa.epsilon_closure_with_steps(thread.1);
             let mut steps = thread.0;
@@ -248,8 +250,8 @@ impl FA {
         let mut threads: Vec<(Vec<RunStep>, i32)> = vec![(Vec::new(), self.initial_state)];
 
         for &symbol in input {
-            // Symbol outside the alphabet: stop reading right before it and reject,
-            // finalizing the threads alive so far (partial progress).
+            // Символ вне алфавита: останавливаем чтение прямо перед ним и отклоняем,
+            // финализируя живые на данный момент потоки (частичный прогресс).
             if !self.alphabet.contains(&symbol) {
                 result.extend(threads.into_iter().map(|t| finalize_end(self, t)));
                 return (result, false);
@@ -257,14 +259,14 @@ impl FA {
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
             'outer: for (history, state) in &threads {
-                // 1) eps-closure of this thread's state BEFORE the symbol; record
-                //    every `$` transition used into this branch's history.
+                // 1) eps-замыкание состояния этого потока ПЕРЕД символом; каждый
+                //    использованный `$`-переход записывается в историю ветви.
                 let (closure_set, closure_steps) = self.epsilon_closure_with_steps(*state);
                 let mut hist = history.clone();
                 hist.extend(closure_steps);
 
-                // 2) Branch on every symbol transition from any closure state;
-                //    each target spawns a separate thread (its own history).
+                // 2) Ветвимся по каждому символьному переходу из любого состояния замыкания;
+                //    каждое целевое состояние порождает отдельный поток (со своей историей).
                 let mut advanced = false;
                 for from in &closure_set {
                     if let Some(targets) = self.transitions.get(&(*from, symbol)) {
@@ -284,8 +286,8 @@ impl FA {
                     }
                 }
 
-                // 3) This thread cannot read the current symbol: it is interrupted,
-                //    kept with its partial history and isFinal = false.
+                // 3) Поток не может прочитать текущий символ: он прерывается и сохраняется
+                //    с частичной историей и isFinal = false.
                 if !advanced {
                     result.push(Trace {
                         steps: hist,
@@ -294,8 +296,8 @@ impl FA {
                 }
             }
 
-            // No alive thread could read this symbol at all: nothing to do but
-            // return what has been finalized so far (partial progress).
+            // Ни один живой поток не смог прочитать этот символ: остаётся только
+            // вернуть то, что уже финализировано (частичный прогресс).
             if next_threads.is_empty() {
                 return (result, false);
             }
@@ -307,7 +309,7 @@ impl FA {
             threads = next_threads;
         }
 
-        // End of input: finalize every surviving thread (with final closure).
+        // Конец входа: финализируем каждый выживший поток (с итоговым замыканием).
         let mut accepted = false;
         for thread in threads {
             let trace = finalize_end(self, thread);
@@ -338,9 +340,9 @@ impl FA {
         closure
     }
 
-    /// eps-closure of `state` plus the ordered list of `$`-transitions traversed
-    /// to reach every state in the closure. `$`-transitions are not branched on
-    /// (each is only recorded once per thread), matching JFLAP Step with Closure.
+    /// eps-замыкание `state` и упорядоченный список `$`-переходов, пройденных для
+    /// достижения каждого состояния замыкания. По `$`-переходам ветвления нет (каждый
+    /// записывается в потоке один раз), как в JFLAP Step with Closure.
     fn epsilon_closure_with_steps(&self, state: i32) -> (HashSet<i32>, Vec<RunStep>) {
         let mut closure: HashSet<i32> = HashSet::new();
         let mut steps: Vec<RunStep> = Vec::new();
@@ -382,10 +384,10 @@ impl FA {
         result
     }
 
-    /// Shortest string of alphabet symbols that reaches every reachable state.
-    /// eps-transitions are traversed for free (they never add characters), so the
-    /// BFS level equals the number of consumed symbols and yields minimal strings.
-    /// States further than `max_len` symbols from the start are not expanded.
+    /// Кратчайшая строка из символов алфавита, достигающая каждого достижимого
+    /// состояния. eps-переходы проходятся «бесплатно» (не добавляют символов), поэтому
+    /// уровень BFS равен числу прочитанных символов и даёт минимальные строки.
+    /// Состояния дальше `max_len` символов от начала не раскрываются.
     fn shortest_paths(&self, max_len: usize) -> HashMap<i32, String> {
         let mut dist: HashMap<i32, String> = HashMap::new();
         let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
@@ -423,8 +425,8 @@ impl FA {
         dist
     }
 
-    /// Characters that are not in the alphabet (digits, then a letter, then `$`),
-    /// used for negative test cases. Returns up to two distinct symbols.
+    /// Символы, не входящие в алфавит (цифры, затем буква, затем `$`), для
+    /// негативных тестов. Возвращает до двух различных символов.
     fn outside_alphabet_symbols(&self) -> Vec<char> {
         let mut out: Vec<char> = Vec::new();
         let preferred: Vec<char> = (b'0'..=b'9')
@@ -445,7 +447,7 @@ impl FA {
         out
     }
 
-    /// Shortest cycle string (>= 1 symbol) that leaves `start` and returns to it.
+    /// Кратчайшая строка-цикл (>= 1 символа), выходящая из `start` и возвращающаяся в него.
     fn shortest_cycle_for(&self, start: i32, max_len: usize) -> Option<String> {
         let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
         let mut visited: HashSet<i32> = HashSet::new();
@@ -495,8 +497,8 @@ impl FA {
         None
     }
 
-    /// Finds any cycle in the automaton: a state from which a non-empty string
-    /// returns to itself. Returns the state and the cycle string.
+    /// Находит любой цикл в автомате: состояние, из которого непустая строка
+    /// возвращает в него же. Возвращает состояние и строку цикла.
     fn find_cycle(&self, max_len: usize) -> Option<(i32, String)> {
         for &s in &self.states {
             if let Some(cycle) = self.shortest_cycle_for(s, max_len) {
@@ -506,8 +508,8 @@ impl FA {
         None
     }
 
-    /// Strings that are valid up to the last symbol but then hit a dead end
-    /// (no alphabet transition available from the reached state's closure).
+    /// Строки, корректные до последнего символа, но затем упирающиеся в тупик
+    /// (из замыкания достигнутого состояния нет перехода по символам алфавита).
     fn out_of_bounds_strings(&self, dist: &HashMap<i32, String>, result: &mut HashSet<String>) {
         let mut states: Vec<i32> = dist.keys().copied().collect();
         states.sort_by_key(|s| dist[s].len());
@@ -525,11 +527,12 @@ impl FA {
         }
     }
 
-    /// Generates an ordered, de-duplicated set of test strings that covers a wide
-    /// range of FA scenarios: empty input, single symbols, shortest paths to every
-    /// state, each transition activation, negative cases (symbols outside the
-    /// alphabet, dead ends, strings ending in non-final states) and cyclic/long
-    /// strings. Results are sorted by length and limited to `cap` entries.
+    /// Генерирует упорядоченный набор тестовых строк без дубликатов, покрывающий
+    /// широкий спектр сценариев КА: пустой вход, одиночные символы, кратчайшие пути
+    /// до каждого состояния, срабатывание каждого перехода, негативные случаи
+    /// (символы вне алфавита, тупики, строки, заканчивающиеся в нефинальных
+    /// состояниях) и циклические/длинные строки. Результат отсортирован по длине и
+    /// ограничен `cap` элементами.
     pub fn generate_test_inputs(&self, cap: usize, depth: usize) -> Vec<String> {
         let mut result: HashSet<String> = HashSet::new();
 

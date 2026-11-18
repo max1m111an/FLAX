@@ -11,11 +11,11 @@ use crate::core::types::{
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
 
-/// Creates a new mealy machine in the store with a single initial state `q0`
-/// and `automatonType = MEALY`.
+/// Создаёт в хранилище новую машину Мили с единственным начальным состоянием
+/// `q0` и `automatonType = MEALY`.
 ///
-/// Kept separate from the Tauri command so it can be unit-tested without a
-/// `tauri::State` (the same convention as `data_to_fa` / `test_line` in `fa`).
+/// Вынесена отдельно от Tauri-команды, чтобы тестироваться без `tauri::State`
+/// (то же соглашение, что `data_to_fa` / `test_line` в `fa`).
 pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
     let mut entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
     entry.automatonType = AutomatonType::MEALY;
@@ -28,11 +28,11 @@ pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> 
     }
 }
 
-/// Appends one mealy transition `from --input/output--> to` to the entry.
+/// Добавляет в запись один переход машины Мили `from --input/output--> to`.
 ///
-/// Validation is performed before any mutation, so an `Err` leaves the entry
-/// untouched. The alphabet is derived from the transitions
-/// (`AutomatonData::get_alphabet`), so it is not maintained here.
+/// Валидация выполняется до любых изменений, поэтому при `Err` запись не
+/// меняется. Алфавит выводится из переходов (`AutomatonData::get_alphabet`),
+/// поэтому здесь он не поддерживается.
 pub(crate) fn add_mealy_transition(
     entry: &mut AutomatonData,
     from: i32,
@@ -73,13 +73,13 @@ pub(crate) fn add_mealy_transition(
     Ok(created)
 }
 
-/// Updates the `input` and/or `output` symbol of an existing transition.
+/// Обновляет символ `input` и/или `output` существующего перехода.
 ///
-/// `None` leaves the corresponding field unchanged; `from`/`to`/`id` are never
-/// touched. Validation is performed before any mutation, so an `Err` leaves the
-/// entry untouched. A conflicting `(from, input)` pair is rejected to preserve
-/// the mealy determinism invariant. The alphabet is derived from the transitions
-/// (`AutomatonData::get_alphabet`), so it is not maintained here.
+/// `None` оставляет соответствующее поле без изменений; `from`/`to`/`id` никогда
+/// не меняются. Валидация выполняется до любых изменений, поэтому при `Err` запись
+/// не меняется. Конфликтующая пара `(from, input)` отклоняется, чтобы сохранить
+/// инвариант детерминизма машины Мили. Алфавит выводится из переходов
+/// (`AutomatonData::get_alphabet`), поэтому здесь он не поддерживается.
 pub(crate) fn update_mealy_transition(
     entry: &mut AutomatonData,
     transition_id: i32,
@@ -119,12 +119,11 @@ pub(crate) fn update_mealy_transition(
     Ok(updated)
 }
 
-/// Removes the transition with the given `transition_id` from the entry.
+/// Удаляет из записи переход с заданным `transition_id`.
 ///
-/// Returns `Err` when no transition matches the id, so the caller can tell
-/// "not found" apart from success without counting entries; in that case the
-/// entry is left unchanged. The alphabet is derived from the transitions, so it
-/// updates automatically.
+/// Возвращает `Err`, если перехода с таким id нет, чтобы вызывающий код мог
+/// отличить «не найдено» от успеха без подсчёта элементов; в этом случае запись
+/// не меняется. Алфавит выводится из переходов, поэтому обновляется автоматически.
 pub(crate) fn remove_mealy_transition(
     entry: &mut AutomatonData,
     transition_id: i32,
@@ -137,10 +136,10 @@ pub(crate) fn remove_mealy_transition(
     Ok(())
 }
 
-/// Builds an [`MM`](crate::mealy::types::MM) from the stored DTOs, mirroring
-/// `data_to_fa` in the `fa` module. Transitions referencing states that are not
-/// present are ignored (orphan IDs). A transition without an output symbol, or
-/// with the epsilon symbol, makes the automaton invalid.
+/// Строит [`MM`](crate::mealy::types::MM) из сохранённых DTO, аналогично
+/// `data_to_fa` в модуле `fa`. Переходы, ссылающиеся на отсутствующие состояния,
+/// игнорируются (осиротевшие ID). Переход без выходного символа или с символом
+/// eps делает автомат некорректным.
 pub(crate) fn data_to_mm(
     states: &[StateData],
     transitions: &[TransitionData],
@@ -176,10 +175,10 @@ pub(crate) fn data_to_mm(
     builder.build()
 }
 
-/// Runs a string on a mealy machine. A mealy machine has no accepting states:
-/// it either processes the whole input (status `200`, with the produced output)
-/// or stops at the first `(state, input)` pair that has no transition (`401`
-/// when some symbols were processed, `402` when none were).
+/// Прогоняет цепочку на машине Мили. У машины Мили нет допускающих состояний:
+/// она либо обрабатывает весь вход (статус `200` с полученным выходом), либо
+/// останавливается на первой паре `(state, input)` без перехода (`401`, если
+/// часть символов обработана, `402`, если ни одного).
 pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
     let mm = match data_to_mm(&entry.states, &entry.transitions) {
         Ok(mm) => mm,
@@ -226,10 +225,10 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
     }
 }
 
-/// Runs several strings on a mealy machine and returns one record per line
-/// without step traces. A partial run is reported through `isComplete`, not a
-/// per-line status: the request status is `200` for a valid machine and `400`
-/// when the machine itself is invalid.
+/// Прогоняет несколько цепочек на машине Мили и возвращает по одной записи на
+/// строку без трасс шагов. Частичный прогон отражается через `isComplete`, а не
+/// статусом строки: статус запроса — `200` для корректной машины и `400`, если
+/// сама машина некорректна.
 pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
         let chars: Vec<char> = line.chars().collect();
@@ -253,14 +252,14 @@ pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> Mealy
     }
 }
 
-/// Creates a new mealy machine with a single initial state `q0`.
+/// Создаёт новую машину Мили с единственным начальным состоянием `q0`.
 #[tauri::command]
 pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
     create_new_mealy(&state, name)
 }
 
-/// Adds a state to a mealy machine. Delegates to `fa_add_state` — states are
-/// shared between FA and MM in the store.
+/// Добавляет состояние в машину Мили. Делегирует в `fa_add_state`: состояния
+/// в хранилище общие для FA и MM.
 #[tauri::command]
 pub fn mealy_add_state(
     state: State<'_, AutomatonStore>,
@@ -274,7 +273,7 @@ pub fn mealy_add_state(
     crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, is_final)
 }
 
-/// Updates a state of a mealy machine. Delegates to `fa_update_state`.
+/// Обновляет состояние машины Мили. Делегирует в `fa_update_state`.
 #[tauri::command]
 #[allow(clippy::too_many_arguments)]
 pub fn mealy_update_state(
@@ -299,7 +298,7 @@ pub fn mealy_update_state(
     )
 }
 
-/// Removes a state and all transitions touching it. Delegates to
+/// Удаляет состояние и все связанные с ним переходы. Делегирует в
 /// `fa_remove_state`.
 #[tauri::command]
 pub fn mealy_remove_state(
@@ -310,7 +309,7 @@ pub fn mealy_remove_state(
     crate::fa::api::fa_remove_state(state, automaton_id, state_id)
 }
 
-/// Adds a single mealy transition `from --input/output--> to`.
+/// Добавляет один переход машины Мили `from --input/output--> to`.
 #[tauri::command]
 pub fn mealy_add_transition(
     state: State<'_, AutomatonStore>,
@@ -439,8 +438,8 @@ pub fn mealy_run_str(
     run_mealy(&entry, &input)
 }
 
-/// Runs several strings at once and returns only the per-line output and
-/// completeness fact (without step traces). Uses the same algorithm as
+/// Прогоняет сразу несколько цепочек и возвращает по каждой строке только выход
+/// и признак полноты (без трасс шагов). Использует тот же алгоритм, что и
 /// `mealy_run_str`.
 #[tauri::command]
 pub fn mealy_multi_run(
@@ -462,8 +461,8 @@ pub fn mealy_multi_run(
     multi_run_mealy(&entry, &inputs)
 }
 
-/// Removes a mealy machine from the store. Delegates to `fa_remove_automaton`
-/// — the store is shared between FA and MM.
+/// Удаляет машину Мили из хранилища. Делегирует в `fa_remove_automaton`:
+/// хранилище общее для FA и MM.
 #[tauri::command]
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
     crate::fa::api::fa_remove_automaton(state, automaton_id)

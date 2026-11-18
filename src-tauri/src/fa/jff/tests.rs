@@ -1,4 +1,4 @@
-//! Unit tests for JFLAP XML (.jff) parsing and serialization.
+//! Модульные тесты разбора и сериализации JFLAP XML (.jff).
 
 use std::fs;
 use std::path::Path;
@@ -9,8 +9,8 @@ use crate::core::types::{
 };
 use crate::fa::jff::{is_deterministic, to_jff};
 
-/// Unwraps the FA variant; FA tests should never receive another type or the
-/// grammar mock.
+/// Извлекает вариант FA; тесты КА никогда не должны получать другой тип или
+/// заглушку грамматики.
 fn parse_fa(xml: &str) -> JffAutomaton {
     match parse_jff(xml).unwrap() {
         JffParsed::Automaton(AutomatonType::FA, automaton) => automaton,

@@ -1,4 +1,4 @@
-//! Unit tests for Mealy machine JFLAP XML (`.jff`) serialization and parsing.
+//! Модульные тесты сериализации и разбора JFLAP XML (`.jff`) для машин Мили.
 
 use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{AutomatonData, AutomatonType, StateData, TransitionData};

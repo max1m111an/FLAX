@@ -58,8 +58,8 @@ pub(crate) fn parse_automaton(root: Node) -> Result<JffAutomaton, String> {
     })
 }
 
-/// True if the automaton is deterministic: exactly one initial state, no
-/// eps-transitions and at most one transition per `(from, symbol)`.
+/// `true`, если автомат детерминирован: ровно одно начальное состояние, нет
+/// eps-переходов и не более одного перехода на каждую пару `(from, symbol)`.
 #[allow(dead_code)]
 pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) -> bool {
     if states.iter().filter(|s| s.isInitial).count() != 1 {

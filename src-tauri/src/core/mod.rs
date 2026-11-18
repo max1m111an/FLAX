@@ -1,5 +1,5 @@
-//! Core domain layer: shared types, the automaton registry, small helpers
-//! and the shared JFLAP XML plumbing used by the `fa` and `mealy` layers.
+//! Ядро доменного слоя: общие типы, реестр автоматов, вспомогательные функции
+//! и общая инфраструктура JFLAP XML, используемая слоями `fa` и `mealy`.
 
 pub mod api;
 pub mod jff;

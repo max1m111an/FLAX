@@ -1,4 +1,4 @@
-//! Unit tests for the finite automaton implementation and its command helpers.
+//! Модульные тесты реализации конечного автомата и вспомогательных функций его команд.
 
 use std::collections::{HashMap, HashSet};
 
@@ -81,7 +81,7 @@ fn accepts_simple_string() {
 
 #[test]
 fn accepts_with_epsilon_transition() {
-    // q0 --eps--> q1 --a--> q2 (accepting)
+    // q0 --eps--> q1 --a--> q2 (допускающее)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -101,8 +101,8 @@ fn accepts_with_epsilon_transition() {
 
 #[test]
 fn accepts_with_nondeterminism() {
-    // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting)
-    // accepts a*b
+    // q0 --a--> {q0, q1}, q1 --b--> q2 (допускающее)
+    // принимает a*b
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -128,7 +128,7 @@ fn accepts_with_nondeterminism() {
 
 #[test]
 fn accepts_with_multiple_epsilon_closures() {
-    // q0 --eps--> q1 --eps--> q2 --a--> q3 (accepting)
+    // q0 --eps--> q1 --eps--> q2 --a--> q3 (допускающее)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -299,17 +299,17 @@ fn fa_to_data_roundtrip_via_builder() {
         .build()
         .unwrap();
 
-    // Test that transitions are stored correctly
+    // Проверяем, что переходы сохраняются корректно
     let t = fa.get_transitions();
     assert!(t.contains_key(&(0, 'a')));
-    assert!(t.contains_key(&(0, EPSILON))); // epsilon
+    assert!(t.contains_key(&(0, EPSILON))); // eps
     assert!(t[&(0, 'a')].contains(&0));
     assert!(t[&(0, 'a')].contains(&1));
 }
 
 #[test]
 fn many_states_complex_fa() {
-    // FA for (a|b)*abb
+    // КА для (a|b)*abb
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -406,7 +406,7 @@ fn run_tracks_epsilon_steps() {
 
 #[test]
 fn run_finds_accepting_branch() {
-    // q0 --a--> {q0, q1}, q1 --b--> q2 (accepting); q0 --a--> q0
+    // q0 --a--> {q0, q1}, q1 --b--> q2 (допускающее); q0 --a--> q0
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -530,8 +530,8 @@ fn run_partial_rejected_no_path() {
         .build()
         .unwrap();
 
-    // 'b' is not in the alphabet: reading stops before it (0 symbols consumed),
-    // the single (empty so far) thread remains, and the string is rejected.
+    // 'b' нет в алфавите: чтение останавливается перед ним (прочитано 0 символов),
+    // остаётся единственный (пока пустой) поток, цепочка отклоняется.
     let (traces, accepted) = fa.run_partial(&['b']);
     assert!(!accepted);
     assert_eq!(
@@ -588,7 +588,7 @@ fn run_partial_full_accepts_empty_when_initial_final() {
 
 #[test]
 fn run_partial_stuck_mid_string() {
-    // q0 --a--> q1, no transition from q1 on 'b'
+    // q0 --a--> q1, из q1 нет перехода по 'b'
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -603,8 +603,8 @@ fn run_partial_stuck_mid_string() {
     let (traces, accepted) = fa.run_partial(&['a', 'b']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
-    // The branch consumed 'a' but could not read 'b': it is interrupted, so even
-    // though state q1 is final, the branch is NOT accepting (isFinal = false).
+    // Ветвь прочитала 'a', но не смогла прочитать 'b': она прервана, поэтому, хотя
+    // состояние q1 финальное, ветвь НЕ допускающая (isFinal = false).
     assert_eq!(
         traces[0],
         Trace {
@@ -620,7 +620,7 @@ fn run_partial_stuck_mid_string() {
 
 #[test]
 fn run_partial_consumed_all_not_final() {
-    // q0 --a--> q1 (not final)
+    // q0 --a--> q1 (не финальное)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -631,7 +631,7 @@ fn run_partial_consumed_all_not_final() {
         .build()
         .unwrap();
 
-    // Input "aa" — first 'a' goes to q1, second 'a' has no transition from q1
+    // Вход "aa": первая 'a' ведёт в q1, для второй 'a' нет перехода из q1
     let (traces, accepted) = fa.run_partial(&['a', 'a']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
@@ -640,9 +640,9 @@ fn run_partial_consumed_all_not_final() {
 
 #[test]
 fn run_partial_with_epsilon() {
-    // q0 --eps--> q1 --a--> q2 (final)
-    // JFLAP Step with Closure: the eps-transition before the symbol is recorded
-    // as a '$' step in the trace.
+    // q0 --eps--> q1 --a--> q2 (финальное)
+    // JFLAP Step with Closure: eps-переход перед символом записывается в трассу
+    // как шаг '$'.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -680,8 +680,8 @@ fn run_partial_with_epsilon() {
 
 #[test]
 fn run_partial_closes_after_last_symbol() {
-    // q0 --a--> q1 --eps--> q2 (final): the eps-transition AFTER the last symbol
-    // must be executed (and recorded) before checking finality.
+    // q0 --a--> q1 --eps--> q2 (финальное): eps-переход ПОСЛЕ последнего символа
+    // должен быть выполнен (и записан) до проверки финальности.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -719,8 +719,8 @@ fn run_partial_closes_after_last_symbol() {
 
 #[test]
 fn run_partial_transitive_epsilon_closure_recorded() {
-    // q0 --eps--> q1 --eps--> q2 (final). Closure of {q0} = {q0,q1,q2} with both
-    // epsilon steps recorded in one trace. No symbols consumed -> accepted.
+    // q0 --eps--> q1 --eps--> q2 (финальное). Замыкание {q0} = {q0,q1,q2}, оба
+    // eps-шага записаны в одну трассу. Символы не прочитаны -> принято.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -757,11 +757,11 @@ fn run_partial_transitive_epsilon_closure_recorded() {
 
 #[test]
 fn run_partial_nondeterministic() {
-    // q0 --a--> {q0, q1}, q1 --b--> q2 (final)
-    // input "aab": every branch is reported:
-    //   - q0-a->q1 (dies on second 'a')         1 step
-    //   - q0-a->q0-a->q0 (dies on 'b')          2 steps
-    //   - q0-a->q0-a->q1-b->q2 (final)          3 steps
+    // q0 --a--> {q0, q1}, q1 --b--> q2 (финальное)
+    // вход "aab": сообщается о каждой ветви:
+    //   - q0-a->q1 (обрывается на второй 'a')    1 шаг
+    //   - q0-a->q0-a->q0 (обрывается на 'b')     2 шага
+    //   - q0-a->q0-a->q1-b->q2 (финальное)       3 шага
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -805,7 +805,7 @@ fn run_partial_nondeterministic() {
 
 #[test]
 fn run_partial_nondeterministic_parallel() {
-    // q0 --a--> {q0, q1}, separate reading histories per branch
+    // q0 --a--> {q0, q1}, отдельные истории чтения для каждой ветви
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -840,10 +840,10 @@ fn run_partial_nondeterministic_parallel() {
 
 #[test]
 fn run_partial_converging_branches_keep_separate_histories() {
-    // Two nearly-identical paths that converge to the same final state:
-    //   q0 -a-> q1 -b-> q3 (final)
-    //   q0 -a-> q2 -b-> q3 (final)
-    // Both reading streams must be reported separately (2 histories), not merged.
+    // Два почти одинаковых пути, сходящихся в одно финальное состояние:
+    //   q0 -a-> q1 -b-> q3 (финальное)
+    //   q0 -a-> q2 -b-> q3 (финальное)
+    // Оба потока чтения должны сообщаться отдельно (2 истории), а не сливаться.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -899,17 +899,17 @@ fn run_partial_converging_branches_keep_separate_histories() {
 
 #[test]
 fn run_partial_reports_every_branch_including_dead() {
-    // Reproduces the reported issue: splitting on identical symbols must yield a
-    // trace per branch, including ones that terminate early.
+    // Воспроизводит найденную ошибку: ветвление по одинаковым символам должно давать
+    // трассу на каждую ветвь, включая досрочно завершившиеся.
     //   q0 -1-> {q1, q2, q3}
     //   q2 -2-> {q4, q5}
     //   q3 -2-> {q6}
-    //   q5 -3-> {q7(final)}
-    // Running "123" gives 4 branches:
-    //   [q0-1->q1]                    (dies on 2)
-    //   [q0-1->q3, q3-2->q6]          (dies on 3)
-    //   [q0-1->q2, q2-2->q4]          (dies on 3)
-    //   [q0-1->q2, q2-2->q5, q5-3->q7](final)
+    //   q5 -3-> {q7(финальное)}
+    // Прогон "123" даёт 4 ветви:
+    //   [q0-1->q1]                    (обрывается на 2)
+    //   [q0-1->q3, q3-2->q6]          (обрывается на 3)
+    //   [q0-1->q2, q2-2->q4]          (обрывается на 3)
+    //   [q0-1->q2, q2-2->q5, q5-3->q7](финальное)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -976,8 +976,8 @@ fn run_partial_reports_every_branch_including_dead() {
 
 #[test]
 fn data_to_fa_ignores_orphan_transitions() {
-    // Transitions referencing states absent from the states list are dropped at
-    // build time, so they do not spawn extra branches.
+    // Переходы, ссылающиеся на состояния, отсутствующие в списке состояний,
+    // отбрасываются при построении и не порождают лишних ветвей.
     let states = vec![
         StateData {
             id: 0,
@@ -997,7 +997,7 @@ fn data_to_fa_ignores_orphan_transitions() {
         },
     ];
     let transitions = vec![
-        // valid: 0 -1-> 1
+        // корректный: 0 -1-> 1
         TransitionData {
             id: 1,
             from: 0,
@@ -1005,7 +1005,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             symbol: '1',
         output: None,
         },
-        // orphan: 'to' 99 does not exist
+        // осиротевший: 'to' 99 не существует
         TransitionData {
             id: 2,
             from: 0,
@@ -1013,7 +1013,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             symbol: '1',
         output: None,
         },
-        // orphan: 'from' 99 does not exist
+        // осиротевший: 'from' 99 не существует
         TransitionData {
             id: 3,
             from: 99,
@@ -1024,7 +1024,7 @@ fn data_to_fa_ignores_orphan_transitions() {
     ];
 
     let fa = data_to_fa(&states, &transitions).unwrap();
-    // Only the valid transition should reach final on "1".
+    // Только корректный переход должен приводить в финальное состояние на "1".
     let (traces, accepted) = fa.run_partial(&['1']);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
@@ -1040,11 +1040,11 @@ fn data_to_fa_ignores_orphan_transitions() {
 
 #[test]
 fn run_partial_explores_all_branches() {
-    // Three independent branches, each ending in the same final state:
-    //   q0 -a-> q1 -b-> q4 (final)
-    //   q0 -a-> q2 -b-> q4 (final)
-    //   q0 -a-> q3 -b-> q4 (final)
-    // All three branches must be reported as separate histories.
+    // Три независимые ветви, каждая заканчивается в одном и том же финальном состоянии:
+    //   q0 -a-> q1 -b-> q4 (финальное)
+    //   q0 -a-> q2 -b-> q4 (финальное)
+    //   q0 -a-> q3 -b-> q4 (финальное)
+    // Все три ветви должны сообщаться как отдельные истории.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1126,7 +1126,7 @@ fn run_partial_symbol_not_in_alphabet() {
         .build()
         .unwrap();
 
-    // 'b' not in alphabet: reading stops before it, thread has 0 steps, rejected.
+    // 'b' нет в алфавите: чтение останавливается перед ним, у потока 0 шагов, отклонено.
     let (traces, accepted) = fa.run_partial(&['b']);
     assert!(!accepted);
     assert_eq!(
@@ -1140,7 +1140,7 @@ fn run_partial_symbol_not_in_alphabet() {
 
 #[test]
 fn run_partial_stops_before_symbol_not_in_alphabet() {
-    // q0 --a--> q1 --b--> q2 (final); 'x' not in alphabet.
+    // q0 --a--> q1 --b--> q2 (финальное); 'x' нет в алфавите.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1154,7 +1154,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
         .build()
         .unwrap();
 
-    // Input "abx": should consume 'a' and 'b' (2 steps), then stop before 'x'.
+    // Вход "abx": должны быть прочитаны 'a' и 'b' (2 шага), затем остановка перед 'x'.
     let (traces, accepted) = fa.run_partial(&['a', 'b', 'x']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
@@ -1181,7 +1181,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
 
 #[test]
 fn run_partial_rejects_all_when_no_final_state() {
-    // No final states at all -> every string rejected, no histories.
+    // Финальных состояний нет вовсе -> любая строка отклоняется, историй нет.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1206,8 +1206,8 @@ fn run_partial_rejects_all_when_no_final_state() {
 
 #[test]
 fn test_line_reports_is_final_and_correct_symbols() {
-    // q0 --a--> q1 --a--> q2 (final). State q1 is not final, so "a" and "aa"
-    // consume both symbols but only "aa" ends in a final state.
+    // q0 --a--> q1 --a--> q2 (финальное). Состояние q1 не финальное, поэтому "a" и
+    // "aa" читаются полностью, но только "aa" заканчивается в финальном состоянии.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1220,20 +1220,20 @@ fn test_line_reports_is_final_and_correct_symbols() {
         .build()
         .unwrap();
 
-    // Empty line: 0 correct symbols, not accepted.
+    // Пустая строка: 0 корректных символов, не принята.
     assert_eq!(test_line(&fa, ""), (false, 0));
-    // "a": stopped at q1 which is not final; 1 symbol consumed.
+    // "a": остановка в q1, которое не финальное; прочитан 1 символ.
     assert_eq!(test_line(&fa, "a"), (false, 1));
-    // "aa": full accept, 2 symbols.
+    // "aa": полное принятие, 2 символа.
     assert_eq!(test_line(&fa, "aa"), (true, 2));
-    // "aaa": all threads die; only 2 symbols are readable.
+    // "aaa": все потоки обрываются; прочитать можно только 2 символа.
     assert_eq!(test_line(&fa, "aaa"), (false, 2));
 }
 
 #[test]
 fn test_line_counts_only_non_epsilon_steps() {
-    // q0 --eps--> q1 --a--> q2 (final). The `$` step is not counted as a
-    // consumed symbol, so "a" gives correctSymbols = 1 (not 2).
+    // q0 --eps--> q1 --a--> q2 (финальное). Шаг `$` не считается прочитанным
+    // символом, поэтому "a" даёт correctSymbols = 1 (а не 2).
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1363,16 +1363,16 @@ fn generate_test_inputs_empty_singles_and_sorted() {
     assert!(inputs.contains(&"".to_string()));
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"b".to_string()));
-    // minimal path to the final state (through the intermediate state)
+    // минимальный путь до финального состояния (через промежуточное состояние)
     assert!(inputs.contains(&"ab".to_string()));
     assert!(inputs.len() <= 50);
-    // sorted by length ascending
+    // отсортировано по возрастанию длины
     assert!(inputs.windows(2).all(|w| w[0].len() <= w[1].len()));
-    // de-duplicated
+    // без дубликатов
     let mut uniq = inputs.clone();
     uniq.dedup();
     assert_eq!(uniq, inputs);
-    // at least one negative case with a symbol outside the alphabet
+    // хотя бы один негативный случай с символом вне алфавита
     assert!(
         inputs
             .iter()
@@ -1382,7 +1382,7 @@ fn generate_test_inputs_empty_singles_and_sorted() {
 
 #[test]
 fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
-    // q0 --a--> q0 (self-loop cycle), q0 --b--> q1 (final)
+    // q0 --a--> q0 (цикл-петля), q0 --b--> q1 (финальное)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1396,16 +1396,16 @@ fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
         .unwrap();
 
     let inputs = fa.generate_test_inputs(50, 15);
-    // the "a" cycle repeated 2 and 3 times
+    // цикл "a", повторённый 2 и 3 раза
     assert!(inputs.contains(&"aa".to_string()));
     assert!(inputs.contains(&"aaa".to_string()));
-    // a long (>= 12 chars) string covering the cycle
+    // длинная (>= 12 символов) строка, покрывающая цикл
     assert!(inputs.iter().any(|s| s.len() >= 12));
 }
 
 #[test]
 fn generate_test_inputs_handles_epsilon_automaton() {
-    // q0 --eps--> q1 --a--> q2 (final): shortest path to q2 is "a", not "$a"
+    // q0 --eps--> q1 --a--> q2 (финальное): кратчайший путь до q2 — "a", а не "$a"
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1421,13 +1421,13 @@ fn generate_test_inputs_handles_epsilon_automaton() {
     let inputs = fa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"".to_string()));
-    // epsilon symbol is not emitted as a learned path character
+    // символ eps не выдаётся как символ найденного пути
     assert!(inputs.iter().all(|s| !s.contains('$')));
 }
 
 fn make_even_a_fa() -> FA {
     // Детерминированный автомат: принимает строки с чётным количеством 'a'
-    // q0 (initial, final) --a--> q1, q0 --b--> q0
+    // q0 (начальное, финальное) --a--> q1, q0 --b--> q0
     // q1 --a--> q0, q1 --b--> q1
     FA::builder()
         .state(0)
@@ -1480,14 +1480,14 @@ fn is_deterministic_detects_nondeterministic_cases() {
 fn accepts_even_a() {
     let fa = make_even_a_fa();
 
-    assert!(fa.accepts(&[])); // 0 a's - even
-    assert!(fa.accepts(&['b'])); // 0 a's - even
-    assert!(fa.accepts(&['b', 'b'])); // 0 a's - even
-    assert!(!fa.accepts(&['a'])); // 1 a - odd
-    assert!(fa.accepts(&['a', 'a'])); // 2 a's - even
-    assert!(!fa.accepts(&['a', 'a', 'a'])); // 3 a's - odd
-    assert!(fa.accepts(&['a', 'b', 'a'])); // 2 a's - even
-    assert!(!fa.accepts(&['a', 'b', 'b'])); // 1 a - odd
+    assert!(fa.accepts(&[])); // 0 'a' — чётно
+    assert!(fa.accepts(&['b'])); // 0 'a' — чётно
+    assert!(fa.accepts(&['b', 'b'])); // 0 'a' — чётно
+    assert!(!fa.accepts(&['a'])); // 1 'a' — нечётно
+    assert!(fa.accepts(&['a', 'a'])); // 2 'a' — чётно
+    assert!(!fa.accepts(&['a', 'a', 'a'])); // 3 'a' — нечётно
+    assert!(fa.accepts(&['a', 'b', 'a'])); // 2 'a' — чётно
+    assert!(!fa.accepts(&['a', 'b', 'b'])); // 1 'a' — нечётно
     assert!(!fa.accepts(&['c']));
     assert!(!fa.accepts(&['a', 'c']));
 }
@@ -1520,7 +1520,7 @@ fn empty_string_rejected_when_initial_not_final() {
 
 #[test]
 fn single_state_loop() {
-    // q0 --a--> q0, accepting: accepts a*
+    // q0 --a--> q0, допускающее: принимает a*
     let fa = FA::builder()
         .state(0)
         .set_initial(0)
@@ -1540,8 +1540,8 @@ fn single_state_loop() {
 #[test]
 fn accepts_only_specific_string() {
     // Автомат, принимающий только "ab"
-    // q0 --a--> q1 --b--> q2 (final)
-    // q0 --b--> dead, q1 --a--> dead
+    // q0 --a--> q1 --b--> q2 (финальное)
+    // q0 --b--> тупик, q1 --a--> тупик
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1580,7 +1580,7 @@ fn reachable_states_all_connected() {
 
 #[test]
 fn reachable_states_partial() {
-    // q0 --a--> q1 (final), q2 unreachable
+    // q0 --a--> q1 (финальное), q2 недостижимо
     let fa = FA::builder()
         .state(0)
         .state(1)

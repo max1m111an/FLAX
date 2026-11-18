@@ -1,4 +1,4 @@
-//! Mealy machine layer: the `MM` implementation and its Tauri commands.
+//! Слой машин Мили: реализация `MM` и её Tauri-команды.
 
 pub mod api;
 pub mod jff;

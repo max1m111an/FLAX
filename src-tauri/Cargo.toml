@@ -5,12 +5,12 @@ description = "A Tauri App"
 authors = ["you"]
 edition = "2024"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+# Остальные ключи и их описание: https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+# Суффикс `_lib` может показаться лишним, но он нужен, чтобы имя библиотеки
+# было уникальным и не конфликтовало с именем бинарника.
+# Похоже, проблема возникает только в Windows, см. https://github.com/rust-lang/cargo/issues/8519
 name = "flax_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
