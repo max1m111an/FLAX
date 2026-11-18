@@ -12,61 +12,29 @@ import styles from "../../scenes/ModelScene.module.scss";
 import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { save } from "@tauri-apps/plugin-dialog";
-import { saveJff } from "@/services/jffService.ts";
 import { isDirty } from "@/services/dirtyState.ts";
-import { basename } from "@tauri-apps/api/path";
 
 
 export default function ModelControlWidget() {
     const currentTab = useCurrentTab();
-    const { updateTab } = useTabs();
+    const { updateTab, saveTab } = useTabs();
     const { addFile } = useRecentFiles();
+    if ( currentTab.type === "SETTINGS") return null;
 
-    const fetchSave = async (): Promise<boolean> => {
-        try {
-            const filePath = await save({
-                defaultPath: `${currentTab?.title}.jff`,
-                filters: [ { name: "Единый формат .jff", extensions: [ "jff" ] } ],
-            });
-
-            if (!filePath || currentTab === undefined) return false;
-
-            const fileName = await basename(filePath);
-            const nameWithoutExt = fileName.replace(/\.jff$/i, "");
-
-            await saveJff({
-                automatonId: currentTab.id,
-                path: filePath,
-            });
-
-            updateTab({
-                ...currentTab,
-                title: nameWithoutExt,
-                isSaved: true,
-                savedPath: filePath,
-            });
-            addFile(filePath);
-            return true;
-        } catch (error) {
-            console.error("Ошибка при сохранении файла:", error);
-            return false;
-        }
-    };
     const handleSaveJFF = async () => {
         if (currentTab?.isSaved && !isDirty(currentTab.id)) {
             return;
         }
         const filePath = currentTab?.savedPath;
         if (filePath) {
-            await saveJff({ automatonId: currentTab.id, path: filePath });
-            addFile(filePath);
+            saveTab(currentTab);
+            addFile(filePath, currentTab.type);
             return;
         }
-        fetchSave();
+        saveTab(currentTab);
     };
     const handleSaveAsJFF = async () => {
-        fetchSave();
+        saveTab(currentTab, true);
     };
     return (
         <div className={ styles.modelLeftControlWrapper }>

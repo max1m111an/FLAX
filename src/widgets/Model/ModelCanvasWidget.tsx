@@ -1,27 +1,31 @@
 import { State } from "@/components/State/State.tsx";
-import { useCallback, useRef, useState } from "react";
-import Edge from "@/components/Edge/Edge.tsx";
-import calculatePoints from "@/utils/calculatePoints.ts";
+import React, { useCallback, useMemo, useRef, useState } from "react";
+import Transition from "@/components/Edge/Transition.tsx";
+import calculatePoints, { buildSelfLoop } from "@/utils/calculatePoints.ts";
 import { Textfield } from "@/components/ui/Textfield/Textfield.tsx";
 import styles from "@/scenes/ModelScene.module.scss";
-import { tab, useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
-import { addState, addTransition, removeState as removeStateRequest, removeTransitionService as removeTransitionRequest, updateState } from "@/services/faService.ts";
+import { useCurrentTab } from "@/context/TabsContext.tsx";
 import { TransitionModel } from "@/types/Automaton.ts";
 import { NODE_RADIUS, NODE_SIZE } from "@/configs/CanvasConst.ts";
 import { ContextMenuInput, ContextMenuItem, useContextMenu } from "@/context/ContextMenuContext.tsx";
 import Mark from "@/assets/svg/Mark.svg?react";
 import { useStateActions } from "@/hooks/useStateAction.tsx";
+import { AppTab } from "@/types/Tabs.ts";
+import { useTransitionAction } from "@/hooks/useTransitionAction.tsx";
 
 
 export default function ModelCanvasWidget() {
-    const currentTab = useCurrentTab();
-    const { updateTab } = useTabs();
+    const currentTab: AppTab | undefined = useCurrentTab();
+
     const [ tempEdge, setTempEdge ] = useState<{
         from: { x: number; y: number };
         to: { x: number; y: number };
     } | null>(null);
     const { setMenuState } = useContextMenu();
-    const { handleFinalChange, handleInitialChange, handleNameChange } = useStateActions();
+    const { handleFinalChange, handleInitialChange, handleNameChange, addState, removeState, saveStatePosition, moveStateLocal } = useStateActions(); //todo rename from handle to edit|update
+
+    const { addTransition, removeTransition } = useTransitionAction();
+
     const [ draftEdge, setDraftEdge ] = useState<{
         from: number;
         to: number;
@@ -31,44 +35,52 @@ export default function ModelCanvasWidget() {
 
     const getCanvasRect = useCallback((): DOMRect => canvasRef.current!.getBoundingClientRect(), []);
 
+    const transitions = currentTab?.type !== "SETTINGS" ? currentTab?.automaton.transitions : undefined;
+
+    const { groupedTransitions, directedKeys } = useMemo(() => {
+        if (!transitions) return { groupedTransitions: [], directedKeys: new Set<string>() };
+
+        const groups = Object.values(
+            transitions.reduce((acc, edge) => {
+                const key = `${edge.from}-${edge.to}`;
+                if (!acc[key]) acc[key] = [];
+                acc[key].push(edge);
+                return acc;
+            }, {} as Record<string, typeof transitions>),
+        ).map((group) => ({
+            ...group[0],
+            allSymbols: group.map((t) => {
+                if ("output" in t) {
+                    return `${t.symbol}⭢${t.output}`;
+                }
+                return t.symbol;
+            }),
+        }));
+
+        const keys = new Set(transitions.map((t) => `${t.from}-${t.to}`));
+
+        return { groupedTransitions: groups, directedKeys: keys };
+    }, [ transitions ]);
+
+    if (!currentTab || currentTab.type === "SETTINGS") return null;
+
     const clampToCanvas = (x: number, y: number) => {
         const rect = getCanvasRect();
         return {
             x: Math.max(0, Math.min(x, rect.width - NODE_SIZE)),
             y: Math.max(0, Math.min(y, rect.height - NODE_SIZE)),
         };
+
     };
 
-    if (!currentTab) return null;
-
-    const addNode = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const handleAddState = (e: React.MouseEvent<HTMLDivElement>) => {
         const rect = getCanvasRect();
-        const { x: x1, y: y1 } = clampToCanvas(
+        const { x, y } = clampToCanvas(
             e.clientX - rect.left - NODE_RADIUS,
             e.clientY - rect.top - NODE_RADIUS,
         );
-        const nextIndex = currentTab.automaton.states.length;
-        const newNode = {
-            automatonId: currentTab.id,
-            label: `q${nextIndex}`,
-            x: x1,
-            y: y1,
-            isInitial: false,
-            isFinal: false,
-        };
-        try {
-            const response = await addState(newNode);
-            const newTabData: tab = {
-                ...currentTab,
-                automaton: {
-                    ...currentTab.automaton,
-                    states: [ ...currentTab.automaton.states, response.state ],
-                },
-            };
-            updateTab(newTabData);
-        } catch (error) {
-            console.error("Ошибка при добавлении вершины:", error);
-        }
+
+        addState(x, y);
     };
 
     const handleEdgeDrop = (startState: number, endState?: number) => {
@@ -79,188 +91,20 @@ export default function ModelCanvasWidget() {
         setDraftEdge({ from: startState, to: endState });
     };
 
-    const addEdge = async (startState: number, endState: number, symbolStr: string) => {
+    const handleAddTransition = async (startState: number, endState: number, symbolStr: string) => {
+        if (!currentTab || currentTab.type === "SETTINGS") return;
+
         setDraftEdge(null);
 
-        let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
-        if (symbols.length === 0) {
-            symbols = [ "$" ];
-        }
-
-        const newTransition = {
-            automatonId: currentTab.id,
-            from: startState,
-            to: endState,
-            symbols,
-        };
-
-        try {
-            const response = await addTransition(newTransition);
-            const newTabData: tab = {
-                ...currentTab,
-                automaton: {
-                    ...currentTab.automaton,
-                    transitions: [ ...currentTab.automaton.transitions, ...response.transition ],
-                },
-            };
-            updateTab(newTabData);
-        } catch (error) {
-            console.error("Ошибка при добавлении перехода:", error);
-        }
+        addTransition(startState, endState, symbolStr);
     };
 
-    const moveStateLocal = (id: number, pos: { x: number; y: number }) => {
-        updateTab({
-            ...currentTab,
-            automaton: {
-                ...currentTab.automaton,
-                states: currentTab.automaton.states.map((state) =>
-                    state.id === id ? { ...state, x: pos.x, y: pos.y } : state,
-                ),
-            },
-        });
-    };
-
-    const saveStatePosition = async (id: number, pos: { x: number; y: number }) => {
-        const request = {
-            automatonId: currentTab.id,
-            stateId: id,
-            x: pos.x,
-            y: pos.y,
-        };
-
-        try {
-            const response = await updateState(request);
-            const newTabData: tab = {
-                ...currentTab,
-                automaton: {
-                    ...currentTab.automaton,
-                    states: currentTab.automaton.states.map((state) =>
-                        state.id === id ? response.state : state,
-                    ),
-                },
-            };
-            updateTab(newTabData);
-        } catch (error) {
-            console.error("Ошибка при сохранении позиции вершины:", error);
-        }
-    };
-
-    const removeState = async (id: number) => {
-        const connectedTransitions = currentTab.automaton.transitions.filter(
-            (t) => t.from === id || t.to === id,
-        );
-
-        try {
-            await Promise.all(
-                connectedTransitions.map((t) =>
-                    removeTransitionRequest({ automatonId: currentTab.id, transitionId: t.id }),
-                ),
-            );
-
-            const request = {
-                automatonId: currentTab.id,
-                stateId: id,
-            };
-            await removeStateRequest(request);
-            const connectedIds: number[] = connectedTransitions.map((t) => t.id);
-            const newTabData = {
-                ...currentTab,
-                selectedNodeId: currentTab.selectedNodeId === id ? null : currentTab.selectedNodeId,
-                automaton: {
-                    ...currentTab.automaton,
-                    states: currentTab.automaton.states.filter((state) => state.id !== id),
-                    transitions: currentTab.automaton.transitions.filter(
-                        (t) => !connectedIds.includes(t.id),
-                    ),
-                },
-            };
-            updateTab(newTabData);
-        } catch (error) {
-            console.error("Ошибка при удалении состояния:", error);
-        }
-    };
-
-    const groupedTransitions = Object.values(
-        currentTab.automaton.transitions.reduce((acc, edge) => {
-            const key = `${edge.from}-${edge.to}`;
-            if (!acc[key]) {
-                acc[key] = { ...edge, allSymbols: [ edge.symbol ] };
-            } else {
-                acc[key].allSymbols.push(edge.symbol);
-            }
-            return acc;
-        }, {} as Record<string, TransitionModel & { allSymbols: string[] }>),
-    );
-
-    const directedKeys = new Set(
-        currentTab.automaton.transitions.map((t) => `${t.from}-${t.to}`),
-    );
 
     const CURVE = 40;
 
     const hasReverse = (from: number, to: number): boolean =>
         from !== to && directedKeys.has(`${to}-${from}`);
 
-    const buildSelfLoop = (stateId: number) => {
-        const state = currentTab.automaton.states.find((s) => s.id === stateId);
-        if (!state) return null;
-
-        const stateX = state.x;
-        const stateY = state.y;
-        const cx = stateX + NODE_RADIUS;
-        const cy = stateY + NODE_RADIUS;
-        const r = NODE_RADIUS;
-
-        const attachX = 18;
-        const attachY = cy - Math.sqrt(r * r - attachX * attachX);
-
-        const startX = cx - attachX;
-        const endX = cx + attachX;
-
-        const c1x = startX + 2;
-        const c2x = endX - 2;
-        const ctrlY = attachY - 96;
-
-        const d = `M ${startX} ${attachY} C ${c1x} ${ctrlY}, ${c2x} ${ctrlY}, ${endX} ${attachY}`;
-
-        const textX = cx;
-        const textY = attachY - 84;
-
-        return { d, textX, textY };
-    };
-
-    const removeEdge = async (id: number) => {
-        const targetTransition = currentTab.automaton.transitions.find((t) => t.id === id);
-        if (!targetTransition) return;
-
-        const transitionsToDelete = currentTab.automaton.transitions.filter(
-            (t) => t.from === targetTransition.from && t.to === targetTransition.to,
-        );
-
-        try {
-            await Promise.all(
-                transitionsToDelete.map((t) =>
-                    removeTransitionRequest({ automatonId: currentTab.id, transitionId: t.id }),
-                ),
-            );
-
-            const idsToDelete = transitionsToDelete.map((t) => t.id);
-            const newTabData = {
-                ...currentTab,
-                automaton: {
-                    ...currentTab.automaton,
-                    transitions: currentTab.automaton.transitions.filter(
-                        (t) => !idsToDelete.includes(t.id),
-                    ),
-                },
-            };
-
-            updateTab(newTabData);
-        } catch (error) {
-            console.error("Ошибка при удалении ребра:", error);
-        }
-    };
 
     const handleRightClickState = (e: React.MouseEvent, stateId: number) => {
         e.preventDefault();
@@ -268,7 +112,7 @@ export default function ModelCanvasWidget() {
         const clickedState = currentTab.automaton.states.find((state) => state.id === stateId);
 
         if (!clickedState) return;
-
+        const isFinal = "isFinal" in clickedState ? clickedState.isFinal === true : false;
         setMenuState({
             visible: true,
             x: e.pageX,
@@ -289,17 +133,18 @@ export default function ModelCanvasWidget() {
                             onBlur={ (e) => {
                                 handleNameChange(e.currentTarget.value, clickedState.id);
                             } }
-                        >
-                        </ContextMenuInput>
+                        />
                     </ContextMenuItem>
                     <ContextMenuItem onClick={ () => handleInitialChange(!clickedState.isInitial, clickedState.id) }>
                         Начальное
                         {clickedState.isInitial && <Mark />}
                     </ContextMenuItem>
-                    <ContextMenuItem onClick={ () => handleFinalChange(!clickedState.isFinal, clickedState.id) }>
-                        Финальное
-                        {clickedState.isFinal && <Mark />}
-                    </ContextMenuItem>
+                    {"isFinal" in clickedState && (
+                        <ContextMenuItem onClick={ () => handleFinalChange(!isFinal, clickedState.id) }>
+                            Финальное
+                            {isFinal && <Mark />}
+                        </ContextMenuItem>
+                    )}
                     <ContextMenuItem onClick={ () => removeState(clickedState.id) } isRed>
                         Удалить
                     </ContextMenuItem>
@@ -320,7 +165,7 @@ export default function ModelCanvasWidget() {
             y: e.pageY,
             content: (
                 <>
-                    <ContextMenuItem onClick={ () => removeEdge(clickedTransition.id) } isRed={ true }>
+                    <ContextMenuItem onClick={ () => removeTransition(clickedTransition.id) } isRed={ true }>
                         Удалить
                     </ContextMenuItem>
                 </>
@@ -333,13 +178,8 @@ export default function ModelCanvasWidget() {
             ref={ canvasRef }
             className={ styles.modelCanvasWrapper }
             onClick={ (e) => {
-                if (currentTab.activeControl === "cursor") {
-                    if (currentTab.selectedNodeId !== null) {
-                        e.stopPropagation();
-                        updateTab({ ...currentTab, selectedNodeId: null });
-                    }
-                } else if (currentTab.activeControl === "node") {
-                    addNode(e);
+                if (currentTab.activeControl === "node") {
+                    handleAddState(e);
                 }
             } }
         >
@@ -348,7 +188,7 @@ export default function ModelCanvasWidget() {
                     label={ state.label }
                     initialPosition={ { x: state.x, y: state.y } }
                     isInitial={ state.isInitial }
-                    isFinal={ state.isFinal }
+                    isFinal={ "isFinal" in state ? state.isFinal : false }
                     onStartEdge={ (pos) => setTempEdge({ from: pos, to: pos }) }
                     onMoveEdge={ (pos) =>
                         setTempEdge((prev) => prev && { ...prev, to: pos })
@@ -356,27 +196,41 @@ export default function ModelCanvasWidget() {
                     onEndEdge={ (hoveredNodeId) => handleEdgeDrop(state.id, hoveredNodeId) }
                     key={ state.id }
                     id={ state.id }
-                    onDeleteNode={ removeState }
+                    onDeleteNode={ () => removeState(state.id) }
                     onMoveNode={ moveStateLocal }
-                    onEndMoveNode={ saveStatePosition }
+                    onEndMoveNode={ (id, pos) => saveStatePosition(id, pos.x, pos.y) }
                     getCanvasRect={ getCanvasRect }
                     onContextMenu={ (e) => handleRightClickState(e, state.id) }
+                    highlightStatus={ currentTab.selectedState?.find((s) => s.id === state.id)?.status || null }
+                    activeControl={ currentTab.activeControl }
                 />
             ))}
 
             <svg style={ { position: "absolute", left: 0, top: 0, width: "100%", height: "100%", pointerEvents: "none" } }>
 
                 {groupedTransitions.map((edgeGroup) => {
+                    const relatedTransitionIds = (currentTab.automaton.transitions ?? [])
+                        .filter((t) => edgeGroup.from !== undefined && edgeGroup.to !== undefined && t.from === edgeGroup.from && t.to === edgeGroup.to)
+                        .map((t) => t.id);
+
+                    const highlightData = currentTab.selectedTransition?.find((h) =>
+                        relatedTransitionIds.includes(h.id),
+                    );
+                    const highlightStatus = highlightData ? highlightData.status : null;
+
+                    const isSelected = !!(highlightData && !highlightData.status);
+
+
                     if (edgeGroup.from === edgeGroup.to) {
-                        const loop = buildSelfLoop(edgeGroup.from);
+                        const state = currentTab.automaton.states.find((s) => s.id === edgeGroup.from);
+                        if (!state) return null;
+                        const loop = buildSelfLoop(state.x, state.y);
                         if (!loop) return null;
 
                         return (
-                            <Edge
+                            <Transition
                                 key={ edgeGroup.id }
                                 id={ edgeGroup.id }
-                                from={ edgeGroup.from }
-                                to={ edgeGroup.to }
                                 x1={ loop.textX }
                                 y1={ loop.textY }
                                 x2={ loop.textX }
@@ -385,8 +239,17 @@ export default function ModelCanvasWidget() {
                                 textX={ loop.textX }
                                 textY={ loop.textY }
                                 angle={ 0 }
-                                label={ edgeGroup.allSymbols.join(", ") }
-                                onDeleteEdge={ removeEdge }
+                                label={ edgeGroup.allSymbols.join("") }
+
+
+                                activeControl={ currentTab.activeControl }
+                                highlightStatus={ highlightStatus }
+                                isSelected={ isSelected }
+                                onMouseDown={ (edgeId) => {
+                                    if (currentTab.activeControl === "trashcan") {
+                                        removeTransition(edgeId);
+                                    }
+                                } }
                                 onContextMenu={ (e) => handleRightClickTransition(e, edgeGroup.id) }
                             />
                         );
@@ -395,14 +258,13 @@ export default function ModelCanvasWidget() {
                     const reverse = hasReverse(edgeGroup.from, edgeGroup.to);
                     const bend = reverse ? -CURVE : 0;
                     const points = calculatePoints(edgeGroup, currentTab.automaton.states, bend);
+
                     if (!points) return null;
 
                     return (
-                        <Edge
+                        <Transition
                             key={ edgeGroup.id }
                             id={ edgeGroup.id }
-                            from={ edgeGroup.from }
-                            to={ edgeGroup.to }
                             x1={ points.x1 }
                             y1={ points.y1 }
                             x2={ points.x2 }
@@ -414,7 +276,14 @@ export default function ModelCanvasWidget() {
                             textY={ points.textY }
                             angle={ points.angle }
                             label={ edgeGroup.allSymbols.join(", ") }
-                            onDeleteEdge={ removeEdge }
+                            activeControl={ currentTab.activeControl }
+                            highlightStatus={ highlightStatus }
+                            isSelected={ isSelected }
+                            onMouseDown={ (edgeId) => {
+                                if (currentTab.activeControl === "trashcan") {
+                                    removeTransition(edgeId);
+                                }
+                            } }
                             onContextMenu={ (e) => handleRightClickTransition(e, edgeGroup.id) }
                         />
                     );
@@ -422,15 +291,19 @@ export default function ModelCanvasWidget() {
 
                 {draftEdge && (() => {
                     if (draftEdge.from === draftEdge.to) {
-                        const loop = buildSelfLoop(draftEdge.from);
+                        const state = currentTab.automaton.states.find((s) => s.id === draftEdge.from);
+                        if (!state) return null;
+
+                        const loop = buildSelfLoop(state.x, state.y);
                         if (!loop) return null;
                         return (
-                            <Edge
+                            <Transition
                                 x1={ loop.textX }
                                 y1={ loop.textY }
                                 x2={ loop.textX }
                                 y2={ loop.textY }
                                 loopD={ loop.d }
+                                activeControl={ currentTab.activeControl }
                             />
                         );
                     }
@@ -440,82 +313,64 @@ export default function ModelCanvasWidget() {
 
                     if (!points) return null;
                     return (
-                        <Edge
+                        <Transition
                             x1={ points.x1 }
                             y1={ points.y1 }
                             x2={ points.x2 }
                             y2={ points.y2 }
+                            activeControl={ currentTab.activeControl }
                         />
                     );
                 })()}
 
                 {tempEdge && (
-                    <Edge
+                    <Transition
                         x1={ tempEdge.from.x }
                         y1={ tempEdge.from.y }
                         x2={ tempEdge.to.x }
                         y2={ tempEdge.to.y }
+                        activeControl={ currentTab.activeControl }
                     />
                 )}
             </svg>
 
-            {draftEdge && (() => {
+            {draftEdge && (((): React.ReactNode => {
+                let inputX = 0;
+                let inputY = 0;
+
                 if (draftEdge.from === draftEdge.to) {
-                    const loop = buildSelfLoop(draftEdge.from);
-                    if (loop) {
-                        return (
-                            <Textfield
-                                key="draft-edge-input"
-                                autoFocus
-                                onEdge
-                                style={ {
-                                    position: "absolute",
-                                    left: loop.textX,
-                                    top: loop.textY,
-                                    transform: "translate(-50%, -50%)",
-                                } }
-                                onKeyDown={ (e) => {
-                                    if (e.key === "Enter") {
-                                        addEdge(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
-                                    } else if (e.key === "Escape") {
-                                        setDraftEdge(null);
-                                    }
-                                } }
-                                onBlur={ (e) => {
-                                    const val = (e.target as HTMLInputElement).value;
-                                    if (val.trim()) {
-                                        addEdge(draftEdge.from, draftEdge.to, val);
-                                    } else {
-                                        setDraftEdge(null);
-                                    }
-                                } }
-                            />
-                        );
-                    }
+                    const state = currentTab.automaton.states.find((s) => s.id === draftEdge.from);
+                    if (!state) return null;
+
+                    const loop = buildSelfLoop(state.x, state.y);
+                    if (!loop) return null;
+
+                    inputX = loop.textX;
+                    inputY = loop.textY;
+                } else {
+                    const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
+                    const points = calculatePoints(fakeEdge, currentTab.automaton.states);
+                    if (!points) return null;
+
+                    inputX = (points.x1 + points.x2) / 2;
+                    inputY = (points.y1 + points.y2) / 2;
                 }
-
-                const fakeEdge = { id: -1, from: draftEdge.from, to: draftEdge.to, symbol: "" } as TransitionModel;
-                const points = calculatePoints(fakeEdge, currentTab.automaton.states);
-
-                if (!points) return null;
-
-                const midX = (points.x1 + points.x2) / 2;
-                const midY = (points.y1 + points.y2) / 2;
 
                 return (
                     <Textfield
                         key="draft-edge-input"
                         autoFocus
                         onEdge
+                        placeholder={ currentTab.type === "MEALY" ? "ab cd" : "a b c" }
                         style={ {
                             position: "absolute",
-                            left: midX,
-                            top: midY,
+                            left: inputX,
+                            top: inputY,
                             transform: "translate(-50%, -50%)",
                         } }
                         onKeyDown={ (e) => {
                             if (e.key === "Enter") {
-                                addEdge(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
+                                handleAddTransition(draftEdge.from, draftEdge.to, (e.target as HTMLInputElement).value);
                             } else if (e.key === "Escape") {
                                 setDraftEdge(null);
                             }
@@ -523,14 +378,14 @@ export default function ModelCanvasWidget() {
                         onBlur={ (e) => {
                             const val = (e.target as HTMLInputElement).value;
                             if (val.trim()) {
-                                addEdge(draftEdge.from, draftEdge.to, val);
+                                handleAddTransition(draftEdge.from, draftEdge.to, val);
                             } else {
                                 setDraftEdge(null);
                             }
                         } }
                     />
                 );
-            })()}
+            })())}
         </div>
     );
 }

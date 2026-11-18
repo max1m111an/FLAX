@@ -32,5 +32,3 @@ export const getDirtySnapshot = (): Set<number> => dirtySet;
 
 export const isDirty = (automatonId: number): boolean => dirtySet.has(automatonId);
 
-export const stripDirtyStar = (title: string): string =>
-    title.endsWith("*") ? title.slice(0, -1) : title;

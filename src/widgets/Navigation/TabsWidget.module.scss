@@ -49,6 +49,14 @@
     color: var(--text-primary);
   }
 }
+.title {
+  &.isDirty::after {
+    content: "*";
+    opacity: 0.8;
+    position: relative;
+    top: -3px;
+  }
+}
 
 .cancelIcon {
   display: inline-flex;

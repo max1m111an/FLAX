@@ -133,3 +133,26 @@ export default function calculatePoints(
         angle,
     };
 }
+
+export const buildSelfLoop = (stateX: number, stateY: number) => {
+    const cx = stateX + NODE_RADIUS;
+    const cy = stateY + NODE_RADIUS;
+    const r = NODE_RADIUS;
+
+    const attachX = 18;
+    const attachY = cy - Math.sqrt(r * r - attachX * attachX);
+
+    const startX = cx - attachX;
+    const endX = cx + attachX;
+
+    const c1x = startX + 2;
+    const c2x = endX - 2;
+    const ctrlY = attachY - 96;
+
+    const d = `M ${startX} ${attachY} C ${c1x} ${ctrlY}, ${c2x} ${ctrlY}, ${endX} ${attachY}`;
+
+    const textX = cx;
+    const textY = attachY - 84;
+
+    return { d, textX, textY };
+};

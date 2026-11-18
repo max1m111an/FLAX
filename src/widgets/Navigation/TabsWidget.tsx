@@ -5,23 +5,16 @@ import HomeIcon from "@/assets/svg/Home.svg?react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import Plus from "@/assets/svg/Plus.svg?react";
 import Cancel from "@/assets/svg/Cancel.svg?react";
-import { models } from "@/data/models.ts";
 import { useTabs } from "@/context/TabsContext.tsx";
-import type { tab } from "@/context/TabsContext.tsx";
-import { isDirty, stripDirtyStar, subscribeDirty, getDirtySnapshot } from "@/services/dirtyState.ts";
+import { subscribeDirty, getDirtySnapshot } from "@/services/dirtyState.ts";
 import clsx from "clsx";
 import styles from "./TabsWidget.module.scss";
+import { models } from "@/data/Models.ts";
 
 
 export default function TabsWidget() {
     const { tabs, addTab, removeTab } = useTabs();
-    useSyncExternalStore(subscribeDirty, getDirtySnapshot, getDirtySnapshot);
-
-    const displayTitle = (tab: tab) => {
-        const base = stripDirtyStar(tab.title);
-        return isDirty(tab.id) ? `${base}*` : base;
-    };
-
+    const dirtyTabs = useSyncExternalStore(subscribeDirty, getDirtySnapshot, getDirtySnapshot);
 
     return (
         <div className={ styles.tabsWrapper }>
@@ -30,10 +23,15 @@ export default function TabsWidget() {
                 Главная
             </NavLink>
             {tabs.map((tab) => {
-                return tab.title !== "Настройки*" ? (
-                    <NavLink key={ tab.id } to={ `/models/${tab.id}` } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
-                        <tab.model.icon />
-                        {displayTitle(tab)}
+                return tab.type !== "SETTINGS" ? (
+                    <NavLink
+                        key={ tab.id }
+                        to={ `/models/${tab.id}` }
+                        className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
+                        <tab.icon />
+                        <span className={ clsx(styles.title, dirtyTabs.has(tab.id) && styles.isDirty) }>
+                            {tab.title}
+                        </span>
                         <Cancel
                             className={ styles.cancelIcon }
                             onClick={ (e) => {
@@ -44,8 +42,9 @@ export default function TabsWidget() {
                         />
                     </NavLink>
                 ) : (
-                    <NavLink key={ tab.id } to={ "/settings" } className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
-                        <tab.model.icon />
+                    <NavLink key={ tab.id } to={ "/settings" }
+                        className={ ({ isActive }) => clsx(styles.tab, isActive && styles.active) }>
+                        <tab.icon />
                         {tab.title}
                         <Cancel
                             className={ styles.cancelIcon }
@@ -55,7 +54,7 @@ export default function TabsWidget() {
                                 removeTab(tab);
                             } }
                         />
-                    </NavLink> );
+                    </NavLink>);
             })}
 
             <DropdownMenu.Root>
@@ -67,9 +66,10 @@ export default function TabsWidget() {
                     <DropdownMenu.Group>
                         {models.map((model) => {
                             return (
-                                <DropdownMenu.Item key={ model.type } className={ styles.item } onClick={ () => addTab(model) }>
+                                <DropdownMenu.Item key={ model.title } className={ styles.item }
+                                    onClick={ () => addTab(model) }>
                                     <model.icon />
-                                    {model.type}
+                                    {model.title}
                                 </DropdownMenu.Item>
                             );
                         })}
