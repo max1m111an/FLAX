@@ -11,7 +11,7 @@ import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { buildTab } from "@/utils/tabFactory.ts";
 import { models } from "@/data/Models.ts";
 import { jffService } from "@/services/jffService.ts";
-import { markDirty } from "@/services/dirtyState.ts";
+import { isDirty, markDirty } from "@/services/dirtyState.ts";
 
 
 interface TabsContextProps {
@@ -125,6 +125,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
             return false;
         }
     };
+
     const closeTab = async (self_tab: AppTab): Promise<void> => {
         if (self_tab.type === "SETTINGS") {
             removeTabFromState(self_tab);
@@ -155,7 +156,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     };
 
     const removeTab = (self_tab: AppTab): void => {
-        if (!self_tab.isSaved) {
+        if (isDirty(self_tab.id)) {
             setPendingCloseTab(self_tab);
             return;
         }
