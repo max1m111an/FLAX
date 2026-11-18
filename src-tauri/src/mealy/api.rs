@@ -268,9 +268,8 @@ pub fn mealy_add_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-    is_final: Option<bool>,
 ) -> StateResult {
-    crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, is_final)
+    crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, None)
 }
 
 /// Обновляет состояние машины Мили. Делегирует в `fa_update_state`.
@@ -284,7 +283,6 @@ pub fn mealy_update_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-    is_final: Option<bool>,
 ) -> StateResult {
     crate::fa::api::fa_update_state(
         state,
@@ -294,7 +292,7 @@ pub fn mealy_update_state(
         x,
         y,
         is_initial,
-        is_final,
+        None,
     )
 }
 
