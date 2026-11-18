@@ -1,13 +1,12 @@
 import { useEffect, useState } from "react";
 import History from "@/assets/svg/History.svg?react";
+import FileDown from "@/assets/svg/CircleAlert.svg?react";
 import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
-import CircleDot from "@/assets/svg/CircleDot.svg?react";
 import { useRecentFiles, RecentFile } from "@/context/RecentFilesContext.tsx";
 import { useTabs } from "@/context/TabsContext.tsx";
-import { models } from "@/data/models.ts";
-import { loadJff } from "@/services/jffService.ts";
 import styles from "../../scenes/MainScene.module.scss";
 import { useNavigate } from "react-router-dom";
+import { models } from "@/data/Models.ts";
 
 const pluralHours = (n: number): string => {
     const mod10 = n % 10;
@@ -100,8 +99,8 @@ const getDisplayNames = (files: RecentFile[]): Map<string, string> => {
     return display;
 };
 
-export default function MainHistoryWidget () {
-    const { files, addFile, clearFiles } = useRecentFiles();
+export default function MainHistoryWidget() {
+    const { files, clearFiles } = useRecentFiles();
     const { loadTab, tabs } = useTabs();
     const [ now, setNow ] = useState(() => Date.now());
     const navigate = useNavigate();
@@ -118,18 +117,12 @@ export default function MainHistoryWidget () {
     const displayNames = getDisplayNames(files);
 
     const openRecent = async (path: string) => {
-        if (tabs.find((tab) => tab.savedPath === path)) {
-            const existingTab = tabs.find((tab) => tab.savedPath === path);
-            if (existingTab) {
-                navigate(`/models/${existingTab.id}`);
-                return;
-            }
+        const existingTab = tabs.find((tab) => tab.savedPath === path);
+        if (existingTab) {
+            navigate(`/models/${existingTab.id}`);
+            return;
         }
-        const response = await loadJff({ path });
-        if (response.automaton) {
-            loadTab(response.automaton, models[0], path);
-            addFile(path);
-        }
+        loadTab(path);
     };
 
     return (
@@ -142,16 +135,26 @@ export default function MainHistoryWidget () {
                 <p className={ styles.cleanText } onClick={ clearFiles }>Очистить список</p>
             </div>
             <div className={ styles.recentCardsWrapper }>
-                {files.map((file) => (
-                    <div key={ file.path } className={ styles.recentCard } onClick={ () => openRecent(file.path) }>
-                        <CircleDot className={ styles.recentIcon } />
-                        <div className={ styles.recentNameTimeCardWrapper }>
-                            <p className={ styles.recentName }>{displayNames.get(file.path) ?? file.name}</p>
-                            <p className={ styles.recentTime }>{formatTime(file.timestamp, now)}</p>
+                {files.map((file) => {
+                    const model = models.find((m) => m.type === file.icon);
+                    const Icon = model ? model.icon : FileDown;
+
+                    return (
+                        <div
+                            key={ file.path }
+                            className={ styles.recentCard }
+                            onClick={ () => openRecent(file.path) }
+                        >
+                            <Icon className={ styles.recentIcon } />
+
+                            <div className={ styles.recentNameTimeCardWrapper }>
+                                <p className={ styles.recentName }>{displayNames.get(file.path) ?? file.name}</p>
+                                <p className={ styles.recentTime }>{formatTime(file.timestamp, now)}</p>
+                            </div>
+                            <ArrowRight className={ styles.recentArrow } />
                         </div>
-                        <ArrowRight className={ styles.recentArrow } />
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </>
     );

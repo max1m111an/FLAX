@@ -1,8 +1,9 @@
 import { createContext, useContext, ReactNode, useState } from "react";
+import { AutomatonType } from "@/types/Payloads.ts";
 
 interface RecentFilesContextProps {
     files: RecentFile[];
-    addFile: (path: string) => void;
+    addFile: (path: string, icon: AutomatonType) => void;
     clearFiles: () => void;
     removeFile: (path: string) => void;
 }
@@ -11,6 +12,7 @@ export interface RecentFile {
     path: string;
     name: string;
     timestamp: number;
+    icon: AutomatonType;
 }
 
 const STORAGE_KEY = "recent-files";
@@ -32,10 +34,14 @@ export const RecentFilesProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
     };
 
-    const addFile = (path: string) => {
+    const addFile = (path: string, icon: AutomatonType) => {
         const name = path.split(/[/\\]/).filter(Boolean).pop() || path;
         const updated = [
-            { path, name, timestamp: Date.now() },
+            {
+                path, name,
+                timestamp: Date.now(),
+                icon,
+            },
             ...files.filter((f) => f.path !== path),
         ].slice(0, MAX_FILES);
         persist(updated);

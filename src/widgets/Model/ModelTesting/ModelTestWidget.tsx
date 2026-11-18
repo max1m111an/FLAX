@@ -10,6 +10,7 @@ import { useCurrentTab, useTabs } from "@/context/TabsContext.tsx";
 export default function ModelTestWidget() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
+    if (!currentTab || currentTab.type === "SETTINGS") return null;
 
     const typeTest = currentTab?.testMode ?? "solo";
 
