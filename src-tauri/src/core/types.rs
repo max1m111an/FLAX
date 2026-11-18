@@ -4,6 +4,7 @@
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::Mutex;
 
 use serde::{Deserialize, Serialize};
@@ -250,14 +251,14 @@ pub trait NondeterministicAutomaton: Automaton {
 
 pub struct AutomatonStore {
     automata: Mutex<HashMap<i32, AutomatonData>>,
-    next_id: Mutex<i32>,
+    next_id: AtomicI32,
 }
 
 impl AutomatonStore {
     pub fn new() -> Self {
         AutomatonStore {
             automata: Mutex::new(HashMap::new()),
-            next_id: Mutex::new(1),
+            next_id: AtomicI32::new(1),
         }
     }
 
@@ -281,12 +282,7 @@ impl AutomatonStore {
     }
 
     pub fn insert(&self, mut data: AutomatonData) -> AutomatonData {
-        let id = {
-            let mut next = self.next_id.lock().unwrap();
-            let id = *next;
-            *next += 1;
-            id
-        };
+        let id = self.next_id.fetch_add(1, Ordering::Relaxed);
 
         data.id = id;
         self.automata.lock().unwrap().insert(id, data.clone());
