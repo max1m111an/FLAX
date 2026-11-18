@@ -74,8 +74,15 @@ impl AutomatonStore {
         self.automata.lock().unwrap().get(&id).cloned()
     }
 
-    pub fn update(&self, data: AutomatonData) {
-        self.automata.lock().unwrap().insert(data.id, data);
+    /// Атомарно изменяет автомат под блокировкой карты, не клонируя запись
+    /// целиком. `f` получает `&mut AutomatonData` и выполняется при удержанном
+    /// замке.
+    ///
+    /// Возвращает `None`, если автомата с таким `id` нет, иначе — результат `f`.
+    /// Изменения фиксируются сразу по возвращении `f`, поэтому для семантики
+    /// «всё или ничего» `f` должен проверить все условия до первой мутации.
+    pub fn modify<R>(&self, id: i32, f: impl FnOnce(&mut AutomatonData) -> R) -> Option<R> {
+        self.automata.lock().unwrap().get_mut(&id).map(f)
     }
 
     pub fn remove(&self, id: i32) -> Option<AutomatonData> {

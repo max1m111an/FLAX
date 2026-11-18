@@ -17,10 +17,14 @@ use crate::mealy::types::MealyBuilder;
 /// Вынесена отдельно от Tauri-команды, чтобы тестироваться без `tauri::State`
 /// (то же соглашение, что `data_to_fa` / `test_line` в `fa`).
 pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
-    let mut entry = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
-    entry.automatonType = AutomatonType::MEALY;
-    entry.states[0].isFinal = None;
-    state.update(entry.clone());
+    let created = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
+    let entry = state
+        .modify(created.id, |entry| {
+            entry.automatonType = AutomatonType::MEALY;
+            entry.states[0].isFinal = None;
+            entry.clone()
+        })
+        .unwrap_or(created);
     OperationResult {
         status: StatusCode::OK,
         message: "Автомат Мили создан".to_string(),
@@ -317,32 +321,25 @@ pub fn mealy_add_transition(
     input: char,
     output: char,
 ) -> TransitionResult {
-    let mut entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                transition: vec![],
-            };
-        }
-    };
-
-    match add_mealy_transition(&mut entry, from, to, input, output) {
-        Ok(created) => {
-            state.update(entry);
-            TransitionResult {
-                status: StatusCode::OK,
-                message: format!(
-                    "Переход {} -{}-> {} (выход '{}') добавлен",
-                    from, input, to, output
-                ),
-                transition: vec![created],
-            }
-        }
-        Err(message) => TransitionResult {
+    match state.modify(automaton_id, |entry| {
+        add_mealy_transition(entry, from, to, input, output)
+    }) {
+        Some(Ok(created)) => TransitionResult {
+            status: StatusCode::OK,
+            message: format!(
+                "Переход {} -{}-> {} (выход '{}') добавлен",
+                from, input, to, output
+            ),
+            transition: vec![created],
+        },
+        Some(Err(message)) => TransitionResult {
             status: StatusCode::BAD_REQUEST,
             message,
+            transition: vec![],
+        },
+        None => TransitionResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
     }
@@ -356,29 +353,22 @@ pub fn mealy_update_transition(
     input: Option<char>,
     output: Option<char>,
 ) -> TransitionResult {
-    let mut entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                transition: vec![],
-            };
-        }
-    };
-
-    match update_mealy_transition(&mut entry, transition_id, input, output) {
-        Ok(updated) => {
-            state.update(entry);
-            TransitionResult {
-                status: StatusCode::OK,
-                message: format!("Переход {} обновлён", transition_id),
-                transition: vec![updated],
-            }
-        }
-        Err(message) => TransitionResult {
+    match state.modify(automaton_id, |entry| {
+        update_mealy_transition(entry, transition_id, input, output)
+    }) {
+        Some(Ok(updated)) => TransitionResult {
+            status: StatusCode::OK,
+            message: format!("Переход {} обновлён", transition_id),
+            transition: vec![updated],
+        },
+        Some(Err(message)) => TransitionResult {
             status: StatusCode::BAD_REQUEST,
             message,
+            transition: vec![],
+        },
+        None => TransitionResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
     }
@@ -390,27 +380,20 @@ pub fn mealy_remove_transition(
     automaton_id: i32,
     transition_id: i32,
 ) -> StatusResult {
-    let mut entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return StatusResult {
-                status: StatusCode::BAD_REQUEST,
-                message: format!("Автомат с id {} не найден", automaton_id),
-            };
-        }
-    };
-
-    match remove_mealy_transition(&mut entry, transition_id) {
-        Ok(()) => {
-            state.update(entry);
-            StatusResult {
-                status: StatusCode::OK,
-                message: format!("Удалён переход {}", transition_id),
-            }
-        }
-        Err(message) => StatusResult {
+    match state.modify(automaton_id, |entry| {
+        remove_mealy_transition(entry, transition_id)
+    }) {
+        Some(Ok(())) => StatusResult {
+            status: StatusCode::OK,
+            message: format!("Удалён переход {}", transition_id),
+        },
+        Some(Err(message)) => StatusResult {
             status: StatusCode::BAD_REQUEST,
             message,
+        },
+        None => StatusResult {
+            status: StatusCode::BAD_REQUEST,
+            message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
 }

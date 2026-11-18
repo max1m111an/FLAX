@@ -58,19 +58,20 @@ fn get_nonexistent_returns_none() {
 }
 
 #[test]
-fn update_modifies_automaton() {
+fn modify_modifies_automaton() {
     let store = make_store();
-    let mut entry = store.create("Test".to_string(), "q0");
-    entry.name = "Updated".to_string();
-    entry.states.push(StateData {
-        id: 1,
-        label: "q1".to_string(),
-        x: 200.0,
-        y: 300.0,
-        isInitial: false,
-        isFinal: Some(true),
+    let entry = store.create("Test".to_string(), "q0");
+    let _ = store.modify(entry.id, |data| {
+        data.name = "Updated".to_string();
+        data.states.push(StateData {
+            id: 1,
+            label: "q1".to_string(),
+            x: 200.0,
+            y: 300.0,
+            isInitial: false,
+            isFinal: Some(true),
+        });
     });
-    store.update(entry);
 
     let fetched = store.get(1).unwrap();
     assert_eq!(fetched.name, "Updated");
@@ -137,6 +138,60 @@ fn store_is_thread_safe() {
 }
 
 #[test]
+fn modify_mutates_in_place_and_returns_result() {
+    let store = make_store();
+    let entry = store.create("Test".to_string(), "q0");
+
+    let states = store.modify(entry.id, |data| {
+        data.name = "Renamed".to_string();
+        data.states.len()
+    });
+
+    assert_eq!(states, Some(1));
+    assert_eq!(store.get(entry.id).unwrap().name, "Renamed");
+}
+
+#[test]
+fn modify_nonexistent_returns_none() {
+    let store = make_store();
+    assert!(store.modify(999, |_| ()).is_none());
+}
+
+#[test]
+fn modify_does_not_lose_concurrent_updates() {
+    use std::sync::Arc;
+    use std::thread;
+
+    let store = Arc::new(make_store());
+    let entry = store.create("Test".to_string(), "q0");
+    let automaton_id = entry.id;
+
+    let handles: Vec<_> = (0..10)
+        .map(|i| {
+            let store = Arc::clone(&store);
+            thread::spawn(move || {
+                let _ = store.modify(automaton_id, |data| {
+                    data.states.push(StateData {
+                        id: i + 1,
+                        label: format!("q{}", i + 1),
+                        x: 0.0,
+                        y: 0.0,
+                        isInitial: false,
+                        isFinal: Some(false),
+                    });
+                });
+            })
+        })
+        .collect();
+
+    for h in handles {
+        h.join().unwrap();
+    }
+
+    assert_eq!(store.get(automaton_id).unwrap().states.len(), 11);
+}
+
+#[test]
 fn insert_assigns_fresh_id_and_stores() {
     let store = make_store();
     let data = AutomatonData {
@@ -170,24 +225,22 @@ fn create_and_modify_full_workflow() {
     let store = make_store();
 
     // Создание
-    let mut entry = store.create("Workflow Test".to_string(), "q0");
+    let entry = store.create("Workflow Test".to_string(), "q0");
     assert_eq!(entry.states.len(), 1);
 
     // Добавление состояния
-    entry.states.push(StateData {
-        id: 1,
-        label: "q1".to_string(),
-        x: 300.0,
-        y: 200.0,
-        isInitial: false,
-        isFinal: Some(true),
+    let _ = store.modify(entry.id, |data| {
+        data.states.push(StateData {
+            id: 1,
+            label: "q1".to_string(),
+            x: 300.0,
+            y: 200.0,
+            isInitial: false,
+            isFinal: Some(true),
+        });
     });
-    store.update(entry.clone());
     let fetched = store.get(1).unwrap();
     assert_eq!(fetched.states.len(), 2);
-
-    // Добавление перехода
-    store.update(entry);
 
     // Удаление
     let removed = store.remove(1).unwrap();
