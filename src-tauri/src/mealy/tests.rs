@@ -4,7 +4,8 @@ use std::collections::HashSet;
 
 use tauri::http::StatusCode;
 
-use crate::core::types::{AutomatonData, AutomatonStore, MealyRunStep, StateData, TransitionData};
+use crate::core::automaton::AutomatonStore;
+use crate::core::types::{AutomatonData, MealyRunStep, StateData, TransitionData};
 use crate::mealy::api::{
     add_mealy_transition, create_new_mealy, data_to_mm, multi_run_mealy, remove_mealy_transition,
     run_mealy, update_mealy_transition,

@@ -3,10 +3,10 @@ use std::collections::HashSet;
 use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
+use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, AutomatonType, MealyLineTest, MealyMultiRunResult,
-    MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
-    TransitionResult,
+    AutomatonData, AutomatonType, MealyLineTest, MealyMultiRunResult, MealyRunResult,
+    OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;

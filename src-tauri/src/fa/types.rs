@@ -1,6 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
-use crate::core::types::{Automaton, NondeterministicAutomaton, RunStep, Trace};
+use crate::core::automaton::{Automaton, NondeterministicAutomaton};
+use crate::core::types::{RunStep, Trace};
 
 pub use crate::core::types::EPSILON;
 

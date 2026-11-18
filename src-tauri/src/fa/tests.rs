@@ -2,9 +2,8 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::core::types::{
-    Automaton, AutomatonData, NondeterministicAutomaton, RunStep, StateData, Trace, TransitionData,
-};
+use crate::core::automaton::{Automaton, NondeterministicAutomaton};
+use crate::core::types::{AutomatonData, RunStep, StateData, Trace, TransitionData};
 use crate::fa::api::{data_to_fa, multi_run_fa, test_line};
 use crate::fa::types::{EPSILON, FA};
 

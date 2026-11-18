@@ -1,9 +1,10 @@
 use tauri::{State, http::StatusCode};
 
 use crate::core::api::generate_id;
+use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonStore, GenerateInputsResult, LineTest, MultiRunResult, OperationResult,
-    RunResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
+    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
 use crate::fa::types::{EPSILON, FA, FABuilder};

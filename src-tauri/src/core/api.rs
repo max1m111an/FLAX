@@ -5,10 +5,10 @@ use std::path::Path;
 use rand::Rng;
 use tauri::{State, http::StatusCode};
 
+use crate::core::automaton::AutomatonStore;
 use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
-    AutomatonData, AutomatonStore, AutomatonType, LoadResult, LoadedFile, StateData, StatusResult,
-    TransitionData,
+    AutomatonData, AutomatonType, LoadResult, LoadedFile, StateData, StatusResult, TransitionData,
 };
 
 pub const MAX_ID: i32 = 10_000_000;

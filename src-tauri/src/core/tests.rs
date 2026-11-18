@@ -1,9 +1,8 @@
 //! Модульные тесты общего реестра автоматов в памяти.
 
 use crate::core::api::{load_via_file_with, multi_run_automaton, save_automaton, save_file_with};
-use crate::core::types::{
-    AutomatonData, AutomatonStore, StateData, TransitionData, alphabet_from_transitions,
-};
+use crate::core::automaton::AutomatonStore;
+use crate::core::types::{AutomatonData, StateData, TransitionData, alphabet_from_transitions};
 
 fn make_store() -> AutomatonStore {
     AutomatonStore::new()
