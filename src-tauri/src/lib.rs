@@ -3,7 +3,7 @@ mod fa;
 mod mealy;
 
 use crate::core::api::{load_file, save_file};
-use crate::core::types::AutomatonStore;
+use crate::core::automaton::AutomatonStore;
 use crate::fa::api::*;
 use crate::mealy::api::*;
 
