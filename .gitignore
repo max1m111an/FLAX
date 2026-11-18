@@ -43,6 +43,7 @@ pids
 *.sublime*
 .idea
 .vscode
+.zed
 debug.log
 TODO.md
 .aider*
@@ -73,9 +74,9 @@ dist-ssr
 # will have schema files for capabilities auto-completion
 src-tauri/gen/schemas/
 
-# max1m111an api file
+# max1m111an api files
 *.md
 !README.md
 
-# zed
-.zed
+# jff
+*.jff

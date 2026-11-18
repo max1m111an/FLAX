@@ -202,7 +202,7 @@ fn create_new_returns_ok_with_single_initial_state() {
     assert_eq!(automaton.states.len(), 1);
     assert_eq!(automaton.states[0].label, "q0");
     assert!(automaton.states[0].isInitial);
-    assert!(!automaton.states[0].isFinal.unwrap());
+    assert!(automaton.states[0].isFinal.is_none());
     assert!(automaton.transitions.is_empty());
     assert!(automaton.get_alphabet().is_empty());
 }
