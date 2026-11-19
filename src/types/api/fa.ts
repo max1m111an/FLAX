@@ -2,11 +2,19 @@ import { ApiResponse } from "@/types/api/common.ts";
 import { FAAutomatonModel, StateFAModel, TransitionFAModel } from "@/types/Automaton.ts";
 import { lineTestFA, RunStepFA, Trace } from "@/types/Testing.ts";
 
-export type createFAResponse = ApiResponse<{ automaton: FAAutomatonModel }>;
+export type CreateFAResponse = ApiResponse<{ automaton: FAAutomatonModel }>;
 
-export type deleteFAResponse = ApiResponse;
+export type CreateFARequest = {
+    name: string;
+};
 
-export type addStateFARequest = {
+export type DeleteFAResponse = ApiResponse;
+
+export type DeleteFARequest = {
+    automatonId: number;
+};
+
+export type AddStateFARequest = {
     automatonId: number;
     label: string;
     x: number;
@@ -15,16 +23,16 @@ export type addStateFARequest = {
     isFinal: boolean;
 }
 
-export type addStateFAResponse = ApiResponse<{ state: StateFAModel }>;
+export type AddStateFAResponse = ApiResponse<{ state: StateFAModel }>;
 
-export type removeStateFARequest = {
+export type RemoveStateFARequest = {
     automatonId: number;
     stateId: number;
 }
 
-export type removeStateFAResponse = ApiResponse;
+export type RemoveStateFAResponse = ApiResponse;
 
-export type updateStateFARequest = {
+export type UpdateStateFARequest = {
     automatonId: number;
     stateId: number;
     label?: string;
@@ -34,18 +42,18 @@ export type updateStateFARequest = {
     isFinal?: boolean;
 }
 
-export type updateStateFAResponse = ApiResponse<{ state: StateFAModel }>;
+export type UpdateStateFAResponse = ApiResponse<{ state: StateFAModel }>;
 
-export type addTransitFARequest = {
+export type AddTransitFARequest = {
     automatonId: number;
     from: number;
     to: number;
     symbols: string[];
 }
 
-export type addTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
+export type AddTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
 
-export type updateTransitFARequest = {
+export type UpdateTransitFARequest = {
     automatonId: number;
     transitionId: number;
     newFrom?: number;
@@ -53,33 +61,33 @@ export type updateTransitFARequest = {
     newSymbol?: string;
 }
 
-export type updateTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
+export type UpdateTransitFAResponse = ApiResponse<{ transition: TransitionFAModel[] }>;
 
-export type removeTransitFARequest = {
+export type RemoveTransitFARequest = {
     automatonId: number;
     transitionId: number;
 }
 
-export type removeTransitFAResponse = ApiResponse;
+export type RemoveTransitFAResponse = ApiResponse;
 
 
-export type runStrFARequest = {
+export type RunStrFARequest = {
     automatonId: number;
     input: string;
 }
 
-export type runStrFAResponse = ApiResponse<{ traces: Trace<RunStepFA>[] }>;
+export type RunStrFAResponse = ApiResponse<{ traces: Trace<RunStepFA>[] }>;
 
 
-export type multiRunStrFARequest = {
+export type MultiRunStrFARequest = {
     automatonId: number;
     inputs: string[];
 }
 
-export type multiRunStrFAResponse = ApiResponse<{ traces: lineTestFA[] }>;
+export type MultiRunStrFAResponse = ApiResponse<{ traces: lineTestFA[] }>;
 
-export type generateInputsRequest = {
+export type GenerateInputsRequest = {
     automatonId: number;
 }
 
-export type generateInputsResponse = ApiResponse<{ inputs: string[] }>;
+export type GenerateInputsResponse = ApiResponse<{ inputs: string[] }>;
