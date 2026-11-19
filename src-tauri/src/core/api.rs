@@ -8,7 +8,8 @@ use tauri::{State, http::StatusCode};
 use crate::core::automaton::AutomatonStore;
 use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
-    AutomatonData, AutomatonType, LoadResult, LoadedFile, StateData, StatusResult, TransitionData,
+    AutomatonData, AutomatonType, LoadResult, LoadedFile, MultiRunResult, StateData, StatusResult,
+    TransitionData,
 };
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -112,7 +113,7 @@ pub fn save_file(
         Some(e) => e,
         None => {
             return StatusResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -168,4 +169,17 @@ where
         .iter()
         .map(|line| run_line(&automaton, line))
         .collect())
+}
+
+/// Инкапсулированная проверка существования автомата.
+/// При отсутствии возвращает переданный `err_resp`, что позволяет
+/// использовать функцию с разными типами ответов команд.
+///
+/// usage: `let entry = check_automaton(store, automaton_id, err_resp)?;`
+pub(crate) fn check_automaton<T>(
+    store: &AutomatonStore,
+    automaton_id: i32,
+    err_resp: T,
+) -> Result<AutomatonData, T> {
+    store.get(automaton_id).ok_or(err_resp)
 }
