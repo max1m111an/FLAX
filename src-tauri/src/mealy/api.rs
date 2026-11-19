@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::generate_id;
+use crate::core::api::{
+    check_automaton_mealy_multi_run, check_automaton_mealy_run, generate_id,
+};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, AutomatonType, MealyLineTest, MealyMultiRunResult, MealyRunResult,
@@ -338,7 +340,7 @@ pub fn mealy_add_transition(
             transition: vec![],
         },
         None => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
@@ -367,7 +369,7 @@ pub fn mealy_update_transition(
             transition: vec![],
         },
         None => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
@@ -392,7 +394,7 @@ pub fn mealy_remove_transition(
             message,
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
@@ -404,16 +406,9 @@ pub fn mealy_run_str(
     automaton_id: i32,
     input: String,
 ) -> MealyRunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return MealyRunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                output: String::new(),
-                steps: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_mealy_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     run_mealy(&entry, &input)
@@ -428,15 +423,9 @@ pub fn mealy_multi_run(
     automaton_id: i32,
     inputs: Vec<String>,
 ) -> MealyMultiRunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return MealyMultiRunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                results: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_mealy_multi_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     multi_run_mealy(&entry, &inputs)

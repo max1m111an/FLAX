@@ -1,6 +1,8 @@
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::generate_id;
+use crate::core::api::{
+    check_automaton_generate_inputs, check_automaton_multi_run, check_automaton_run, generate_id,
+};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
@@ -49,7 +51,7 @@ pub fn fa_add_state(
         Some(v) => v,
         None => {
             return StateResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -114,7 +116,7 @@ pub fn fa_update_state(
         }
         None => {
             return StateResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -156,7 +158,7 @@ pub fn fa_remove_state(
             message,
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
@@ -227,7 +229,7 @@ pub fn fa_add_transition(
         }
         None => {
             return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -283,7 +285,7 @@ pub fn fa_update_transition(
         }
         None => {
             return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -311,7 +313,7 @@ pub fn fa_remove_transition(
         Some(removed) => removed,
         None => {
             return StatusResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -320,7 +322,7 @@ pub fn fa_remove_transition(
     let (status, msg) = if removed > 0 {
         (StatusCode::OK, format!("Удалено {} переход(ов)", removed))
     } else {
-        (StatusCode::BAD_REQUEST, "Переход не найден".to_string())
+        (StatusCode::NOT_FOUND, "Переход не найден".to_string())
     };
 
     StatusResult {
@@ -334,15 +336,9 @@ pub fn fa_remove_transition(
 /// (не массивом).
 #[tauri::command]
 pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: String) -> RunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return RunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                traces: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     let chars: Vec<char> = input.chars().collect();
@@ -372,7 +368,10 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
                     ),
                 )
             } else {
-                (StatusCode::PAYMENT_REQUIRED, format!("Цепочка '{}' отклонена", input))
+                (
+                    StatusCode::PAYMENT_REQUIRED,
+                    format!("Цепочка '{}' отклонена", input),
+                )
             };
             RunResult {
                 status,
@@ -397,15 +396,9 @@ pub fn fa_multi_run_str(
     automaton_id: i32,
     inputs: Vec<String>,
 ) -> MultiRunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return MultiRunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                traces: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_multi_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     multi_run_fa(&entry, &inputs)
@@ -444,15 +437,9 @@ pub fn fa_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
 ) -> GenerateInputsResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return GenerateInputsResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                inputs: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_generate_inputs(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     let fa = match data_to_fa(&entry.states, &entry.transitions) {
@@ -483,7 +470,7 @@ pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) 
             message: format!("Автомат с id {} удалён", automaton_id),
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
