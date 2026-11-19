@@ -182,6 +182,7 @@ pub(crate) fn check_automaton<T>(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`StatusResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_status(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -197,6 +198,7 @@ pub(crate) fn check_automaton_status(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`StateResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_state(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -213,6 +215,7 @@ pub(crate) fn check_automaton_state(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`TransitionResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_transition(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -229,6 +232,7 @@ pub(crate) fn check_automaton_transition(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`RunResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_run(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -245,6 +249,7 @@ pub(crate) fn check_automaton_run(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`MultiRunResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_multi_run(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -261,6 +266,7 @@ pub(crate) fn check_automaton_multi_run(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`MealyRunResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_mealy_run(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -278,6 +284,7 @@ pub(crate) fn check_automaton_mealy_run(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`MealyMultiRunResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_mealy_multi_run(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -294,6 +301,7 @@ pub(crate) fn check_automaton_mealy_multi_run(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`OperationResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_operation(
     store: &AutomatonStore,
     automaton_id: i32,
@@ -310,6 +318,7 @@ pub(crate) fn check_automaton_operation(
 }
 
 /// Проверка существования автомата с шаблоном ошибки [`GenerateInputsResult`].
+#[warn(dead_code)]
 pub(crate) fn check_automaton_generate_inputs(
     store: &AutomatonStore,
     automaton_id: i32,
