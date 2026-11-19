@@ -8,8 +8,9 @@ use tauri::{State, http::StatusCode};
 use crate::core::automaton::AutomatonStore;
 use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
-    AutomatonData, AutomatonType, LoadResult, LoadedFile, MultiRunResult, StateData, StatusResult,
-    TransitionData,
+    AutomatonData, AutomatonType, LoadResult, LoadedFile, MealyMultiRunResult, MealyRunResult,
+    MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult,
+    TransitionData, TransitionResult,
 };
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -176,10 +177,139 @@ where
 /// использовать функцию с разными типами ответов команд.
 ///
 /// usage: `let entry = check_automaton(store, automaton_id, err_resp)?;`
+#[warn(dead_code)]
 pub(crate) fn check_automaton<T>(
     store: &AutomatonStore,
     automaton_id: i32,
     err_resp: T,
 ) -> Result<AutomatonData, T> {
     store.get(automaton_id).ok_or(err_resp)
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`StatusResult`].
+pub(crate) fn check_automaton_status(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, StatusResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        StatusResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`StateResult`].
+pub(crate) fn check_automaton_state(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, StateResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        StateResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            state: None,
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`TransitionResult`].
+pub(crate) fn check_automaton_transition(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, TransitionResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        TransitionResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            transition: Vec::new(),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`RunResult`].
+pub(crate) fn check_automaton_run(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, RunResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        RunResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            traces: Vec::new(),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`MultiRunResult`].
+pub(crate) fn check_automaton_multi_run(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, MultiRunResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        MultiRunResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            traces: Vec::new(),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`MealyRunResult`].
+pub(crate) fn check_automaton_mealy_run(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, MealyRunResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        MealyRunResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            output: String::new(),
+            steps: Vec::new(),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`MealyMultiRunResult`].
+pub(crate) fn check_automaton_mealy_multi_run(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, MealyMultiRunResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        MealyMultiRunResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            results: Vec::new(),
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`OperationResult`].
+pub(crate) fn check_automaton_operation(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, OperationResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        OperationResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            automaton: None,
+        },
+    )
 }
