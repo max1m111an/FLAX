@@ -338,7 +338,7 @@ pub fn mealy_add_transition(
             transition: vec![],
         },
         None => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
@@ -367,7 +367,7 @@ pub fn mealy_update_transition(
             transition: vec![],
         },
         None => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
             transition: vec![],
         },
@@ -392,7 +392,7 @@ pub fn mealy_remove_transition(
             message,
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }

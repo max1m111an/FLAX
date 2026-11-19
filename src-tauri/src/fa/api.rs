@@ -49,7 +49,7 @@ pub fn fa_add_state(
         Some(v) => v,
         None => {
             return StateResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -114,7 +114,7 @@ pub fn fa_update_state(
         }
         None => {
             return StateResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 state: None,
             };
@@ -156,7 +156,7 @@ pub fn fa_remove_state(
             message,
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
@@ -227,7 +227,7 @@ pub fn fa_add_transition(
         }
         None => {
             return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -283,7 +283,7 @@ pub fn fa_update_transition(
         }
         None => {
             return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
                 transition: vec![],
             };
@@ -311,7 +311,7 @@ pub fn fa_remove_transition(
         Some(removed) => removed,
         None => {
             return StatusResult {
-                status: StatusCode::BAD_REQUEST,
+                status: StatusCode::NOT_FOUND,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
@@ -320,7 +320,7 @@ pub fn fa_remove_transition(
     let (status, msg) = if removed > 0 {
         (StatusCode::OK, format!("Удалено {} переход(ов)", removed))
     } else {
-        (StatusCode::BAD_REQUEST, "Переход не найден".to_string())
+        (StatusCode::NOT_FOUND, "Переход не найден".to_string())
     };
 
     StatusResult {
@@ -372,7 +372,10 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
                     ),
                 )
             } else {
-                (StatusCode::PAYMENT_REQUIRED, format!("Цепочка '{}' отклонена", input))
+                (
+                    StatusCode::PAYMENT_REQUIRED,
+                    format!("Цепочка '{}' отклонена", input),
+                )
             };
             RunResult {
                 status,
@@ -483,7 +486,7 @@ pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) 
             message: format!("Автомат с id {} удалён", automaton_id),
         },
         None => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+            status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
