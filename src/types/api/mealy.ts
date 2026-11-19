@@ -53,8 +53,6 @@ export type UpdateTransitMealyRequest = {
     transitionId: number;
     input?: string;
     output?: string;
-    newFrom?: number;
-    newTo?: number;
 };
 
 export type UpdateTransitMealyResponse = ApiResponse<{ transition: TransitionMealyModel[] }>;
