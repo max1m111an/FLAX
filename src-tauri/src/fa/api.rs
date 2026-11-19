@@ -1,6 +1,8 @@
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::generate_id;
+use crate::core::api::{
+    check_automaton_generate_inputs, check_automaton_multi_run, check_automaton_run, generate_id,
+};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
@@ -334,15 +336,9 @@ pub fn fa_remove_transition(
 /// (не массивом).
 #[tauri::command]
 pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: String) -> RunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return RunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                traces: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     let chars: Vec<char> = input.chars().collect();
@@ -400,15 +396,9 @@ pub fn fa_multi_run_str(
     automaton_id: i32,
     inputs: Vec<String>,
 ) -> MultiRunResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return MultiRunResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                traces: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_multi_run(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     multi_run_fa(&entry, &inputs)
@@ -447,15 +437,9 @@ pub fn fa_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
 ) -> GenerateInputsResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return GenerateInputsResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-                inputs: Vec::new(),
-            };
-        }
+    let entry = match check_automaton_generate_inputs(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     let fa = match data_to_fa(&entry.states, &entry.transitions) {

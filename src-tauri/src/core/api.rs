@@ -8,9 +8,9 @@ use tauri::{State, http::StatusCode};
 use crate::core::automaton::AutomatonStore;
 use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
-    AutomatonData, AutomatonType, LoadResult, LoadedFile, MealyMultiRunResult, MealyRunResult,
-    MultiRunResult, OperationResult, RunResult, StateData, StateResult, StatusResult,
-    TransitionData, TransitionResult,
+    AutomatonData, AutomatonType, GenerateInputsResult, LoadResult, LoadedFile,
+    MealyMultiRunResult, MealyRunResult, MultiRunResult, OperationResult, RunResult, StateData,
+    StateResult, StatusResult, TransitionData, TransitionResult,
 };
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -110,14 +110,9 @@ pub fn save_file(
     automaton_id: i32,
     path: String,
 ) -> StatusResult {
-    let entry = match state.get(automaton_id) {
-        Some(e) => e,
-        None => {
-            return StatusResult {
-                status: StatusCode::NOT_FOUND,
-                message: format!("Автомат с id {} не найден", automaton_id),
-            };
-        }
+    let entry = match check_automaton_status(state.inner(), automaton_id) {
+        Ok(e) => e,
+        Err(e) => return e,
     };
 
     save_automaton(&entry, &path)
@@ -310,6 +305,22 @@ pub(crate) fn check_automaton_operation(
             status: StatusCode::NOT_FOUND,
             message: format!("Автомат с id {} не найден", automaton_id),
             automaton: None,
+        },
+    )
+}
+
+/// Проверка существования автомата с шаблоном ошибки [`GenerateInputsResult`].
+pub(crate) fn check_automaton_generate_inputs(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> Result<AutomatonData, GenerateInputsResult> {
+    check_automaton(
+        store,
+        automaton_id,
+        GenerateInputsResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+            inputs: Vec::new(),
         },
     )
 }
