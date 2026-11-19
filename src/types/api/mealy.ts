@@ -2,11 +2,15 @@ import { ApiResponse } from "@/types/api/common.ts";
 import { MealyAutomatonModel, StateMealyModel, TransitionMealyModel } from "@/types/Automaton.ts";
 import { lineTestMealy, RunStepMealy, Trace } from "@/types/Testing.ts";
 
-export type createMealyResponse = ApiResponse<{ automaton: MealyAutomatonModel }>;
-
-export type deleteMealyResponse = ApiResponse;
-
-export type addStateMealyRequest = {
+export type CreateMealyResponse = ApiResponse<{ automaton: MealyAutomatonModel }>;
+export type CreateMealyRequest = {
+    name: string;
+};
+export type DeleteMealyResponse = ApiResponse;
+export type DeleteMealyRequest = {
+    automatonId: number;
+};
+export type AddStateMealyRequest = {
     automatonId: number;
     label: string;
     x: number;
@@ -14,9 +18,9 @@ export type addStateMealyRequest = {
     isInitial: boolean;
 };
 
-export type addStateMealyResponse = ApiResponse<{ state: StateMealyModel }>;
+export type AddStateMealyResponse = ApiResponse<{ state: StateMealyModel }>;
 
-export type updateStateMealyRequest = {
+export type UpdateStateMealyRequest = {
     automatonId: number;
     stateId: number;
     label?: string;
@@ -25,16 +29,16 @@ export type updateStateMealyRequest = {
     isInitial?: boolean;
 };
 
-export type updateStateMealyResponse = ApiResponse<{ state: StateMealyModel }>;
+export type UpdateStateMealyResponse = ApiResponse<{ state: StateMealyModel }>;
 
-export type removeStateMealyRequest = {
+export type RemoveStateMealyRequest = {
     automatonId: number;
     stateId: number;
 };
 
-export type removeStateMealyResponse = ApiResponse;
+export type RemoveStateMealyResponse = ApiResponse;
 
-export type addTransitMealyRequest = {
+export type AddTransitMealyRequest = {
     automatonId: number;
     from: number;
     to: number;
@@ -42,9 +46,9 @@ export type addTransitMealyRequest = {
     output: string;
 };
 
-export type addTransitMealyResponse = ApiResponse<{ transition: TransitionMealyModel[] }>;
+export type AddTransitMealyResponse = ApiResponse<{ transition: TransitionMealyModel[] }>;
 
-export type updateTransitMealyRequest = {
+export type UpdateTransitMealyRequest = {
     automatonId: number;
     transitionId: number;
     input?: string;
@@ -53,35 +57,35 @@ export type updateTransitMealyRequest = {
     newTo?: number;
 };
 
-export type updateTransitMealyResponse = ApiResponse<{ transition: TransitionMealyModel[] }>;
+export type UpdateTransitMealyResponse = ApiResponse<{ transition: TransitionMealyModel[] }>;
 
-export type removeTransitMealyRequest = {
+export type RemoveTransitMealyRequest = {
     automatonId: number;
     transitionId: number;
 };
 
-export type removeTransitMealyResponse = ApiResponse;
+export type RemoveTransitMealyResponse = ApiResponse;
 
 
-export type runStrMealyRequest = {
+export type RunStrMealyRequest = {
     automatonId: number;
     input: string;
 }
 
-export type runStrMealyResponse = ApiResponse<{
+export type RunStrMealyResponse = ApiResponse<{
     output: string;
     steps: RunStepMealy[];
 }>;
 
-export type runStrMealyTracesResponse = ApiResponse<{
+export type RunStrMealyTracesResponse = ApiResponse<{
     traces: Trace<RunStepMealy>[];
 }>;
 
-export type multiRunStrMealyRequest = {
+export type MultiRunStrMealyRequest = {
     automatonId: number;
     inputs: string[];
 }
 
-export type multiRunStrMealyResponse = ApiResponse<{
+export type MultiRunStrMealyResponse = ApiResponse<{
     results: lineTestMealy[];
 }>;
