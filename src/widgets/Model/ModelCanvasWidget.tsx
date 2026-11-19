@@ -275,7 +275,7 @@ export default function ModelCanvasWidget() {
                             textX={ points.textX }
                             textY={ points.textY }
                             angle={ points.angle }
-                            label={ edgeGroup.allSymbols.join(", ") }
+                            label={ edgeGroup.allSymbols.join("") }
                             activeControl={ currentTab.activeControl }
                             highlightStatus={ highlightStatus }
                             isSelected={ isSelected }
@@ -361,7 +361,7 @@ export default function ModelCanvasWidget() {
                         key="draft-edge-input"
                         autoFocus
                         onEdge
-                        placeholder={ currentTab.type === "MEALY" ? "ab cd" : "a b c" }
+                        placeholder={ currentTab.type === "MEALY" ? "ab cd" : "abc" }
                         style={ {
                             position: "absolute",
                             left: inputX,

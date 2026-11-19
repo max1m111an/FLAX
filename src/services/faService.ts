@@ -65,7 +65,7 @@ export const faService: IAutomatonService<
     },
 
     addTransition: async (automatonId: number, from: number, to: number, symbolStr: string) => {
-        let symbols = symbolStr.split(",").map((s) => s.trim()).filter((s) => s !== "");
+        let symbols = symbolStr.split("").map((s) => s.trim()).filter((s) => s !== "");
         if (symbols.length === 0) {
             symbols = [ "$" ];
         }
