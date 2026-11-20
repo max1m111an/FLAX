@@ -7,7 +7,7 @@ use crate::core::api::{
 };
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonType, MealyLineTest, MealyMultiRunResult, MealyRunResult,
+    AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult, MealyRunResult,
     OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
 };
 use crate::fa::types::EPSILON;
@@ -429,6 +429,17 @@ pub fn mealy_multi_run(
     };
 
     multi_run_mealy(&entry, &inputs)
+}
+
+/// Генерирует упорядоченный набор входов для Multiple Run машины Мили.
+/// Делегирует общему генератору ядра, который добавляет `$` и символы вне
+/// входного алфавита как негативные сценарии.
+#[tauri::command]
+pub fn mealy_generate_inputs(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+) -> GenerateInputsResult {
+    crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
 /// Удаляет машину Мили из хранилища. Делегирует в `fa_remove_automaton`:

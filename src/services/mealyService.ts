@@ -9,7 +9,6 @@ import { MealyStatePayload } from "@/types/Payloads.ts";
  * Сервис для работы с машинами Мили (MEALY).
  * Инкапсулирует разбор пар вход/выход, нормализацию трасс и вызов команд бэкенда.
  */
-// @ts-expect-error: todo: add insufficient Api
 export const mealyService: IAutomatonService<
     AutomatonModel,
     StateMealyModel,
@@ -108,5 +107,9 @@ export const mealyService: IAutomatonService<
 
     async runMultipleStr (automatonId: number, inputs: string[]) {
         return await call("mealy_multi_run", { automatonId, inputs });
+    },
+
+    async generateTestInputs (automatonId: number) {
+        return await call("mealy_generate_inputs", { automatonId });
     },
 };

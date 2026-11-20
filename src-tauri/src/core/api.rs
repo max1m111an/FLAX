@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fs;
 use std::path::Path;
 
@@ -10,6 +10,7 @@ use crate::core::jff::{JffParsed, parse_jff};
 use crate::core::types::{
     AutomatonData,
     AutomatonType,
+    EPSILON,
     GenerateInputsResult,
     LoadResult,
     LoadedFile,
@@ -20,6 +21,7 @@ use crate::core::types::{
     StateData,
     StatusResult,
     TransitionData,
+    alphabet_from_transitions,
     //TransitionResult, OperationResult, StateResult
 };
 
@@ -341,4 +343,300 @@ pub(crate) fn check_automaton_generate_inputs(
             inputs: Vec::new(),
         },
     )
+}
+
+/// Символы вне входного алфавита для негативных тестов. Сначала цифры, затем
+/// буквы; `eps` включается всегда, чтобы проверить отказ от `$` как входа.
+fn outside_alphabet_symbols(alphabet: &HashSet<char>) -> Vec<char> {
+    let mut out = Vec::new();
+    let preferred: Vec<char> = (b'0'..=b'9')
+        .chain(b'a'..=b'z')
+        .chain(b'A'..=b'Z')
+        .map(|b| b as char)
+        .collect();
+    let mut candidates: Vec<char> = vec!['0', '4', EPSILON];
+    candidates.extend(preferred);
+    for c in candidates {
+        if !alphabet.contains(&c) && !out.contains(&c) {
+            out.push(c);
+            if out.len() == 2 {
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// Кратчайший непустой цикл из `start` обратно в `start` в детерминированном
+/// графе переходов. Поиск в ширину гарантирует минимальную длину цикла.
+fn shortest_cycle(
+    start: i32,
+    transitions: &HashMap<(i32, char), i32>,
+    alphabet: &[char],
+    depth: usize,
+) -> Option<String> {
+    let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
+    let mut visited: HashSet<i32> = HashSet::new();
+
+    for &ch in alphabet {
+        if let Some(&to) = transitions.get(&(start, ch)) {
+            if to == start {
+                return Some(ch.to_string());
+            }
+            if visited.insert(to) {
+                queue.push_back((to, ch.to_string(), 1));
+            }
+        }
+    }
+
+    while let Some((state, path, len)) = queue.pop_front() {
+        if len >= depth {
+            continue;
+        }
+        for &ch in alphabet {
+            if let Some(&to) = transitions.get(&(state, ch)) {
+                if to == start {
+                    let mut cycle = path;
+                    cycle.push(ch);
+                    return Some(cycle);
+                }
+                if visited.insert(to) {
+                    let mut next = path.clone();
+                    next.push(ch);
+                    queue.push_back((to, next, len + 1));
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Генерирует упорядоченные тестовые входы для детерминированного автомата
+/// (машина Мили, в будущем — машина Мура). В отличие от КА, здесь нет
+/// eps-переходов и финальных состояний, зато важно покрыть выходные символы:
+/// поэтому для каждого выхода берётся кратчайший переход, его порождающий.
+///
+/// Негативные сценарии (`$` и символы вне алфавита) добавляются как входные
+/// строки — они не должны быть переходами самой машины.
+pub(crate) fn generate_test_inputs_deterministic(
+    entry: &AutomatonData,
+    cap: usize,
+    depth: usize,
+) -> Result<Vec<String>, String> {
+    let initial = entry
+        .states
+        .iter()
+        .find(|s| s.isInitial)
+        .ok_or_else(|| "Начальное состояние не задано".to_string())?
+        .id;
+    let alphabet = alphabet_from_transitions(&entry.transitions);
+    let alphabet_set: HashSet<char> = alphabet.iter().copied().collect();
+    let state_ids: HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
+
+    // Осиротевшие переходы и `$` игнорируются: это не корректные входы машины.
+    let mut transitions: HashMap<(i32, char), i32> = HashMap::new();
+    let mut output_transitions: HashMap<char, Vec<(i32, char)>> = HashMap::new();
+    for t in &entry.transitions {
+        if t.symbol == EPSILON || !state_ids.contains(&t.from) || !state_ids.contains(&t.to) {
+            continue;
+        }
+        transitions.insert((t.from, t.symbol), t.to);
+        if let Some(output) = t.output {
+            output_transitions
+                .entry(output)
+                .or_default()
+                .push((t.from, t.symbol));
+        }
+    }
+
+    // Кратчайшие пути до всех достижимых состояний.
+    let mut dist: HashMap<i32, String> = HashMap::new();
+    dist.insert(initial, String::new());
+    let mut queue: VecDeque<i32> = VecDeque::new();
+    queue.push_back(initial);
+    while let Some(state) = queue.pop_front() {
+        let path = dist.get(&state).cloned().unwrap_or_default();
+        if path.chars().count() >= depth {
+            continue;
+        }
+        for &ch in &alphabet {
+            if let Some(&to) = transitions.get(&(state, ch)) {
+                if !dist.contains_key(&to) {
+                    let mut next = path.clone();
+                    next.push(ch);
+                    dist.insert(to, next);
+                    queue.push_back(to);
+                }
+            }
+        }
+    }
+
+    let mut states: Vec<i32> = dist.keys().copied().collect();
+    states.sort_by_key(|s| dist.get(s).map(|p| p.chars().count()).unwrap_or(0));
+
+    let mut result: HashSet<String> = HashSet::new();
+    result.insert(String::new());
+    for &ch in &alphabet {
+        result.insert(ch.to_string());
+    }
+    // `$` недопустим как переход машины Мили, но должен присутствовать как
+    // негативный тестовый вход.
+    result.insert(EPSILON.to_string());
+    let outside = outside_alphabet_symbols(&alphabet_set);
+    for ch in &outside {
+        result.insert(ch.to_string());
+    }
+
+    for state in &states {
+        if let Some(path) = dist.get(state) {
+            result.insert(path.clone());
+        }
+    }
+
+    // Покрытие каждого перехода: путь до состояния + символ перехода.
+    for ((from, symbol), _) in &transitions {
+        if let Some(path) = dist.get(from) {
+            let mut activated = path.clone();
+            activated.push(*symbol);
+            result.insert(activated);
+        }
+    }
+
+    // Покрытие каждого выходного символа (цель генерации — получить много
+    // разных выходов при мультипрогоне).
+    for candidates in output_transitions.values() {
+        let best = candidates
+            .iter()
+            .filter(|(from, _)| dist.contains_key(from))
+            .min_by_key(|(from, _)| {
+                dist.get(from)
+                    .map(|p| p.chars().count())
+                    .unwrap_or(usize::MAX)
+            });
+        if let Some((from, symbol)) = best {
+            let mut path = dist.get(from).cloned().unwrap_or_default();
+            path.push(*symbol);
+            result.insert(path);
+        }
+    }
+
+    // Негативные случаи: путь до состояния, в котором нет перехода по символу
+    // алфавита (прогон остановится до конца строки).
+    let mut dead_end_states = states.clone();
+    dead_end_states.truncate(8);
+    for state in dead_end_states {
+        let path = dist.get(&state).cloned().unwrap_or_default();
+        for &ch in &alphabet {
+            if !transitions.contains_key(&(state, ch)) {
+                let mut stuck = path.clone();
+                stuck.push(ch);
+                result.insert(stuck);
+            }
+        }
+    }
+
+    // Символы вне алфавита, вставленные в корректные префиксы.
+    let mut bases: Vec<String> = states.iter().filter_map(|s| dist.get(s)).cloned().collect();
+    bases.sort();
+    bases.dedup();
+    bases.sort_by_key(|p| p.chars().count());
+    bases.truncate(4);
+    for o in &outside {
+        let invalid = o.to_string();
+        for base in &bases {
+            result.insert(format!("{}{}", invalid, base));
+            result.insert(format!("{}{}", base, invalid));
+            let mid_chars = base.chars().count() / 2;
+            let mid_byte = base
+                .char_indices()
+                .nth(mid_chars)
+                .map(|(idx, _)| idx)
+                .unwrap_or(base.len());
+            let (left, right) = base.split_at(mid_byte);
+            result.insert(format!("{}{}{}", left, invalid, right));
+        }
+    }
+
+    // Циклы: повтор 1–3 раза и одна длинная цепочка для проверки выходной
+    // последовательности на большом входе.
+    let mut cycle_input = None;
+    for state in &states {
+        if let Some(cycle) = shortest_cycle(*state, &transitions, &alphabet, depth) {
+            let prefix = dist.get(state).cloned().unwrap_or_default();
+            cycle_input = Some((prefix, cycle));
+            break;
+        }
+    }
+    if let Some((prefix, cycle)) = cycle_input {
+        result.insert(format!("{}{}", prefix, cycle));
+        result.insert(format!("{}{}{}", prefix, cycle, cycle));
+        result.insert(format!("{}{}{}{}", prefix, cycle, cycle, cycle));
+
+        let mut walk = prefix;
+        while walk.chars().count() < 20 && !cycle.is_empty() {
+            walk.push_str(&cycle);
+        }
+        let long: String = walk.chars().take(20).collect();
+        if long.chars().count() >= 12 {
+            result.insert(long);
+        }
+    }
+
+    let mut sorted: Vec<String> = result.into_iter().collect();
+    sorted.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then(a.cmp(b)));
+    sorted.truncate(cap);
+    Ok(sorted)
+}
+
+/// Генерирует входы для режима Multiple Run, чтобы пользователь мог сразу
+/// увидеть множество выходных последовательностей машины Мили. Для КА используется
+/// существующий генератор, для Мили — общий детерминированный генератор ядра.
+/// При появлении `AutomatonType::MOORE` здесь добавится ещё одна ветка с тем же
+/// генератором (источник выходных символов у Мура — состояния).
+pub(crate) fn gen_multi_run_for_output(
+    store: &AutomatonStore,
+    automaton_id: i32,
+) -> GenerateInputsResult {
+    let entry = match check_automaton_generate_inputs(store, automaton_id) {
+        Ok(entry) => entry,
+        Err(err) => return err,
+    };
+
+    let inputs = match entry.automatonType {
+        AutomatonType::FA => match crate::fa::api::data_to_fa(&entry.states, &entry.transitions) {
+            Ok(fa) => fa.generate_test_inputs(50, 15),
+            Err(_) => {
+                return GenerateInputsResult {
+                    status: StatusCode::BAD_REQUEST,
+                    message: "Некорректный автомат".to_string(),
+                    inputs: Vec::new(),
+                };
+            }
+        },
+        AutomatonType::MEALY => {
+            if let Err(err) = crate::mealy::api::data_to_mm(&entry.states, &entry.transitions) {
+                return GenerateInputsResult {
+                    status: StatusCode::BAD_REQUEST,
+                    message: format!("Некорректный автомат: {}", err),
+                    inputs: Vec::new(),
+                };
+            }
+            match generate_test_inputs_deterministic(&entry, 50, 15) {
+                Ok(inputs) => inputs,
+                Err(err) => {
+                    return GenerateInputsResult {
+                        status: StatusCode::BAD_REQUEST,
+                        message: format!("Некорректный автомат: {}", err),
+                        inputs: Vec::new(),
+                    };
+                }
+            }
+        }
+    };
+
+    GenerateInputsResult {
+        status: StatusCode::OK,
+        message: format!("Сгенерировано {} тестовых входов", inputs.len()),
+        inputs,
+    }
 }
