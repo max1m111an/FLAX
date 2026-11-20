@@ -18,6 +18,7 @@ import {
     UpdateTransitMealyRequest,
     UpdateTransitMealyResponse,
 } from "@/types/api/mealy.ts";
+import { GenerateInputsRequest, GenerateInputsResponse } from "@/types/api/fa.ts";
 
 export interface MealyCommands {
     "mealy_create_new": { req: CreateMealyRequest; res: CreateMealyResponse };
@@ -30,4 +31,5 @@ export interface MealyCommands {
     "mealy_remove_transition": { req: RemoveTransitMealyRequest; res: RemoveTransitMealyResponse };
     "mealy_run_str": { req: RunStrMealyRequest; res: RunStrMealyResponse };
     "mealy_multi_run": { req: MultiRunStrMealyRequest; res: MultiRunStrMealyResponse };
+    "mealy_generate_inputs": { req: GenerateInputsRequest; res: GenerateInputsResponse };
 }

@@ -1,8 +1,13 @@
 //! Модульные тесты общего реестра автоматов в памяти.
 
-use crate::core::api::{load_via_file_with, multi_run_automaton, save_automaton, save_file_with};
+use crate::core::api::{
+    gen_multi_run_for_output, load_via_file_with, multi_run_automaton, save_automaton,
+    save_file_with,
+};
 use crate::core::automaton::AutomatonStore;
-use crate::core::types::{AutomatonData, StateData, TransitionData, alphabet_from_transitions};
+use crate::core::types::{
+    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions,
+};
 
 fn make_store() -> AutomatonStore {
     AutomatonStore::new()
@@ -365,11 +370,11 @@ fn load_via_file_with_preserves_formal_language_flag() {
         Ok((
             false,
             AutomatonData {
-            id: 0,
-            name: String::new(),
-            automatonType: crate::core::types::AutomatonType::FA,
-            states: Vec::new(),
-            transitions: Vec::new(),
+                id: 0,
+                name: String::new(),
+                automatonType: crate::core::types::AutomatonType::FA,
+                states: Vec::new(),
+                transitions: Vec::new(),
             },
         ))
     })
@@ -531,4 +536,163 @@ fn load_result_serializes_is_automaton_and_data() {
     let value = serde_json::to_value(&result).unwrap();
     assert_eq!(value["isAutomaton"], true);
     assert_eq!(value["data"]["id"], 1);
+}
+
+fn mealy_state(id: i32, is_initial: bool) -> StateData {
+    StateData {
+        id,
+        label: format!("q{}", id),
+        x: 0.0,
+        y: 0.0,
+        isInitial: is_initial,
+        isFinal: None,
+    }
+}
+
+fn mealy_trans(id: i32, from: i32, to: i32, symbol: char, output: char) -> TransitionData {
+    TransitionData {
+        id,
+        from,
+        to,
+        symbol,
+        output: Some(output),
+    }
+}
+
+fn make_mealy_entry() -> AutomatonData {
+    AutomatonData {
+        id: 0,
+        name: "Mealy".to_string(),
+        automatonType: AutomatonType::MEALY,
+        states: vec![mealy_state(0, true), mealy_state(1, false)],
+        // q0 --a/x--> q0, q0 --b/y--> q1, q1 --a/z--> q0
+        transitions: vec![
+            mealy_trans(1, 0, 0, 'a', 'x'),
+            mealy_trans(2, 0, 1, 'b', 'y'),
+            mealy_trans(3, 1, 0, 'a', 'z'),
+        ],
+    }
+}
+
+#[test]
+fn gen_multi_run_for_output_mealy_returns_ordered_inputs_with_negatives() {
+    let store = make_store();
+    let entry = store.insert(make_mealy_entry());
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.message.starts_with("Сгенерировано "));
+    assert!(result.inputs.contains(&String::new()));
+    assert!(result.inputs.contains(&"a".to_string()));
+    assert!(result.inputs.contains(&"b".to_string()));
+    // `$` обязателен как негативный вход, хотя это и не переход машины.
+    assert!(result.inputs.contains(&"$".to_string()));
+    let outside: Vec<&String> = result
+        .inputs
+        .iter()
+        .filter(|s| s.chars().any(|c| !['a', 'b'].contains(&c)))
+        .collect();
+    assert_eq!(outside.len(), 3);
+    assert!(outside.iter().any(|s| s.as_str() == "$"));
+    assert!(result.inputs.len() <= 50);
+    assert!(
+        result
+            .inputs
+            .windows(2)
+            .all(|w| w[0].chars().count() <= w[1].chars().count())
+    );
+    let mut unique = result.inputs.clone();
+    unique.sort();
+    unique.dedup();
+    assert_eq!(unique.len(), result.inputs.len());
+}
+
+#[test]
+fn gen_multi_run_for_output_mealy_covers_states_outputs_and_cycles() {
+    let store = make_store();
+    let entry = store.insert(make_mealy_entry());
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    // Путь до q1 и активация каждого перехода.
+    assert!(result.inputs.contains(&"b".to_string()));
+    assert!(result.inputs.contains(&"ba".to_string()));
+    // Выходы x, y, z покрываются кратчайшими строками.
+    assert!(result.inputs.contains(&"a".to_string()));
+    assert!(result.inputs.contains(&"b".to_string()));
+    assert!(result.inputs.contains(&"ba".to_string()));
+    // Цикл q0 --a--> q0 повторяется 2 и 3 раза, длинных цепочек больше нет.
+    assert!(result.inputs.contains(&"aa".to_string()));
+    assert!(result.inputs.contains(&"aaa".to_string()));
+}
+
+#[test]
+fn gen_multi_run_for_output_missing_automaton_returns_404() {
+    let store = make_store();
+
+    let result = gen_multi_run_for_output(&store, 999);
+
+    assert_eq!(result.status, tauri::http::StatusCode::NOT_FOUND);
+    assert!(result.inputs.is_empty());
+}
+
+#[test]
+fn gen_multi_run_for_output_invalid_mealy_returns_400() {
+    let store = make_store();
+    let mut entry = make_mealy_entry();
+    entry.states[0].isInitial = false;
+    let entry = store.insert(entry);
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
+    assert!(result.message.contains("Некорректный автомат"));
+    assert!(result.inputs.is_empty());
+}
+
+#[test]
+fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
+    let store = make_store();
+    let mut entry = make_mealy_entry();
+    for i in 0..12 {
+        let id = i + 2;
+        entry.states.push(mealy_state(id, false));
+        entry.transitions.push(mealy_trans(
+            id + 10,
+            0,
+            id,
+            char::from(b'c' + i as u8),
+            char::from(b'0' + i as u8),
+        ));
+    }
+    let entry = store.insert(entry);
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.inputs.len(), 50);
+    assert!(result.inputs.contains(&"aa".to_string()));
+    assert!(result.inputs.contains(&"aaa".to_string()));
+}
+
+#[test]
+fn gen_multi_run_for_output_fa_uses_existing_generator() {
+    let store = make_store();
+    let mut entry = store.create("FA".to_string(), "q0");
+    entry.transitions = vec![trans(1, 0, 1, 'a'), trans(2, 1, 0, 'b')];
+    let entry = store.insert(entry);
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.inputs.contains(&String::new()));
+    assert!(result.inputs.contains(&"a".to_string()));
+    assert!(result.inputs.contains(&"b".to_string()));
+    assert!(
+        result
+            .inputs
+            .iter()
+            .any(|s| s.contains('$') || s.chars().any(|c| !['a', 'b'].contains(&c)))
+    );
 }

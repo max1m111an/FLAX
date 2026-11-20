@@ -1,8 +1,6 @@
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::{
-    check_automaton_generate_inputs, check_automaton_multi_run, check_automaton_run, generate_id,
-};
+use crate::core::api::{check_automaton_multi_run, check_automaton_run, generate_id};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
@@ -430,50 +428,22 @@ pub(crate) fn multi_run_fa(entry: &AutomatonData, inputs: &[String]) -> MultiRun
 
 /// Генерирует упорядоченный набор тестовых цепочек, покрывающий широкий спектр
 /// сценариев (пустая строка, одиночные символы, пути до каждого состояния,
-/// срабатывание переходов, негативные/тупиковые случаи, циклические и длинные
-/// цепочки). Результат готов для вставки в поля Multiple Run.
+/// срабатывание переходов, негативные/тупиковые случаи и короткие повторы
+/// циклов (2–3 прохода). Результат готов для вставки в поля Multiple Run.
 #[tauri::command]
 pub fn fa_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
 ) -> GenerateInputsResult {
-    let entry = match check_automaton_generate_inputs(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
-
-    let fa = match data_to_fa(&entry.states, &entry.transitions) {
-        Ok(n) => n,
-        Err(_) => {
-            return GenerateInputsResult {
-                status: StatusCode::BAD_REQUEST,
-                message: "Некорректный автомат".to_string(),
-                inputs: Vec::new(),
-            };
-        }
-    };
-
-    let resp_vec: Vec<String> = fa.generate_test_inputs(50, 15);
-
-    GenerateInputsResult {
-        status: StatusCode::OK,
-        message: format!("Сгенерировано {} тестовых входов", resp_vec.len()),
-        inputs: resp_vec,
-    }
+    // Генерация живёт в core: оттуда же берут входы и команда Мили. Так
+    // исправления петель/юникода применяются и к этому frontend-методу.
+    crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
+/// Удаляет автомат по его id.
 #[tauri::command]
 pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
-    match state.remove(automaton_id) {
-        Some(_) => StatusResult {
-            status: StatusCode::OK,
-            message: format!("Автомат с id {} удалён", automaton_id),
-        },
-        None => StatusResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-        },
-    }
+    crate::core::api::remove_automaton(state, automaton_id)
 }
 
 /// Прогоняет одну строку на автомате. Возвращает, принята ли строка целиком

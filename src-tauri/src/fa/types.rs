@@ -509,6 +509,47 @@ impl FA {
         None
     }
 
+    /// кратчайший путь от `start` до ближайшего допускающего состояния.
+    /// Используется как продолжение после нескольких проходов по циклу, чтобы
+    /// тестовая строка заканчивалась в финале (например `bbba`).
+    fn shortest_path_to_final(&self, start: i32, max_len: usize) -> Option<String> {
+        let mut visited: HashSet<i32> = HashSet::new();
+        let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
+
+        for s in self.epsilon_closure_owned(start) {
+            if self.final_states.contains(&s) {
+                return Some(String::new());
+            }
+            if visited.insert(s) {
+                queue.push_back((s, String::new(), 0));
+            }
+        }
+
+        while let Some((state, path, depth)) = queue.pop_front() {
+            if depth >= max_len {
+                continue;
+            }
+            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+                if let Some(targets) = self.transitions.get(&(state, ch)) {
+                    for &t in targets {
+                        let mut next = path.clone();
+                        next.push(ch);
+                        let closure = self.epsilon_closure_owned(t);
+                        if closure.iter().any(|s| self.final_states.contains(s)) {
+                            return Some(next);
+                        }
+                        for s in closure {
+                            if visited.insert(s) {
+                                queue.push_back((s, next.clone(), depth + 1));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
     /// Строки, корректные до последнего символа, но затем упирающиеся в тупик
     /// (из замыкания достигнутого состояния нет перехода по символам алфавита).
     fn out_of_bounds_strings(&self, dist: &HashMap<i32, String>, result: &mut HashSet<String>) {
@@ -532,10 +573,13 @@ impl FA {
     /// широкий спектр сценариев КА: пустой вход, одиночные символы, кратчайшие пути
     /// до каждого состояния, срабатывание каждого перехода, негативные случаи
     /// (символы вне алфавита, тупики, строки, заканчивающиеся в нефинальных
-    /// состояниях) и циклические/длинные строки. Результат отсортирован по длине и
+    /// состояниях) и короткие циклические строки (2–3 прохода). Результат отсортирован по длине и
     /// ограничен `cap` элементами.
     pub fn generate_test_inputs(&self, cap: usize, depth: usize) -> Vec<String> {
         let mut result: HashSet<String> = HashSet::new();
+        // Циклические строки важны для проверки петель: они должны попасть в
+        // результат даже если коротких вариантов больше `cap`.
+        let mut priority: HashSet<String> = HashSet::new();
 
         result.insert(String::new());
         for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
@@ -579,53 +623,50 @@ impl FA {
         bases.sort_by(|a, b| a.len().cmp(&b.len()));
         bases.truncate(4);
 
-        for o in &outside {
-            let outside_str = o.to_string();
-            result.insert(outside_str.clone());
-            for base in &bases {
-                result.insert(format!("{}{}", outside_str, base));
-                result.insert(format!("{}{}", base, outside_str));
-                let mid = base.len() / 2;
-                let (left, right) = base.split_at(mid);
-                result.insert(format!("{}{}{}", left, outside_str, right));
-            }
+        // Всего 2–3 негативных строки: только символ вне алфавита (`$`) и
+        // две комбинации «в алфавите + вне алфавита».
+        result.insert(EPSILON.to_string());
+        let invalid = outside
+            .iter()
+            .find(|c| **c != EPSILON)
+            .map(|c| c.to_string())
+            .unwrap_or_else(|| EPSILON.to_string());
+        if let Some(base) = bases.first() {
+            result.insert(format!("{}{}", invalid, base));
+            result.insert(format!("{}{}", base, invalid));
         }
 
-        if let Some((entry, cycle)) = self.find_cycle(depth) {
+        // Несколько проходов по петле (2 и 3) с продолжением до финала, чтобы
+        // получить например `bbba` для q0 --b--> q0, q0 --a--> q1(final).
+        if let Some((entry, cycle_str)) = self.find_cycle(depth) {
             let prefix = dist.get(&entry).cloned().unwrap_or_default();
-            result.insert(format!("{}{}", prefix, cycle));
-            result.insert(format!("{}{}{}", prefix, cycle, cycle));
-            result.insert(format!("{}{}{}{}", prefix, cycle, cycle, cycle));
-        }
-
-        let longest = dist
-            .values()
-            .max_by_key(|p| p.len())
-            .cloned()
-            .unwrap_or_default();
-        let mut long = longest.clone();
-        if let Some((entry, cycle)) = self.find_cycle(depth) {
-            let prefix = dist.get(&entry).cloned().unwrap_or_default();
-            let mut walk = prefix;
-            while walk.len() < 20 {
-                walk.push_str(&cycle);
-                if cycle.is_empty() {
-                    break;
+            let suffix = self
+                .shortest_path_to_final(entry, depth)
+                .unwrap_or_default();
+            for count in 2..=3 {
+                let mut input = prefix.clone();
+                for _ in 0..count {
+                    input.push_str(&cycle_str);
                 }
+                input.push_str(&suffix);
+                priority.insert(input);
             }
-            walk.truncate(20);
-            if walk.len() > long.len() {
-                long = walk;
-            }
-        }
-        if long.len() >= 12 {
-            result.insert(long);
         }
 
-        let mut sorted: Vec<String> = result.into_iter().collect();
-        sorted.sort_by(|a, b| a.len().cmp(&b.len()).then(a.cmp(b)));
-        sorted.truncate(cap);
-        sorted
+        let mut sorted: Vec<String> = result
+            .into_iter()
+            .filter(|s| !priority.contains(s))
+            .collect();
+        sorted.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then(a.cmp(b)));
+        let mut inputs: Vec<String> = sorted
+            .into_iter()
+            .take(cap.saturating_sub(priority.len()))
+            .collect();
+        inputs.extend(priority);
+        inputs.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then(a.cmp(b)));
+        inputs.dedup();
+        inputs.truncate(cap);
+        inputs
     }
 }
 
