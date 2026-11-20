@@ -2,8 +2,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use crate::core::automaton::{Automaton, NondeterministicAutomaton};
-use crate::core::types::{AutomatonData, RunStep, StateData, Trace, TransitionData};
+use crate::core::api::gen_multi_run_for_output;
+use crate::core::automaton::{Automaton, AutomatonStore, NondeterministicAutomaton};
+use crate::core::types::{AutomatonData, AutomatonType, RunStep, StateData, Trace, TransitionData};
 use crate::fa::api::{data_to_fa, multi_run_fa, test_line};
 use crate::fa::types::{EPSILON, FA};
 
@@ -1380,8 +1381,8 @@ fn generate_test_inputs_empty_singles_and_sorted() {
 }
 
 #[test]
-fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
-    // q0 --a--> q0 (цикл-петля), q0 --b--> q1 (финальное)
+fn generate_test_inputs_repeats_loop_two_or_three_times_before_final() {
+    // q0 --b--> q0 (петля), q0 --a--> q1 (финальное)
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -1389,17 +1390,24 @@ fn generate_test_inputs_repeats_cycles_and_builds_long_string() {
         .set_final(1)
         .symbol('a')
         .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'b', 1)
+        .transition(0, 'a', 1)
+        .transition(0, 'b', 0)
         .build()
         .unwrap();
 
     let inputs = fa.generate_test_inputs(50, 15);
-    // цикл "a", повторённый 2 и 3 раза
-    assert!(inputs.contains(&"aa".to_string()));
-    assert!(inputs.contains(&"aaa".to_string()));
-    // длинная (>= 12 символов) строка, покрывающая цикл
-    assert!(inputs.iter().any(|s| s.len() >= 12));
+    // 2 и 3 прохода по петле с продолжением до финального состояния
+    assert!(inputs.contains(&"bba".to_string()));
+    assert!(inputs.contains(&"bbba".to_string()));
+    // без длинных цепочек из десятков повторов
+    assert!(inputs.iter().all(|s| s.chars().count() <= 4));
+    // символов вне алфавита — ровно 3 строки
+    let outside: Vec<&String> = inputs
+        .iter()
+        .filter(|s| s.chars().any(|c| !['a', 'b'].contains(&c)))
+        .collect();
+    assert_eq!(outside.len(), 3);
+    assert!(outside.iter().any(|s| s.as_str() == "$"));
 }
 
 #[test]
@@ -1420,8 +1428,8 @@ fn generate_test_inputs_handles_epsilon_automaton() {
     let inputs = fa.generate_test_inputs(50, 15);
     assert!(inputs.contains(&"a".to_string()));
     assert!(inputs.contains(&"".to_string()));
-    // символ eps не выдаётся как символ найденного пути
-    assert!(inputs.iter().all(|s| !s.contains('$')));
+    // `$` присутствует только как отдельный негативный вход, а не внутри путей
+    assert!(inputs.iter().filter(|s| s.contains('$')).all(|s| s == "$"));
 }
 
 fn make_even_a_fa() -> FA {
@@ -1641,4 +1649,80 @@ fn run_rejects_string_without_path() {
     assert!(fa.run(&['a']).is_none());
     assert!(fa.run(&['a', 'a', 'a']).is_none());
     assert!(fa.run(&['c']).is_none());
+}
+
+#[test]
+fn generate_test_inputs_handles_unicode_loop_symbols() {
+    // Многобайтовые символы не должны ломать разрезание строки и повторы петли.
+    let fa = FA::builder()
+        .set_initial(0)
+        .set_final(0)
+        .symbol('я')
+        .transition(0, 'я', 0)
+        .build()
+        .unwrap();
+
+    let inputs = fa.generate_test_inputs(50, 15);
+
+    assert!(inputs.contains(&"я".to_string()));
+    assert!(inputs.contains(&"яя".to_string()));
+    assert!(inputs.contains(&"яяя".to_string()));
+}
+
+#[test]
+fn fa_generate_inputs_command_path_keeps_loop_strings() {
+    // Путь, который использует frontend: fa_generate_inputs -> core helper.
+    let store = AutomatonStore::new();
+    let entry = store.insert(AutomatonData {
+        id: 0,
+        name: "Loop".to_string(),
+        automatonType: AutomatonType::FA,
+        states: vec![StateData {
+            id: 0,
+            label: "q0".to_string(),
+            x: 0.0,
+            y: 0.0,
+            isInitial: true,
+            isFinal: Some(true),
+        }],
+        transitions: vec![TransitionData {
+            id: 1,
+            from: 0,
+            to: 0,
+            symbol: 'я',
+            output: None,
+        }],
+    });
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert!(result.inputs.contains(&"я".to_string()));
+    assert!(result.inputs.contains(&"яя".to_string()));
+    assert!(result.inputs.contains(&"яяя".to_string()));
+}
+
+#[test]
+fn generate_test_inputs_keeps_cycles_when_cap_is_exceeded() {
+    let mut builder = FA::builder()
+        .set_initial(0)
+        .set_final(0)
+        .symbol('a')
+        .transition(0, 'a', 0);
+    for i in 1..12 {
+        let ch = char::from(b'a' + i as u8);
+        builder = builder.symbol(ch).transition(0, ch, i).set_final(i);
+    }
+    let fa = builder.build().unwrap();
+
+    let inputs = fa.generate_test_inputs(50, 15);
+
+    assert_eq!(inputs.len(), 50);
+    assert!(inputs.contains(&"aa".to_string()));
+    assert!(inputs.contains(&"aaa".to_string()));
+    assert!(
+        inputs
+            .windows(2)
+            .all(|w| w[0].chars().count() <= w[1].chars().count())
+    );
 }

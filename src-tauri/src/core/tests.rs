@@ -588,12 +588,13 @@ fn gen_multi_run_for_output_mealy_returns_ordered_inputs_with_negatives() {
     assert!(result.inputs.contains(&"b".to_string()));
     // `$` обязателен как негативный вход, хотя это и не переход машины.
     assert!(result.inputs.contains(&"$".to_string()));
-    assert!(
-        result
-            .inputs
-            .iter()
-            .any(|s| s.chars().any(|c| !['a', 'b'].contains(&c)))
-    );
+    let outside: Vec<&String> = result
+        .inputs
+        .iter()
+        .filter(|s| s.chars().any(|c| !['a', 'b'].contains(&c)))
+        .collect();
+    assert_eq!(outside.len(), 3);
+    assert!(outside.iter().any(|s| s.as_str() == "$"));
     assert!(result.inputs.len() <= 50);
     assert!(
         result
@@ -621,10 +622,9 @@ fn gen_multi_run_for_output_mealy_covers_states_outputs_and_cycles() {
     assert!(result.inputs.contains(&"a".to_string()));
     assert!(result.inputs.contains(&"b".to_string()));
     assert!(result.inputs.contains(&"ba".to_string()));
-    // Цикл q0 --a--> q0 повторяется, есть длинная цепочка.
+    // Цикл q0 --a--> q0 повторяется 2 и 3 раза, длинных цепочек больше нет.
     assert!(result.inputs.contains(&"aa".to_string()));
     assert!(result.inputs.contains(&"aaa".to_string()));
-    assert!(result.inputs.iter().any(|s| s.chars().count() >= 12));
 }
 
 #[test]
@@ -649,6 +649,31 @@ fn gen_multi_run_for_output_invalid_mealy_returns_400() {
     assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
     assert!(result.message.contains("Некорректный автомат"));
     assert!(result.inputs.is_empty());
+}
+
+#[test]
+fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
+    let store = make_store();
+    let mut entry = make_mealy_entry();
+    for i in 0..12 {
+        let id = i + 2;
+        entry.states.push(mealy_state(id, false));
+        entry.transitions.push(mealy_trans(
+            id + 10,
+            0,
+            id,
+            char::from(b'c' + i as u8),
+            char::from(b'0' + i as u8),
+        ));
+    }
+    let entry = store.insert(entry);
+
+    let result = gen_multi_run_for_output(&store, entry.id);
+
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.inputs.len(), 50);
+    assert!(result.inputs.contains(&"aa".to_string()));
+    assert!(result.inputs.contains(&"aaa".to_string()));
 }
 
 #[test]

@@ -475,6 +475,9 @@ pub(crate) fn generate_test_inputs_deterministic(
     states.sort_by_key(|s| dist.get(s).map(|p| p.chars().count()).unwrap_or(0));
 
     let mut result: HashSet<String> = HashSet::new();
+    // Повторы цикла должны остаться в ответе даже при большом количестве
+    // коротких вариантов и маленьком `cap`.
+    let mut priority: HashSet<String> = HashSet::new();
     result.insert(String::new());
     for &ch in &alphabet {
         result.insert(ch.to_string());
@@ -483,9 +486,6 @@ pub(crate) fn generate_test_inputs_deterministic(
     // негативный тестовый вход.
     result.insert(EPSILON.to_string());
     let outside = outside_alphabet_symbols(&alphabet_set);
-    for ch in &outside {
-        result.insert(ch.to_string());
-    }
 
     for state in &states {
         if let Some(path) = dist.get(state) {
@@ -535,30 +535,27 @@ pub(crate) fn generate_test_inputs_deterministic(
         }
     }
 
-    // Символы вне алфавита, вставленные в корректные префиксы.
+    // Всего 2–3 негативных строки: `$` уже добавлен выше, плюс две комбинации
+    // «символ внутри алфавита + символ вне алфавита».
     let mut bases: Vec<String> = states.iter().filter_map(|s| dist.get(s)).cloned().collect();
     bases.sort();
     bases.dedup();
     bases.sort_by_key(|p| p.chars().count());
-    bases.truncate(4);
-    for o in &outside {
-        let invalid = o.to_string();
-        for base in &bases {
-            result.insert(format!("{}{}", invalid, base));
-            result.insert(format!("{}{}", base, invalid));
-            let mid_chars = base.chars().count() / 2;
-            let mid_byte = base
-                .char_indices()
-                .nth(mid_chars)
-                .map(|(idx, _)| idx)
-                .unwrap_or(base.len());
-            let (left, right) = base.split_at(mid_byte);
-            result.insert(format!("{}{}{}", left, invalid, right));
-        }
+    let base = bases
+        .iter()
+        .find(|p| !p.is_empty())
+        .or_else(|| bases.first());
+    let invalid = outside
+        .iter()
+        .find(|c| **c != EPSILON)
+        .map(|c| c.to_string())
+        .unwrap_or_else(|| EPSILON.to_string());
+    if let Some(base) = base {
+        result.insert(format!("{}{}", invalid, base));
+        result.insert(format!("{}{}", base, invalid));
     }
 
-    // Циклы: повтор 1–3 раза и одна длинная цепочка для проверки выходной
-    // последовательности на большом входе.
+    // Только 2 и 3 прохода по циклу — без длинных цепочек из 20 символов.
     let mut cycle_input = None;
     for state in &states {
         if let Some(cycle) = shortest_cycle(*state, &transitions, &alphabet, depth) {
@@ -568,24 +565,29 @@ pub(crate) fn generate_test_inputs_deterministic(
         }
     }
     if let Some((prefix, cycle)) = cycle_input {
-        result.insert(format!("{}{}", prefix, cycle));
-        result.insert(format!("{}{}{}", prefix, cycle, cycle));
-        result.insert(format!("{}{}{}{}", prefix, cycle, cycle, cycle));
-
-        let mut walk = prefix;
-        while walk.chars().count() < 20 && !cycle.is_empty() {
-            walk.push_str(&cycle);
-        }
-        let long: String = walk.chars().take(20).collect();
-        if long.chars().count() >= 12 {
-            result.insert(long);
+        for count in 2..=3 {
+            let mut input = prefix.clone();
+            for _ in 0..count {
+                input.push_str(&cycle);
+            }
+            priority.insert(input);
         }
     }
 
-    let mut sorted: Vec<String> = result.into_iter().collect();
+    let mut sorted: Vec<String> = result
+        .into_iter()
+        .filter(|s| !priority.contains(s))
+        .collect();
     sorted.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then(a.cmp(b)));
-    sorted.truncate(cap);
-    Ok(sorted)
+    let mut inputs: Vec<String> = sorted
+        .into_iter()
+        .take(cap.saturating_sub(priority.len()))
+        .collect();
+    inputs.extend(priority);
+    inputs.sort_by(|a, b| a.chars().count().cmp(&b.chars().count()).then(a.cmp(b)));
+    inputs.dedup();
+    inputs.truncate(cap);
+    Ok(inputs)
 }
 
 /// Генерирует входы для режима Multiple Run, чтобы пользователь мог сразу
