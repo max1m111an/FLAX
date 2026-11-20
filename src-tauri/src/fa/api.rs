@@ -440,18 +440,10 @@ pub fn fa_generate_inputs(
     crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
+/// Удаляет автомат по его id.
 #[tauri::command]
 pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
-    match state.remove(automaton_id) {
-        Some(_) => StatusResult {
-            status: StatusCode::OK,
-            message: format!("Автомат с id {} удалён", automaton_id),
-        },
-        None => StatusResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-        },
-    }
+    crate::core::api::remove_automaton(state, automaton_id)
 }
 
 /// Прогоняет одну строку на автомате. Возвращает, принята ли строка целиком

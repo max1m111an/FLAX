@@ -2,13 +2,12 @@ use std::collections::HashSet;
 
 use tauri::{State, http::StatusCode};
 
-use crate::core::api::{
-    check_automaton_mealy_multi_run, check_automaton_mealy_run, generate_id,
-};
+use crate::core::api::{check_automaton_mealy_multi_run, check_automaton_mealy_run, generate_id};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult, MealyRunResult,
-    OperationResult, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult,
+    MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
+    TransitionResult,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
@@ -290,16 +289,7 @@ pub fn mealy_update_state(
     y: Option<f32>,
     is_initial: Option<bool>,
 ) -> StateResult {
-    crate::fa::api::fa_update_state(
-        state,
-        automaton_id,
-        state_id,
-        label,
-        x,
-        y,
-        is_initial,
-        None,
-    )
+    crate::fa::api::fa_update_state(state, automaton_id, state_id, label, x, y, is_initial, None)
 }
 
 /// Удаляет состояние и все связанные с ним переходы. Делегирует в
@@ -442,9 +432,9 @@ pub fn mealy_generate_inputs(
     crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
-/// Удаляет машину Мили из хранилища. Делегирует в `fa_remove_automaton`:
+/// Удаляет машину Мили из хранилища. Делегирует в `core::api::remove_automaton`:
 /// хранилище общее для FA и MM.
 #[tauri::command]
 pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
-    crate::fa::api::fa_remove_automaton(state, automaton_id)
+    crate::core::api::remove_automaton(state, automaton_id)
 }

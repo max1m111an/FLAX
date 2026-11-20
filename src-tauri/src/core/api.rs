@@ -642,3 +642,18 @@ pub(crate) fn gen_multi_run_for_output(
         inputs,
     }
 }
+
+/// Удаляет автомат по его id.
+#[tauri::command]
+pub fn remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
+    match state.remove(automaton_id) {
+        Some(_) => StatusResult {
+            status: StatusCode::OK,
+            message: format!("Автомат с id {} удалён", automaton_id),
+        },
+        None => StatusResult {
+            status: StatusCode::NOT_FOUND,
+            message: format!("Автомат с id {} не найден", automaton_id),
+        },
+    }
+}
