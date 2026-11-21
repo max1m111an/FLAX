@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use crate::core::api::gen_multi_run_for_output;
 use crate::core::automaton::{Automaton, AutomatonStore, NondeterministicAutomaton};
 use crate::core::types::{AutomatonData, AutomatonType, RunStep, StateData, Trace, TransitionData};
-use crate::fa::api::{data_to_fa, multi_run_fa, test_line};
+use crate::fa::api::{data_to_fa, multi_run_fa, run_fa_line, test_line};
 use crate::fa::types::{EPSILON, FA};
 
 #[test]
@@ -640,9 +640,8 @@ fn run_partial_consumed_all_not_final() {
 
 #[test]
 fn run_partial_with_epsilon() {
-    // q0 --eps--> q1 --a--> q2 (финальное)
-    // JFLAP Step with Closure: eps-переход перед символом записывается в трассу
-    // как шаг '$'.
+    // q0 --eps--> q1 --a--> q2 (финальное). eps ветвится: можно остаться в q0
+    // (тогда 'a' не прочитать — тупик) или пройти по eps в q1 и прочитать 'a'.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -657,9 +656,16 @@ fn run_partial_with_epsilon() {
 
     let (traces, accepted) = fa.run_partial(&['a']);
     assert!(accepted);
-    assert_eq!(traces.len(), 1);
+    assert_eq!(traces.len(), 2);
     assert_eq!(
         traces[0],
+        Trace {
+            steps: vec![],
+            isFinal: false,
+        }
+    );
+    assert_eq!(
+        traces[1],
         Trace {
             steps: vec![
                 RunStep {
@@ -680,8 +686,8 @@ fn run_partial_with_epsilon() {
 
 #[test]
 fn run_partial_closes_after_last_symbol() {
-    // q0 --a--> q1 --eps--> q2 (финальное): eps-переход ПОСЛЕ последнего символа
-    // должен быть выполнен (и записан) до проверки финальности.
+    // q0 --a--> q1 --eps--> q2 (финальное): eps ПОСЛЕ последнего символа тоже
+    // ветвится — остаться в q1 (тупик) или пройти в q2 (принятие).
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -696,9 +702,20 @@ fn run_partial_closes_after_last_symbol() {
 
     let (traces, accepted) = fa.run_partial(&['a']);
     assert!(accepted);
-    assert_eq!(traces.len(), 1);
+    assert_eq!(traces.len(), 2);
     assert_eq!(
         traces[0],
+        Trace {
+            steps: vec![RunStep {
+                from: 0,
+                symbol: 'a',
+                to: 1
+            }],
+            isFinal: false,
+        }
+    );
+    assert_eq!(
+        traces[1],
         Trace {
             steps: vec![
                 RunStep {
@@ -719,8 +736,8 @@ fn run_partial_closes_after_last_symbol() {
 
 #[test]
 fn run_partial_transitive_epsilon_closure_recorded() {
-    // q0 --eps--> q1 --eps--> q2 (финальное). Замыкание {q0} = {q0,q1,q2}, оба
-    // eps-шага записаны в одну трассу. Символы не прочитаны -> принято.
+    // q0 --eps--> q1 --eps--> q2 (финальное). Каждый eps-переход ветвится, поэтому
+    // пустой вход даёт три трассы: остаться в q0, дойти до q1 и дойти до q2.
     let fa = FA::builder()
         .state(0)
         .state(1)
@@ -734,9 +751,27 @@ fn run_partial_transitive_epsilon_closure_recorded() {
 
     let (traces, accepted) = fa.run_partial(&[]);
     assert!(accepted);
-    assert_eq!(traces.len(), 1);
+    assert_eq!(traces.len(), 3);
     assert_eq!(
         traces[0],
+        Trace {
+            steps: vec![],
+            isFinal: false
+        }
+    );
+    assert_eq!(
+        traces[1],
+        Trace {
+            steps: vec![RunStep {
+                from: 0,
+                symbol: '$',
+                to: 1
+            }],
+            isFinal: false,
+        }
+    );
+    assert_eq!(
+        traces[2],
         Trace {
             steps: vec![
                 RunStep {
@@ -752,6 +787,242 @@ fn run_partial_transitive_epsilon_closure_recorded() {
             ],
             isFinal: true,
         }
+    );
+}
+
+#[test]
+fn run_partial_epsilon_branches_keep_dead_traces() {
+    // q0 -1-> q1, q1 -eps-> q2, q2 -2-> q3 (финальное), вход "12".
+    // Ветвь, оставшаяся в q1, не может прочитать '2' и остаётся тупиковой;
+    // ветвь, прошедшая по eps, принимается. Тупик не отменяет принятие.
+    let fa = FA::builder()
+        .state(0)
+        .state(1)
+        .state(2)
+        .state(3)
+        .set_initial(0)
+        .set_final(3)
+        .symbol('1')
+        .symbol('2')
+        .transition(0, '1', 1)
+        .epsilon(1, 2)
+        .transition(2, '2', 3)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = fa.run_partial(&['1', '2']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 2);
+    assert_eq!(
+        traces[0],
+        Trace {
+            steps: vec![RunStep {
+                from: 0,
+                symbol: '1',
+                to: 1
+            }],
+            isFinal: false,
+        }
+    );
+    assert_eq!(
+        traces[1],
+        Trace {
+            steps: vec![
+                RunStep {
+                    from: 0,
+                    symbol: '1',
+                    to: 1
+                },
+                RunStep {
+                    from: 1,
+                    symbol: '$',
+                    to: 2
+                },
+                RunStep {
+                    from: 2,
+                    symbol: '2',
+                    to: 3
+                },
+            ],
+            isFinal: true,
+        }
+    );
+}
+
+#[test]
+fn run_partial_multiple_epsilon_branches() {
+    // q0 -eps-> {q1, q2}; q1 -a-> q3 (финальное), q2 -a-> q4 (не финальное).
+    // Три ветви: тупик в q0, принятие через q1, отказ через q2.
+    let fa = FA::builder()
+        .state(0)
+        .state(1)
+        .state(2)
+        .state(3)
+        .state(4)
+        .set_initial(0)
+        .set_final(3)
+        .symbol('a')
+        .epsilon(0, 1)
+        .epsilon(0, 2)
+        .transition(1, 'a', 3)
+        .transition(2, 'a', 4)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = fa.run_partial(&['a']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 3);
+    let accepted_step = RunStep {
+        from: 1,
+        symbol: 'a',
+        to: 3,
+    };
+    let rejected_step = RunStep {
+        from: 2,
+        symbol: 'a',
+        to: 4,
+    };
+    assert!(traces.iter().any(|t| t.steps.is_empty() && !t.isFinal));
+    assert!(
+        traces
+            .iter()
+            .any(|t| t.isFinal && t.steps.last() == Some(&accepted_step))
+    );
+    assert!(
+        traces
+            .iter()
+            .any(|t| !t.isFinal && t.steps.last() == Some(&rejected_step))
+    );
+}
+
+#[test]
+fn run_partial_epsilon_cycle_terminates() {
+    // q0 -eps-> q1 -eps-> q0 (цикл), q1 -a-> q2 (финальное). Разворачивание eps
+    // останавливается по visited, бесконечных трасс не возникает.
+    let fa = FA::builder()
+        .state(0)
+        .state(1)
+        .state(2)
+        .set_initial(0)
+        .set_final(2)
+        .symbol('a')
+        .epsilon(0, 1)
+        .epsilon(1, 0)
+        .transition(1, 'a', 2)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = fa.run_partial(&['a']);
+    assert!(accepted);
+    assert_eq!(traces.len(), 2);
+    assert!(traces.iter().all(|t| t.steps.len() <= 2));
+    let expected = vec![
+        RunStep {
+            from: 0,
+            symbol: '$',
+            to: 1,
+        },
+        RunStep {
+            from: 1,
+            symbol: 'a',
+            to: 2,
+        },
+    ];
+    assert!(traces.iter().any(|t| t.isFinal && t.steps == expected));
+}
+
+#[test]
+fn run_fa_line_keeps_dead_traces_on_acceptance() {
+    // Проверка ответа fa_run_str через тестируемый хелпер: статус 200, final-ветвь
+    // первая, тупиковая ветвь сохранена, processed_len считает только символы.
+    let entry = multi_run_entry(
+        vec![
+            multi_run_state(0, true, false),
+            multi_run_state(1, false, false),
+            multi_run_state(2, false, false),
+            multi_run_state(3, false, true),
+        ],
+        vec![
+            multi_run_transition(1, 0, 1, '1'),
+            multi_run_transition(2, 1, 2, EPSILON),
+            multi_run_transition(3, 2, 3, '2'),
+        ],
+    );
+
+    let result = run_fa_line(&entry, "12");
+    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.traces.len(), 2);
+    assert!(result.traces[0].isFinal);
+    assert!(!result.traces[1].isFinal);
+    assert_eq!(
+        result.traces[0].steps,
+        vec![
+            RunStep {
+                from: 0,
+                symbol: '1',
+                to: 1
+            },
+            RunStep {
+                from: 1,
+                symbol: '$',
+                to: 2
+            },
+            RunStep {
+                from: 2,
+                symbol: '2',
+                to: 3
+            },
+        ]
+    );
+}
+
+#[test]
+fn run_fa_line_rejects_unreadable_trailing_symbol() {
+    // Тот же автомат: q0 -1-> q1, q1 -eps-> q2, q2 -2-> q3 (финальное).
+    // "12" проходит, а "123" нет: после '2' поток дошёл до финального q3,
+    // но перехода по '3' нет, поэтому accepting-ветвь становится тупиковой.
+    let entry = multi_run_entry(
+        vec![
+            multi_run_state(0, true, false),
+            multi_run_state(1, false, false),
+            multi_run_state(2, false, false),
+            multi_run_state(3, false, true),
+        ],
+        vec![
+            multi_run_transition(1, 0, 1, '1'),
+            multi_run_transition(2, 1, 2, EPSILON),
+            multi_run_transition(3, 2, 3, '2'),
+        ],
+    );
+
+    let accepted = run_fa_line(&entry, "12");
+    assert_eq!(accepted.status, tauri::http::StatusCode::OK);
+    assert!(accepted.traces.iter().any(|t| t.isFinal));
+
+    let rejected = run_fa_line(&entry, "123");
+    assert_eq!(rejected.status, tauri::http::StatusCode::UNAUTHORIZED);
+    assert_eq!(rejected.traces.len(), 2);
+    assert!(rejected.traces.iter().all(|t| !t.isFinal));
+    assert!(rejected.message.contains("обработано 2 из 3"));
+    assert_eq!(
+        rejected.traces[1].steps,
+        vec![
+            RunStep {
+                from: 0,
+                symbol: '1',
+                to: 1
+            },
+            RunStep {
+                from: 1,
+                symbol: '$',
+                to: 2
+            },
+            RunStep {
+                from: 2,
+                symbol: '2',
+                to: 3
+            },
+        ]
     );
 }
 
@@ -1155,6 +1426,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
         .unwrap();
 
     // Вход "abx": должны быть прочитаны 'a' и 'b' (2 шага), затем остановка перед 'x'.
+    // Поток дошёл до финального q2, но не дочитал вход, поэтому isFinal = false.
     let (traces, accepted) = fa.run_partial(&['a', 'b', 'x']);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
@@ -1174,7 +1446,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
                     to: 2
                 },
             ],
-            isFinal: true,
+            isFinal: false,
         }
     );
 }

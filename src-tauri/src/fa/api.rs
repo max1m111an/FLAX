@@ -339,6 +339,14 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
         Err(e) => return e,
     };
 
+    run_fa_line(&entry, &input)
+}
+
+/// Тестируемый прогон одной строки без `State`: строит КА, запускает
+/// `FA::run_partial` (где eps-переходы ветвятся) и формирует `RunResult`.
+/// Возвращает все трейсы, включая тупиковые; статус 200 выставляется, если
+/// принята хотя бы одна ветвь.
+pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
     let chars: Vec<char> = input.chars().collect();
     match data_to_fa(&entry.states, &entry.transitions) {
         Ok(fa) => {
@@ -346,7 +354,7 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
             // Упорядочиваем историю так, чтобы допускающие потоки чтения (isFinal) шли
             // раньше отвергнутых.
             traces.sort_by_key(|t| !t.isFinal);
-            // Шаги `$` (eps-замыкание) входят в историю; для длины обработанной части
+            // Шаги `$` (eps-ветвление) входят в историю; для длины обработанной части
             // считаем только реально прочитанные символьные переходы.
             let processed_len = traces
                 .iter()
