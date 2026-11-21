@@ -203,121 +203,157 @@ impl FA {
         }
     }
 
-    /// Параллельный прогон по потокам КА в стиле JFLAP (JFLAP «Step with Closure»).
-    /// Возвращает (traces, accepted). Каждый элемент внешнего вектора — одно
-    /// параллельное чтение (поток): история его шагов и признак завершения в
-    /// финальном состоянии. Каждый отдельный путь хранится как собственная трасса,
-    /// поэтому ветви, попавшие в одно состояние (или разветвившиеся по одному
-    /// символу), дают отдельные трассы.
+    /// Разворачивает один поток по eps-переходам недетерминированно: вариант
+    /// «не идти по eps» (остаться в текущем состоянии) плюс по одному варианту на
+    /// каждый eps-переход с рекурсивным продолжением. Каждый `$`-шаг записывается
+    /// только в ту ветвь, которая реально его прошла. Защита от eps-циклов —
+    /// `visited` в рамках одного разворачивания; общее число вариантов ограничено
+    /// `limit`.
+    fn expand_epsilon_threads(
+        &self,
+        thread: &(Vec<RunStep>, i32),
+        limit: usize,
+    ) -> Vec<(Vec<RunStep>, i32)> {
+        let mut variants: Vec<(Vec<RunStep>, i32)> = vec![thread.clone()];
+        let mut queue: VecDeque<(Vec<RunStep>, i32, HashSet<i32>)> = VecDeque::new();
+        queue.push_back((thread.0.clone(), thread.1, HashSet::from([thread.1])));
+
+        while let Some((history, state, visited)) = queue.pop_front() {
+            let Some(targets) = self.transitions.get(&(state, EPSILON)) else {
+                continue;
+            };
+            for &to in targets {
+                if variants.len() >= limit {
+                    return variants;
+                }
+                if visited.contains(&to) {
+                    continue;
+                }
+                let mut next_history = history.clone();
+                next_history.push(RunStep {
+                    from: state,
+                    symbol: EPSILON,
+                    to,
+                });
+                variants.push((next_history.clone(), to));
+                let mut next_visited = visited.clone();
+                next_visited.insert(to);
+                queue.push_back((next_history, to, next_visited));
+            }
+        }
+        variants
+    }
+
+    /// Разворачивает все потоки по eps с общим потолком `MAX_THREADS`.
+    fn expand_epsilon_all(&self, threads: Vec<(Vec<RunStep>, i32)>) -> Vec<(Vec<RunStep>, i32)> {
+        let mut expanded: Vec<(Vec<RunStep>, i32)> = Vec::new();
+        for thread in &threads {
+            let remaining = MAX_THREADS.saturating_sub(expanded.len());
+            if remaining == 0 {
+                break;
+            }
+            expanded.extend(self.expand_epsilon_threads(thread, remaining));
+        }
+        expanded
+    }
+
+    /// Параллельный прогон по потокам КА в стиле JFLAP. Возвращает `(traces, accepted)`.
+    /// Каждый элемент `traces` — отдельная история чтения (поток) с признаком
+    /// завершения в финальном состоянии. Пути, сошедшиеся в одном состоянии,
+    /// остаются отдельными трассами.
     ///
-    /// eps-замыкание вычисляется перед первым символом, после каждого символа и
-    /// после последнего символа; каждый `$`-переход, пройденный при замыкании,
-    /// записывается в историю ветви как `RunStep` с символом "$". Замыкание
-    /// расширяет множество состояний без ветвления; недетерминизм ветвится только
-    /// по символьным переходам.
+    /// eps-переход ветвится: автомат может пойти по `$`-ребру, а может остаться в
+    /// текущем состоянии. Разворачивание делается до первого символа и после
+    /// каждого прочитанного символа (включая последний). Пройденные `$`-шаги
+    /// записываются в историю только соответствующей ветви. Символ читается
+    /// только из состояния конкретной ветви; несколько eps-переходов подряд дают
+    /// несколько ветвей, eps-циклы обрываются `visited` и не дают бесконечных трасс.
     ///
-    /// Сообщается о каждой ветви, включая досрочно завершившиеся: поток, который
-    /// не может прочитать текущий символ, финализируется (сохраняется с частичной
-    /// историей и `isFinal = false`), а не отбрасывается. На `accepted` влияют
-    /// только потоки, прочитавшие весь вход, замкнутые и оказавшиеся в финальном
-    /// состоянии.
+    /// Сообщается о каждой ветви, включая прерванные: поток, который не может
+    /// прочитать текущий символ, сохраняется с частичной историей и
+    /// `isFinal = false`. На `accepted` влияют только потоки, дочитавшие весь
+    /// вход и оказавшиеся в финальном состоянии: тупиковые ветви не отменяют
+    /// принятие.
     ///
     /// Семантика:
     /// - Если в автомате нет финальных состояний, любая строка отклоняется.
-    /// - Каждый символ читается всеми потоками, которые могут его прочитать;
-    ///   символ вне алфавита останавливает чтение прямо перед ним, и строка
+    /// - Символ вне алфавита останавливает чтение прямо перед ним, строка
     ///   отклоняется.
     /// - Число потоков ограничено, чтобы сдержать экспоненциальный рост в худшем
     ///   случае.
     pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
-        // Финализация потока в конце входа: применяем итоговое eps-замыкание
-        // (записывая его шаги `$`) и ставим isFinal, если хотя бы одно состояние финальное.
-        let finalize_end = |fa: &Self, thread: (Vec<RunStep>, i32)| -> Trace {
-            let (closure_set, closure_steps) = fa.epsilon_closure_with_steps(thread.1);
-            let mut steps = thread.0;
-            steps.extend(closure_steps);
-            let is_final = closure_set.iter().any(|s| fa.final_states.contains(s));
-            Trace {
-                steps,
-                isFinal: is_final,
-            }
-        };
-
         if self.final_states.is_empty() {
             return (Vec::new(), false);
         }
 
         let mut result: Vec<Trace> = Vec::new();
-        let mut threads: Vec<(Vec<RunStep>, i32)> = vec![(Vec::new(), self.initial_state)];
+        // eps-ветвление до первого символа (и для пустого входа).
+        let mut threads = self.expand_epsilon_all(vec![(Vec::new(), self.initial_state)]);
 
         for &symbol in input {
-            // Символ вне алфавита: останавливаем чтение прямо перед ним и отклоняем,
-            // финализируя живые на данный момент потоки (частичный прогресс).
+            // Символ вне алфавита: останавливаем чтение прямо перед ним,
+            // финализируя живые на данный момент ветви (частичный прогресс).
+            // Ветвь не дочитала вход, поэтому она не допускающая, даже если
+            // застряла в финальном состоянии.
             if !self.alphabet.contains(&symbol) {
-                result.extend(threads.into_iter().map(|t| finalize_end(self, t)));
+                for (steps, _) in threads {
+                    result.push(Trace {
+                        steps,
+                        isFinal: false,
+                    });
+                }
                 return (result, false);
             }
 
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
-            'outer: for (history, state) in &threads {
-                // 1) eps-замыкание состояния этого потока ПЕРЕД символом; каждый
-                //    использованный `$`-переход записывается в историю ветви.
-                let (closure_set, closure_steps) = self.epsilon_closure_with_steps(*state);
-                let mut hist = history.clone();
-                hist.extend(closure_steps);
-
-                // 2) Ветвимся по каждому символьному переходу из любого состояния замыкания;
-                //    каждое целевое состояние порождает отдельный поток (со своей историей).
+            for (history, state) in threads {
                 let mut advanced = false;
-                for from in &closure_set {
-                    if let Some(targets) = self.transitions.get(&(*from, symbol)) {
-                        advanced = true;
-                        for &t in targets {
-                            if next_threads.len() >= MAX_THREADS {
-                                break 'outer;
-                            }
-                            let mut h = hist.clone();
-                            h.push(RunStep {
-                                from: *from,
-                                symbol: symbol,
-                                to: t,
-                            });
-                            next_threads.push((h, t));
+                if let Some(targets) = self.transitions.get(&(state, symbol)) {
+                    advanced = true;
+                    for &to in targets {
+                        if next_threads.len() >= MAX_THREADS {
+                            break;
                         }
+                        let mut steps = history.clone();
+                        steps.push(RunStep {
+                            from: state,
+                            symbol,
+                            to,
+                        });
+                        next_threads.push((steps, to));
                     }
                 }
 
-                // 3) Поток не может прочитать текущий символ: он прерывается и сохраняется
-                //    с частичной историей и isFinal = false.
+                // Ветвь не может прочитать текущий символ: прерывается и
+                // сохраняется с частичной историей и isFinal = false.
                 if !advanced {
                     result.push(Trace {
-                        steps: hist,
+                        steps: history,
                         isFinal: false,
                     });
                 }
             }
 
-            // Ни один живой поток не смог прочитать этот символ: остаётся только
-            // вернуть то, что уже финализировано (частичный прогресс).
             if next_threads.is_empty() {
                 return (result, false);
             }
 
-            if next_threads.len() >= MAX_THREADS {
+            let capped = next_threads.len() >= MAX_THREADS;
+            // eps-ветвление после прочитанного символа (перед следующим / в конце).
+            threads = self.expand_epsilon_all(next_threads);
+            if capped {
                 break;
             }
-
-            threads = next_threads;
         }
 
-        // Конец входа: финализируем каждый выживший поток (с итоговым замыканием).
         let mut accepted = false;
-        for thread in threads {
-            let trace = finalize_end(self, thread);
-            if trace.isFinal {
-                accepted = true;
-            }
-            result.push(trace);
+        for (steps, state) in threads {
+            let is_final = self.final_states.contains(&state);
+            accepted |= is_final;
+            result.push(Trace {
+                steps,
+                isFinal: is_final,
+            });
         }
         (result, accepted)
     }
@@ -339,34 +375,6 @@ impl FA {
             }
         }
         closure
-    }
-
-    /// eps-замыкание `state` и упорядоченный список `$`-переходов, пройденных для
-    /// достижения каждого состояния замыкания. По `$`-переходам ветвления нет (каждый
-    /// записывается в потоке один раз), как в JFLAP Step with Closure.
-    fn epsilon_closure_with_steps(&self, state: i32) -> (HashSet<i32>, Vec<RunStep>) {
-        let mut closure: HashSet<i32> = HashSet::new();
-        let mut steps: Vec<RunStep> = Vec::new();
-        let mut stack: Vec<i32> = vec![state];
-        while let Some(current) = stack.pop() {
-            if closure.contains(&current) {
-                continue;
-            }
-            closure.insert(current);
-            if let Some(next_states) = self.transitions.get(&(current, EPSILON)) {
-                for &next in next_states {
-                    if !closure.contains(&next) {
-                        steps.push(RunStep {
-                            from: current,
-                            symbol: EPSILON,
-                            to: next,
-                        });
-                        stack.push(next);
-                    }
-                }
-            }
-        }
-        (closure, steps)
     }
 
     fn next_states_owned(&self, state: i32, symbol: char) -> HashSet<i32> {
