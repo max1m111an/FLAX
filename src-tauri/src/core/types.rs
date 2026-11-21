@@ -4,7 +4,6 @@
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
-use tauri::http::StatusCode;
 
 /// Символ эпсилон-перехода. Никогда не входит во входной алфавит.
 pub const EPSILON: char = '$';
@@ -84,11 +83,16 @@ impl AutomatonData {
     }
 }
 
+/// Ответ команды: числовой статус и сообщение. Используется для команд без
+/// полезной нагрузки и как `Err` команд, возвращающих данные.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Response {
+    pub status: u32,
+    pub message: String,
+}
+
 #[derive(Debug, Clone, Serialize)]
 pub struct OperationResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub automaton: Option<AutomatonData>,
 }
 
@@ -104,34 +108,18 @@ pub struct LoadedFile {
 #[derive(Debug, Clone, Serialize)]
 #[allow(non_snake_case)]
 pub struct LoadResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub isAutomaton: Option<bool>,
     pub data: Option<AutomatonData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct StatusResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StateResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub state: Option<StateData>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TransitionResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub transition: Vec<TransitionData>,
 }
 
@@ -151,9 +139,6 @@ pub struct Trace {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub traces: Vec<Trace>,
 }
 
@@ -167,9 +152,6 @@ pub struct MealyRunStep {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MealyRunResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub output: String,
     pub steps: Vec<MealyRunStep>,
 }
@@ -185,9 +167,6 @@ pub struct MealyLineTest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MealyMultiRunResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub results: Vec<MealyLineTest>,
 }
 
@@ -201,16 +180,10 @@ pub struct LineTest {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MultiRunResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub traces: Vec<LineTest>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GenerateInputsResult {
-    #[serde(with = "http_serde::status_code")]
-    pub status: StatusCode,
-    pub message: String,
     pub inputs: Vec<String>,
 }

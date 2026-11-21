@@ -2,8 +2,6 @@
 
 use std::collections::HashSet;
 
-use tauri::http::StatusCode;
-
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{AutomatonData, MealyRunStep, StateData, TransitionData};
 use crate::mealy::api::{
@@ -191,7 +189,6 @@ fn create_new_returns_ok_with_single_initial_state() {
     let store = AutomatonStore::new();
     let result = create_new_mealy(&store, None);
 
-    assert_eq!(result.status, StatusCode::OK);
     let automaton = result
         .automaton
         .expect("созданный автомат должен присутствовать");
@@ -543,46 +540,41 @@ fn data_to_mm_rejects_transition_without_output() {
 }
 
 #[test]
-fn run_mealy_full_run_returns_200_and_output() {
+fn run_mealy_full_run_returns_output() {
     let entry = run_entry();
 
-    let result = run_mealy(&entry, "ab");
+    let result = run_mealy(&entry, "ab").unwrap();
 
-    assert_eq!(result.status, StatusCode::OK);
     assert_eq!(result.output, "10");
     assert_eq!(result.steps.len(), 2);
-    assert!(result.message.contains("10"));
 }
 
 #[test]
-fn run_mealy_partial_run_returns_401() {
+fn run_mealy_partial_run_stops_on_unreadable_symbol() {
     let entry = run_entry();
 
-    let result = run_mealy(&entry, "ac");
+    let result = run_mealy(&entry, "ac").unwrap();
 
-    assert_eq!(result.status, StatusCode::UNAUTHORIZED);
     assert_eq!(result.output, "1");
     assert_eq!(result.steps.len(), 1);
 }
 
 #[test]
-fn run_mealy_stuck_on_first_symbol_returns_402() {
+fn run_mealy_stuck_on_first_symbol_has_no_output() {
     let entry = run_entry();
 
-    let result = run_mealy(&entry, "z");
+    let result = run_mealy(&entry, "z").unwrap();
 
-    assert_eq!(result.status, StatusCode::PAYMENT_REQUIRED);
     assert!(result.output.is_empty());
     assert!(result.steps.is_empty());
 }
 
 #[test]
-fn run_mealy_empty_input_returns_200() {
+fn run_mealy_empty_input_has_no_output() {
     let entry = run_entry();
 
-    let result = run_mealy(&entry, "");
+    let result = run_mealy(&entry, "").unwrap();
 
-    assert_eq!(result.status, StatusCode::OK);
     assert!(result.output.is_empty());
     assert!(result.steps.is_empty());
 }
@@ -594,11 +586,10 @@ fn run_mealy_invalid_automaton_returns_400() {
         state.isInitial = false;
     }
 
-    let result = run_mealy(&entry, "a");
+    let error = run_mealy(&entry, "a").unwrap_err();
 
-    assert_eq!(result.status, StatusCode::BAD_REQUEST);
-    assert!(result.output.is_empty());
-    assert!(result.steps.is_empty());
+    assert_eq!(error.status, 400);
+    assert!(!error.message.is_empty());
 }
 
 #[test]
@@ -606,10 +597,8 @@ fn multi_run_mealy_reports_full_and_partial_lines_in_order() {
     let entry = run_entry();
     let inputs = ["", "a", "ab", "ac"].map(String::from);
 
-    let result = multi_run_mealy(&entry, &inputs);
+    let result = multi_run_mealy(&entry, &inputs).unwrap();
 
-    assert_eq!(result.status, StatusCode::OK);
-    assert!(result.message.is_empty());
     assert_eq!(result.results.len(), 4);
 
     let lines: Vec<&str> = result.results.iter().map(|r| r.line.as_str()).collect();
@@ -629,12 +618,11 @@ fn multi_run_mealy_reports_full_and_partial_lines_in_order() {
 }
 
 #[test]
-fn multi_run_mealy_partial_run_does_not_change_request_status() {
+fn multi_run_mealy_partial_run_is_marked_incomplete() {
     let entry = run_entry();
 
-    let result = multi_run_mealy(&entry, &["z".to_string()]);
+    let result = multi_run_mealy(&entry, &["z".to_string()]).unwrap();
 
-    assert_eq!(result.status, StatusCode::OK);
     assert_eq!(result.results.len(), 1);
     assert_eq!(result.results[0].output, "");
     assert!(!result.results[0].isComplete);
@@ -647,19 +635,17 @@ fn multi_run_mealy_invalid_automaton_returns_400() {
         state.isInitial = false;
     }
 
-    let result = multi_run_mealy(&entry, &["a".to_string()]);
+    let error = multi_run_mealy(&entry, &["a".to_string()]).unwrap_err();
 
-    assert_eq!(result.status, StatusCode::BAD_REQUEST);
-    assert!(result.message.contains("Некорректный автомат"));
-    assert!(result.results.is_empty());
+    assert_eq!(error.status, 400);
+    assert!(!error.message.is_empty());
 }
 
 #[test]
-fn multi_run_mealy_empty_inputs_returns_200_and_no_results() {
+fn multi_run_mealy_empty_inputs_returns_no_results() {
     let entry = run_entry();
 
-    let result = multi_run_mealy(&entry, &[]);
+    let result = multi_run_mealy(&entry, &[]).unwrap();
 
-    assert_eq!(result.status, StatusCode::OK);
     assert!(result.results.is_empty());
 }

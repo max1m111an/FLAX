@@ -933,8 +933,8 @@ fn run_partial_epsilon_cycle_terminates() {
 
 #[test]
 fn run_fa_line_keeps_dead_traces_on_acceptance() {
-    // Проверка ответа fa_run_str через тестируемый хелпер: статус 200, final-ветвь
-    // первая, тупиковая ветвь сохранена, processed_len считает только символы.
+    // Проверка ответа fa_run_str через тестируемый хелпер: final-ветвь первая,
+    // тупиковая ветвь сохранена, eps-шаги входят в историю.
     let entry = multi_run_entry(
         vec![
             multi_run_state(0, true, false),
@@ -949,8 +949,7 @@ fn run_fa_line_keeps_dead_traces_on_acceptance() {
         ],
     );
 
-    let result = run_fa_line(&entry, "12");
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    let result = run_fa_line(&entry, "12").unwrap();
     assert_eq!(result.traces.len(), 2);
     assert!(result.traces[0].isFinal);
     assert!(!result.traces[1].isFinal);
@@ -995,15 +994,21 @@ fn run_fa_line_rejects_unreadable_trailing_symbol() {
         ],
     );
 
-    let accepted = run_fa_line(&entry, "12");
-    assert_eq!(accepted.status, tauri::http::StatusCode::OK);
+    let accepted = run_fa_line(&entry, "12").unwrap();
     assert!(accepted.traces.iter().any(|t| t.isFinal));
 
-    let rejected = run_fa_line(&entry, "123");
-    assert_eq!(rejected.status, tauri::http::StatusCode::UNAUTHORIZED);
+    let rejected = run_fa_line(&entry, "123").unwrap();
     assert_eq!(rejected.traces.len(), 2);
     assert!(rejected.traces.iter().all(|t| !t.isFinal));
-    assert!(rejected.message.contains("обработано 2 из 3"));
+    // Из трёх символов прочитаны два (eps-шаг в счёт не идёт).
+    assert_eq!(
+        rejected.traces[1]
+            .steps
+            .iter()
+            .filter(|s| s.symbol != EPSILON)
+            .count(),
+        2
+    );
     assert_eq!(
         rejected.traces[1].steps,
         vec![
@@ -1567,10 +1572,8 @@ fn multi_run_fa_reports_results_in_input_order() {
     );
     let inputs = ["", "a", "aa", "aaa"].map(String::from);
 
-    let result = multi_run_fa(&entry, &inputs);
+    let result = multi_run_fa(&entry, &inputs).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
-    assert!(result.message.is_empty());
     assert_eq!(result.traces.len(), 4);
 
     let lines: Vec<&str> = result.traces.iter().map(|t| t.line.as_str()).collect();
@@ -1598,21 +1601,18 @@ fn multi_run_fa_reports_results_in_input_order() {
 fn multi_run_fa_invalid_automaton_returns_400() {
     let entry = multi_run_entry(vec![multi_run_state(0, false, true)], Vec::new());
 
-    let result = multi_run_fa(&entry, &["a".to_string()]);
+    let error = multi_run_fa(&entry, &["a".to_string()]).unwrap_err();
 
-    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
-    assert_eq!(result.message, "Некорректный автомат");
-    assert!(result.traces.is_empty());
+    assert_eq!(error.status, 400);
+    assert_eq!(error.message, "Некорректный автомат");
 }
 
 #[test]
-fn multi_run_fa_empty_inputs_returns_200_and_no_traces() {
+fn multi_run_fa_empty_inputs_returns_no_traces() {
     let entry = multi_run_entry(vec![multi_run_state(0, true, true)], Vec::new());
 
-    let result = multi_run_fa(&entry, &[]);
+    let result = multi_run_fa(&entry, &[]).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
-    assert!(result.message.is_empty());
     assert!(result.traces.is_empty());
 }
 
@@ -1966,9 +1966,8 @@ fn fa_generate_inputs_command_path_keeps_loop_strings() {
         }],
     });
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
     assert!(result.inputs.contains(&"я".to_string()));
     assert!(result.inputs.contains(&"яя".to_string()));
     assert!(result.inputs.contains(&"яяя".to_string()));

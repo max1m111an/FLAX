@@ -425,7 +425,7 @@ fn save_file_with_writes_content_and_reports_success() {
 
     let result = save_file_with(path_str, "payload");
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.status, 200);
     assert!(result.message.contains(path_str));
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "payload");
 
@@ -440,7 +440,7 @@ fn save_file_with_reports_write_error() {
 
     let result = save_file_with(path.to_str().unwrap(), "payload");
 
-    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
+    assert_eq!(result.status, 400);
     assert!(result.message.contains("Не удалось сохранить файл"));
     assert!(!path.exists());
 }
@@ -452,7 +452,7 @@ fn save_automaton_dispatches_fa_serializer() {
 
     let result = save_automaton(&entry, path.to_str().unwrap());
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.status, 200);
     let written = std::fs::read_to_string(&path).unwrap();
     assert!(written.contains("<type>fa</type>"));
 
@@ -474,7 +474,7 @@ fn save_automaton_dispatches_mealy_serializer() {
 
     let result = save_automaton(&entry, path.to_str().unwrap());
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
+    assert_eq!(result.status, 200);
     let written = std::fs::read_to_string(&path).unwrap();
     assert!(written.contains("<type>mealy</type>"));
     assert!(written.contains("<transout>1</transout>"));
@@ -521,8 +521,6 @@ fn multi_run_automaton_propagates_build_error() {
 #[test]
 fn load_result_serializes_is_automaton_and_data() {
     let result = crate::core::types::LoadResult {
-        status: tauri::http::StatusCode::OK,
-        message: "loaded".to_string(),
         isAutomaton: Some(true),
         data: Some(AutomatonData {
             id: 1,
@@ -536,6 +534,8 @@ fn load_result_serializes_is_automaton_and_data() {
     let value = serde_json::to_value(&result).unwrap();
     assert_eq!(value["isAutomaton"], true);
     assert_eq!(value["data"]["id"], 1);
+    assert!(value.get("status").is_none());
+    assert!(value.get("message").is_none());
 }
 
 fn mealy_state(id: i32, is_initial: bool) -> StateData {
@@ -579,10 +579,8 @@ fn gen_multi_run_for_output_mealy_returns_ordered_inputs_with_negatives() {
     let store = make_store();
     let entry = store.insert(make_mealy_entry());
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
-    assert!(result.message.starts_with("Сгенерировано "));
     assert!(result.inputs.contains(&String::new()));
     assert!(result.inputs.contains(&"a".to_string()));
     assert!(result.inputs.contains(&"b".to_string()));
@@ -613,7 +611,7 @@ fn gen_multi_run_for_output_mealy_covers_states_outputs_and_cycles() {
     let store = make_store();
     let entry = store.insert(make_mealy_entry());
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
     // Путь до q1 и активация каждого перехода.
     assert!(result.inputs.contains(&"b".to_string()));
@@ -631,10 +629,9 @@ fn gen_multi_run_for_output_mealy_covers_states_outputs_and_cycles() {
 fn gen_multi_run_for_output_missing_automaton_returns_404() {
     let store = make_store();
 
-    let result = gen_multi_run_for_output(&store, 999);
+    let error = gen_multi_run_for_output(&store, 999).unwrap_err();
 
-    assert_eq!(result.status, tauri::http::StatusCode::NOT_FOUND);
-    assert!(result.inputs.is_empty());
+    assert_eq!(error.status, 404);
 }
 
 #[test]
@@ -644,11 +641,10 @@ fn gen_multi_run_for_output_invalid_mealy_returns_400() {
     entry.states[0].isInitial = false;
     let entry = store.insert(entry);
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let error = gen_multi_run_for_output(&store, entry.id).unwrap_err();
 
-    assert_eq!(result.status, tauri::http::StatusCode::BAD_REQUEST);
-    assert!(result.message.contains("Некорректный автомат"));
-    assert!(result.inputs.is_empty());
+    assert_eq!(error.status, 400);
+    assert!(error.message.contains("Некорректный автомат"));
 }
 
 #[test]
@@ -668,9 +664,8 @@ fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
     }
     let entry = store.insert(entry);
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
     assert_eq!(result.inputs.len(), 50);
     assert!(result.inputs.contains(&"aa".to_string()));
     assert!(result.inputs.contains(&"aaa".to_string()));
@@ -683,9 +678,8 @@ fn gen_multi_run_for_output_fa_uses_existing_generator() {
     entry.transitions = vec![trans(1, 0, 1, 'a'), trans(2, 1, 0, 'b')];
     let entry = store.insert(entry);
 
-    let result = gen_multi_run_for_output(&store, entry.id);
+    let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert_eq!(result.status, tauri::http::StatusCode::OK);
     assert!(result.inputs.contains(&String::new()));
     assert!(result.inputs.contains(&"a".to_string()));
     assert!(result.inputs.contains(&"b".to_string()));

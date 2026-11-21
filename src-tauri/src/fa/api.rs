@@ -1,10 +1,10 @@
-use tauri::{State, http::StatusCode};
+use tauri::State;
 
 use crate::core::api::{check_automaton_multi_run, check_automaton_run, generate_id};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
-    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, Response,
+    RunResult, StateData, StateResult, TransitionData, TransitionResult,
     alphabet_from_transitions,
 };
 use crate::fa::types::{EPSILON, FA, FABuilder};
@@ -14,8 +14,6 @@ use crate::fa::types::{EPSILON, FA, FABuilder};
 pub fn fa_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
     let entry = state.create(name.unwrap_or_else(|| "Автомат".to_string()), "q0");
     OperationResult {
-        status: StatusCode::OK,
-        message: "Конечный автомат создан".to_string(),
         automaton: Some(entry),
     }
 }
@@ -29,8 +27,8 @@ pub fn fa_add_state(
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> StateResult {
-    let (new_id, created) = match state.modify(automaton_id, |entry| {
+) -> Result<StateResult, Response> {
+    let (_, created) = match state.modify(automaton_id, |entry| {
         let used: std::collections::HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
         let new_id = generate_id(&used);
 
@@ -48,19 +46,16 @@ pub fn fa_add_state(
     }) {
         Some(v) => v,
         None => {
-            return StateResult {
-                status: StatusCode::NOT_FOUND,
+            return Err(Response {
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                state: None,
-            };
+            });
         }
     };
 
-    StateResult {
-        status: StatusCode::OK,
-        message: format!("Состояние {} добавлено", new_id),
+    Ok(StateResult {
         state: Some(created),
-    }
+    })
 }
 
 #[tauri::command]
@@ -73,7 +68,7 @@ pub fn fa_update_state(
     y: Option<f32>,
     is_initial: Option<bool>,
     is_final: Option<bool>,
-) -> StateResult {
+) -> Result<StateResult, Response> {
     let updated = match state.modify(automaton_id, |entry| {
         let idx = entry
             .states
@@ -106,26 +101,22 @@ pub fn fa_update_state(
     }) {
         Some(Ok(updated)) => updated,
         Some(Err(message)) => {
-            return StateResult {
-                status: StatusCode::BAD_REQUEST,
+            return Err(Response {
+                status: 400,
                 message,
-                state: None,
-            };
+            });
         }
         None => {
-            return StateResult {
-                status: StatusCode::NOT_FOUND,
+            return Err(Response {
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                state: None,
-            };
+            });
         }
     };
 
-    StateResult {
-        status: StatusCode::OK,
-        message: format!("Состояние {} обновлено", state_id),
+    Ok(StateResult {
         state: Some(updated),
-    }
+    })
 }
 
 /// Удаляет состояние вместе со всеми связанными с ним переходами (входящими,
@@ -135,7 +126,7 @@ pub fn fa_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
-) -> StatusResult {
+) -> Response {
     match state.modify(automaton_id, |entry| {
         if !entry.states.iter().any(|s| s.id == state_id) {
             return Err(format!("Состояние {} не существует", state_id));
@@ -147,16 +138,16 @@ pub fn fa_remove_state(
             .retain(|t| t.from != state_id && t.to != state_id);
         Ok(())
     }) {
-        Some(Ok(())) => StatusResult {
-            status: StatusCode::OK,
+        Some(Ok(())) => Response {
+            status: 200,
             message: format!("Состояние {} удалено", state_id),
         },
-        Some(Err(message)) => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+        Some(Err(message)) => Response {
+            status: 400,
             message,
         },
-        None => StatusResult {
-            status: StatusCode::NOT_FOUND,
+        None => Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
@@ -174,7 +165,7 @@ pub fn fa_add_transition(
     from: i32,
     to: i32,
     symbols: Vec<char>,
-) -> TransitionResult {
+) -> Result<TransitionResult, Response> {
     let added = match state.modify(automaton_id, |entry| {
         if !entry.states.iter().any(|s| s.id == from) {
             return Err(format!("Состояние {} не существует", from));
@@ -219,26 +210,20 @@ pub fn fa_add_transition(
     }) {
         Some(Ok(added)) => added,
         Some(Err(message)) => {
-            return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+            return Err(Response {
+                status: 400,
                 message,
-                transition: vec![],
-            };
+            });
         }
         None => {
-            return TransitionResult {
-                status: StatusCode::NOT_FOUND,
+            return Err(Response {
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                transition: vec![],
-            };
+            });
         }
     };
 
-    TransitionResult {
-        status: StatusCode::OK,
-        message: format!("{} переход(ов) {} -> {} добавлено", added.len(), from, to),
-        transition: added,
-    }
+    Ok(TransitionResult { transition: added })
 }
 
 /// Частично обновляет переход, найденный по `transition_id`; меняются только
@@ -251,7 +236,7 @@ pub fn fa_update_transition(
     new_from: Option<i32>,
     new_to: Option<i32>,
     new_symbol: Option<char>,
-) -> TransitionResult {
+) -> Result<TransitionResult, Response> {
     let updated = match state.modify(automaton_id, |entry| {
         let idx = entry
             .transitions
@@ -275,26 +260,22 @@ pub fn fa_update_transition(
     }) {
         Some(Ok(updated)) => updated,
         Some(Err(message)) => {
-            return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
+            return Err(Response {
+                status: 400,
                 message,
-                transition: vec![],
-            };
+            });
         }
         None => {
-            return TransitionResult {
-                status: StatusCode::NOT_FOUND,
+            return Err(Response {
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
-                transition: vec![],
-            };
+            });
         }
     };
 
-    TransitionResult {
-        status: StatusCode::OK,
-        message: "Переход обновлён".to_string(),
+    Ok(TransitionResult {
         transition: vec![updated],
-    }
+    })
 }
 
 #[tauri::command]
@@ -302,7 +283,7 @@ pub fn fa_remove_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     transition_id: i32,
-) -> StatusResult {
+) -> Response {
     let removed = match state.modify(automaton_id, |entry| {
         let original_count = entry.transitions.len();
         entry.transitions.retain(|t| t.id != transition_id);
@@ -310,86 +291,57 @@ pub fn fa_remove_transition(
     }) {
         Some(removed) => removed,
         None => {
-            return StatusResult {
-                status: StatusCode::NOT_FOUND,
+            return Response {
+                status: 404,
                 message: format!("Автомат с id {} не найден", automaton_id),
             };
         }
     };
 
-    let (status, msg) = if removed > 0 {
-        (StatusCode::OK, format!("Удалено {} переход(ов)", removed))
+    if removed > 0 {
+        Response {
+            status: 200,
+            message: format!("Удалено {} переход(ов)", removed),
+        }
     } else {
-        (StatusCode::NOT_FOUND, "Переход не найден".to_string())
-    };
-
-    StatusResult {
-        status: status,
-        message: msg,
+        Response {
+            status: 404,
+            message: "Переход не найден".to_string(),
+        }
     }
 }
 
 /// Прогоняет цепочку на автомате (параллельная проверка в стиле JFLAP через
-/// `FA::run_partial`, статусы `200`/`401`/`402`). Принимает вход целой строкой
-/// (не массивом).
+/// `FA::run_partial`). Принимает вход целой строкой (не массивом).
 #[tauri::command]
-pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: String) -> RunResult {
-    let entry = match check_automaton_run(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
+pub fn fa_run_str(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+    input: String,
+) -> Result<RunResult, Response> {
+    let entry = check_automaton_run(state.inner(), automaton_id)?;
 
     run_fa_line(&entry, &input)
 }
 
 /// Тестируемый прогон одной строки без `State`: строит КА, запускает
 /// `FA::run_partial` (где eps-переходы ветвятся) и формирует `RunResult`.
-/// Возвращает все трейсы, включая тупиковые; статус 200 выставляется, если
-/// принята хотя бы одна ветвь.
-pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
+/// Возвращает все трейсы, включая тупиковые; факт принятия отражается в
+/// `Trace::isFinal`.
+pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> Result<RunResult, Response> {
     let chars: Vec<char> = input.chars().collect();
     match data_to_fa(&entry.states, &entry.transitions) {
         Ok(fa) => {
-            let (mut traces, accepted) = fa.run_partial(&chars);
+            let (mut traces, _) = fa.run_partial(&chars);
             // Упорядочиваем историю так, чтобы допускающие потоки чтения (isFinal) шли
             // раньше отвергнутых.
             traces.sort_by_key(|t| !t.isFinal);
-            // Шаги `$` (eps-ветвление) входят в историю; для длины обработанной части
-            // считаем только реально прочитанные символьные переходы.
-            let processed_len = traces
-                .iter()
-                .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
-                .max()
-                .unwrap_or(0);
-            let (status, message) = if accepted {
-                (StatusCode::OK, format!("Цепочка '{}' принята", input))
-            } else if processed_len > 0 {
-                (
-                    StatusCode::UNAUTHORIZED,
-                    format!(
-                        "Цепочка '{}' принята частично (обработано {} из {} символов)",
-                        input,
-                        processed_len,
-                        chars.len()
-                    ),
-                )
-            } else {
-                (
-                    StatusCode::PAYMENT_REQUIRED,
-                    format!("Цепочка '{}' отклонена", input),
-                )
-            };
-            RunResult {
-                status,
-                message,
-                traces,
-            }
+            Ok(RunResult { traces })
         }
-        Err(err) => RunResult {
-            status: StatusCode::BAD_REQUEST,
+        Err(err) => Err(Response {
+            status: 400,
             message: format!("Некорректный автомат: {}", err),
-            traces: Vec::new(),
-        },
+        }),
     }
 }
 
@@ -401,18 +353,18 @@ pub fn fa_multi_run_str(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     inputs: Vec<String>,
-) -> MultiRunResult {
-    let entry = match check_automaton_multi_run(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
+) -> Result<MultiRunResult, Response> {
+    let entry = check_automaton_multi_run(state.inner(), automaton_id)?;
 
     multi_run_fa(&entry, &inputs)
 }
 
 /// Тестируемый пакетный прогон: строит КА один раз и пропускает каждый вход
 /// через `test_line`, сохраняя порядок входов. Некорректный автомат даёт `400`.
-pub(crate) fn multi_run_fa(entry: &AutomatonData, inputs: &[String]) -> MultiRunResult {
+pub(crate) fn multi_run_fa(
+    entry: &AutomatonData,
+    inputs: &[String],
+) -> Result<MultiRunResult, Response> {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_fa, |fa, line| {
         let (is_final, correct_symbols) = test_line(fa, line);
         LineTest {
@@ -421,16 +373,11 @@ pub(crate) fn multi_run_fa(entry: &AutomatonData, inputs: &[String]) -> MultiRun
             correctSymbols: correct_symbols,
         }
     }) {
-        Ok(traces) => MultiRunResult {
-            status: StatusCode::OK,
-            message: String::new(),
-            traces,
-        },
-        Err(_) => MultiRunResult {
-            status: StatusCode::BAD_REQUEST,
+        Ok(traces) => Ok(MultiRunResult { traces }),
+        Err(_) => Err(Response {
+            status: 400,
             message: "Некорректный автомат".to_string(),
-            traces: Vec::new(),
-        },
+        }),
     }
 }
 
@@ -442,7 +389,7 @@ pub(crate) fn multi_run_fa(entry: &AutomatonData, inputs: &[String]) -> MultiRun
 pub fn fa_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-) -> GenerateInputsResult {
+) -> Result<GenerateInputsResult, Response> {
     // Генерация живёт в core: оттуда же берут входы и команда Мили. Так
     // исправления петель/юникода применяются и к этому frontend-методу.
     crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
@@ -450,7 +397,7 @@ pub fn fa_generate_inputs(
 
 /// Удаляет автомат по его id.
 #[tauri::command]
-pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
+pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> Response {
     crate::core::api::remove_automaton(state, automaton_id)
 }
 

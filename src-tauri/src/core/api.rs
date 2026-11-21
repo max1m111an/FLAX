@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use rand::Rng;
-use tauri::{State, http::StatusCode};
+use tauri::State;
 
 use crate::core::automaton::AutomatonStore;
 use crate::core::jff::{JffParsed, parse_jff};
@@ -14,15 +14,10 @@ use crate::core::types::{
     GenerateInputsResult,
     LoadResult,
     LoadedFile,
-    MealyMultiRunResult,
-    MealyRunResult,
-    MultiRunResult,
-    RunResult,
+    Response,
     StateData,
-    StatusResult,
     TransitionData,
     alphabet_from_transitions,
-    //TransitionResult, OperationResult, StateResult
 };
 
 pub const MAX_ID: i32 = 10_000_000;
@@ -39,7 +34,7 @@ pub fn generate_id(used: &HashSet<i32>) -> i32 {
 
 /// Загружает JFLAP-файл и регистрирует объект в хранилище.
 #[tauri::command]
-pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> LoadResult {
+pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> Result<LoadResult, Response> {
     match load_via_file_with(&state, &path, "Автомат", |content| {
         let (is_automaton, automaton_type, states, transitions) = match parse_jff(content)? {
             JffParsed::Automaton(automaton_type, automaton) => (
@@ -61,22 +56,14 @@ pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> LoadResult {
             },
         ))
     }) {
-        Ok(loaded) => LoadResult {
-            status: StatusCode::OK,
-            message: if loaded.isAutomaton {
-                "Автомат загружен из файла".to_string()
-            } else {
-                "Формальный язык загружен из файла (заглушка)".to_string()
-            },
+        Ok(loaded) => Ok(LoadResult {
             isAutomaton: Some(loaded.isAutomaton),
             data: Some(loaded.data),
-        },
-        Err(message) => LoadResult {
-            status: StatusCode::BAD_REQUEST,
+        }),
+        Err(message) => Err(Response {
+            status: 400,
             message,
-            isAutomaton: None,
-            data: None,
-        },
+        }),
     }
 }
 
@@ -121,8 +108,8 @@ pub fn save_file(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     path: String,
-) -> StatusResult {
-    let entry = match check_automaton_status(state.inner(), automaton_id) {
+) -> Response {
+    let entry = match check_automaton_response(state.inner(), automaton_id) {
         Ok(e) => e,
         Err(e) => return e,
     };
@@ -132,7 +119,7 @@ pub fn save_file(
 
 /// Сериализует автомат в формате его типа и записывает результат в `path`.
 /// Новый тип автомата подключается добавлением ветки в `match`.
-pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> StatusResult {
+pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> Response {
     let content = match entry.automatonType {
         AutomatonType::FA => crate::fa::jff::to_jff(entry),
         AutomatonType::MEALY => crate::mealy::jff::to_jff(entry),
@@ -143,14 +130,14 @@ pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> StatusResult 
 
 /// Записывает готовое содержимое в файл, инкапсулируя работу с файловой
 /// системой и формирование ответа об успехе/ошибке.
-pub(crate) fn save_file_with(path: &str, content: &str) -> StatusResult {
+pub(crate) fn save_file_with(path: &str, content: &str) -> Response {
     match fs::write(path, content) {
-        Ok(()) => StatusResult {
-            status: StatusCode::OK,
+        Ok(()) => Response {
+            status: 200,
             message: format!("Автомат сохранён в {}", path),
         },
-        Err(err) => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+        Err(err) => Response {
+            status: 400,
             message: format!("Не удалось сохранить файл: {}", err),
         },
     }
@@ -193,156 +180,65 @@ pub(crate) fn check_automaton<T>(
     store.get(automaton_id).ok_or(err_resp)
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`StatusResult`].
+/// Проверка существования автомата с шаблоном ошибки [`Response`].
 #[warn(dead_code)]
-pub(crate) fn check_automaton_status(
+pub(crate) fn check_automaton_response(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, StatusResult> {
+) -> Result<AutomatonData, Response> {
     check_automaton(
         store,
         automaton_id,
-        StatusResult {
-            status: StatusCode::NOT_FOUND,
+        Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     )
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`StateResult`].
-//pub(crate) fn check_automaton_state(
-//    store: &AutomatonStore,
-//    automaton_id: i32,
-//) -> Result<AutomatonData, StateResult> {
-//    check_automaton(
-//        store,
-//        automaton_id,
-//        StateResult {
-//            status: StatusCode::NOT_FOUND,
-//            message: format!("Автомат с id {} не найден", automaton_id),
-//            state: None,
-//        },
-//    )
-//}
-
-/// Проверка существования автомата с шаблоном ошибки [`TransitionResult`].
-//#[warn(dead_code)]
-//pub(crate) fn check_automaton_transition(
-//    store: &AutomatonStore,
-//    automaton_id: i32,
-//) -> Result<AutomatonData, TransitionResult> {
-//    check_automaton(
-//        store,
-//        automaton_id,
-//        TransitionResult {
-//            status: StatusCode::NOT_FOUND,
-//            message: format!("Автомат с id {} не найден", automaton_id),
-//            transition: Vec::new(),
-//        },
-//    )
-//}
-
-/// Проверка существования автомата с шаблоном ошибки [`RunResult`].
+/// Проверка существования автомата для команды прогона КА.
 #[warn(dead_code)]
 pub(crate) fn check_automaton_run(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, RunResult> {
-    check_automaton(
-        store,
-        automaton_id,
-        RunResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            traces: Vec::new(),
-        },
-    )
+) -> Result<AutomatonData, Response> {
+    check_automaton_response(store, automaton_id)
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`MultiRunResult`].
+/// Проверка существования автомата для пакетного прогона КА.
 #[warn(dead_code)]
 pub(crate) fn check_automaton_multi_run(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, MultiRunResult> {
-    check_automaton(
-        store,
-        automaton_id,
-        MultiRunResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            traces: Vec::new(),
-        },
-    )
+) -> Result<AutomatonData, Response> {
+    check_automaton_response(store, automaton_id)
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`MealyRunResult`].
+/// Проверка существования автомата для прогона машины Мили.
 #[warn(dead_code)]
 pub(crate) fn check_automaton_mealy_run(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, MealyRunResult> {
-    check_automaton(
-        store,
-        automaton_id,
-        MealyRunResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            output: String::new(),
-            steps: Vec::new(),
-        },
-    )
+) -> Result<AutomatonData, Response> {
+    check_automaton_response(store, automaton_id)
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`MealyMultiRunResult`].
+/// Проверка существования автомата для пакетного прогона машины Мили.
 #[warn(dead_code)]
 pub(crate) fn check_automaton_mealy_multi_run(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, MealyMultiRunResult> {
-    check_automaton(
-        store,
-        automaton_id,
-        MealyMultiRunResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            results: Vec::new(),
-        },
-    )
+) -> Result<AutomatonData, Response> {
+    check_automaton_response(store, automaton_id)
 }
 
-/// Проверка существования автомата с шаблоном ошибки [`OperationResult`].
-//#[warn(dead_code)]
-//pub(crate) fn check_automaton_operation(
-//    store: &AutomatonStore,
-//    automaton_id: i32,
-//) -> Result<AutomatonData, OperationResult> {
-//    check_automaton(
-//        store,
-//        automaton_id,
-//        OperationResult {
-//            status: StatusCode::NOT_FOUND,
-//            message: format!("Автомат с id {} не найден", automaton_id),
-//            automaton: None,
-//        },
-//    )
-//}
-
-/// Проверка существования автомата с шаблоном ошибки [`GenerateInputsResult`].
+/// Проверка существования автомата для генерации входов.
 #[warn(dead_code)]
 pub(crate) fn check_automaton_generate_inputs(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<AutomatonData, GenerateInputsResult> {
-    check_automaton(
-        store,
-        automaton_id,
-        GenerateInputsResult {
-            status: StatusCode::NOT_FOUND,
-            message: format!("Автомат с id {} не найден", automaton_id),
-            inputs: Vec::new(),
-        },
-    )
+) -> Result<AutomatonData, Response> {
+    check_automaton_response(store, automaton_id)
 }
 
 /// Символы вне входного алфавита для негативных тестов. Сначала цифры, затем
@@ -598,61 +494,51 @@ pub(crate) fn generate_test_inputs_deterministic(
 pub(crate) fn gen_multi_run_for_output(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> GenerateInputsResult {
-    let entry = match check_automaton_generate_inputs(store, automaton_id) {
-        Ok(entry) => entry,
-        Err(err) => return err,
-    };
+) -> Result<GenerateInputsResult, Response> {
+    let entry = check_automaton_generate_inputs(store, automaton_id)?;
 
     let inputs = match entry.automatonType {
         AutomatonType::FA => match crate::fa::api::data_to_fa(&entry.states, &entry.transitions) {
             Ok(fa) => fa.generate_test_inputs(50, 15),
             Err(_) => {
-                return GenerateInputsResult {
-                    status: StatusCode::BAD_REQUEST,
+                return Err(Response {
+                    status: 400,
                     message: "Некорректный автомат".to_string(),
-                    inputs: Vec::new(),
-                };
+                });
             }
         },
         AutomatonType::MEALY => {
             if let Err(err) = crate::mealy::api::data_to_mm(&entry.states, &entry.transitions) {
-                return GenerateInputsResult {
-                    status: StatusCode::BAD_REQUEST,
+                return Err(Response {
+                    status: 400,
                     message: format!("Некорректный автомат: {}", err),
-                    inputs: Vec::new(),
-                };
+                });
             }
             match generate_test_inputs_deterministic(&entry, 50, 15) {
                 Ok(inputs) => inputs,
                 Err(err) => {
-                    return GenerateInputsResult {
-                        status: StatusCode::BAD_REQUEST,
+                    return Err(Response {
+                        status: 400,
                         message: format!("Некорректный автомат: {}", err),
-                        inputs: Vec::new(),
-                    };
+                    });
                 }
             }
         }
     };
 
-    GenerateInputsResult {
-        status: StatusCode::OK,
-        message: format!("Сгенерировано {} тестовых входов", inputs.len()),
-        inputs,
-    }
+    Ok(GenerateInputsResult { inputs })
 }
 
 /// Удаляет автомат по его id.
 #[tauri::command]
-pub fn remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
+pub fn remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> Response {
     match state.remove(automaton_id) {
-        Some(_) => StatusResult {
-            status: StatusCode::OK,
+        Some(_) => Response {
+            status: 200,
             message: format!("Автомат с id {} удалён", automaton_id),
         },
-        None => StatusResult {
-            status: StatusCode::NOT_FOUND,
+        None => Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }

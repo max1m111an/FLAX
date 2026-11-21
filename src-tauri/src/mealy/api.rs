@@ -1,12 +1,12 @@
 use std::collections::HashSet;
 
-use tauri::{State, http::StatusCode};
+use tauri::State;
 
 use crate::core::api::{check_automaton_mealy_multi_run, check_automaton_mealy_run, generate_id};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult,
-    MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
+    MealyRunResult, OperationResult, Response, StateData, StateResult, TransitionData,
     TransitionResult,
 };
 use crate::fa::types::EPSILON;
@@ -27,8 +27,6 @@ pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> 
         })
         .unwrap_or(created);
     OperationResult {
-        status: StatusCode::OK,
-        message: "Автомат Мили создан".to_string(),
         automaton: Some(entry),
     }
 }
@@ -181,60 +179,32 @@ pub(crate) fn data_to_mm(
 }
 
 /// Прогоняет цепочку на машине Мили. У машины Мили нет допускающих состояний:
-/// она либо обрабатывает весь вход (статус `200` с полученным выходом), либо
-/// останавливается на первой паре `(state, input)` без перехода (`401`, если
-/// часть символов обработана, `402`, если ни одного).
-pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
+/// она либо обрабатывает весь вход, либо останавливается на первой паре
+/// `(state, input)` без перехода. Факт полной обработки отражается в длине
+/// `steps` и выходной строке.
+pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> Result<MealyRunResult, Response> {
     let mm = match data_to_mm(&entry.states, &entry.transitions) {
         Ok(mm) => mm,
         Err(err) => {
-            return MealyRunResult {
-                status: StatusCode::BAD_REQUEST,
+            return Err(Response {
+                status: 400,
                 message: format!("Некорректный автомат: {}", err),
-                output: String::new(),
-                steps: Vec::new(),
-            };
+            });
         }
     };
 
     let chars: Vec<char> = input.chars().collect();
     let (steps, output) = mm.run(&chars);
-    let processed = steps.len();
-    let total = chars.len();
 
-    let (status, message) = if processed == total {
-        (
-            StatusCode::OK,
-            format!("Цепочка '{}' обработана, выход '{}'", input, output),
-        )
-    } else if processed > 0 {
-        (
-            StatusCode::UNAUTHORIZED,
-            format!(
-                "Цепочка '{}' обработана частично (обработано {} из {} символов)",
-                input, processed, total
-            ),
-        )
-    } else {
-        (
-            StatusCode::PAYMENT_REQUIRED,
-            format!("Цепочка '{}' не обработана", input),
-        )
-    };
-
-    MealyRunResult {
-        status,
-        message,
-        output,
-        steps,
-    }
+    Ok(MealyRunResult { output, steps })
 }
 
 /// Прогоняет несколько цепочек на машине Мили и возвращает по одной записи на
-/// строку без трасс шагов. Частичный прогон отражается через `isComplete`, а не
-/// статусом строки: статус запроса — `200` для корректной машины и `400`, если
-/// сама машина некорректна.
-pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
+/// строку без трасс шагов. Частичный прогон отражается через `isComplete`.
+pub(crate) fn multi_run_mealy(
+    entry: &AutomatonData,
+    inputs: &[String],
+) -> Result<MealyMultiRunResult, Response> {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
         let chars: Vec<char> = line.chars().collect();
         let (steps, output) = mm.run(&chars);
@@ -244,16 +214,11 @@ pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> Mealy
             isComplete: steps.len() == chars.len(),
         }
     }) {
-        Ok(results) => MealyMultiRunResult {
-            status: StatusCode::OK,
-            message: String::new(),
-            results,
-        },
-        Err(err) => MealyMultiRunResult {
-            status: StatusCode::BAD_REQUEST,
+        Ok(results) => Ok(MealyMultiRunResult { results }),
+        Err(err) => Err(Response {
+            status: 400,
             message: format!("Некорректный автомат: {}", err),
-            results: Vec::new(),
-        },
+        }),
     }
 }
 
@@ -273,7 +238,7 @@ pub fn mealy_add_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-) -> StateResult {
+) -> Result<StateResult, Response> {
     crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, None)
 }
 
@@ -288,7 +253,7 @@ pub fn mealy_update_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-) -> StateResult {
+) -> Result<StateResult, Response> {
     crate::fa::api::fa_update_state(state, automaton_id, state_id, label, x, y, is_initial, None)
 }
 
@@ -299,7 +264,7 @@ pub fn mealy_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
-) -> StatusResult {
+) -> Response {
     crate::fa::api::fa_remove_state(state, automaton_id, state_id)
 }
 
@@ -312,28 +277,21 @@ pub fn mealy_add_transition(
     to: i32,
     input: char,
     output: char,
-) -> TransitionResult {
+) -> Result<TransitionResult, Response> {
     match state.modify(automaton_id, |entry| {
         add_mealy_transition(entry, from, to, input, output)
     }) {
-        Some(Ok(created)) => TransitionResult {
-            status: StatusCode::OK,
-            message: format!(
-                "Переход {} -{}-> {} (выход '{}') добавлен",
-                from, input, to, output
-            ),
+        Some(Ok(created)) => Ok(TransitionResult {
             transition: vec![created],
-        },
-        Some(Err(message)) => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+        }),
+        Some(Err(message)) => Err(Response {
+            status: 400,
             message,
-            transition: vec![],
-        },
-        None => TransitionResult {
-            status: StatusCode::NOT_FOUND,
+        }),
+        None => Err(Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
-            transition: vec![],
-        },
+        }),
     }
 }
 
@@ -344,25 +302,21 @@ pub fn mealy_update_transition(
     transition_id: i32,
     input: Option<char>,
     output: Option<char>,
-) -> TransitionResult {
+) -> Result<TransitionResult, Response> {
     match state.modify(automaton_id, |entry| {
         update_mealy_transition(entry, transition_id, input, output)
     }) {
-        Some(Ok(updated)) => TransitionResult {
-            status: StatusCode::OK,
-            message: format!("Переход {} обновлён", transition_id),
+        Some(Ok(updated)) => Ok(TransitionResult {
             transition: vec![updated],
-        },
-        Some(Err(message)) => TransitionResult {
-            status: StatusCode::BAD_REQUEST,
+        }),
+        Some(Err(message)) => Err(Response {
+            status: 400,
             message,
-            transition: vec![],
-        },
-        None => TransitionResult {
-            status: StatusCode::NOT_FOUND,
+        }),
+        None => Err(Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
-            transition: vec![],
-        },
+        }),
     }
 }
 
@@ -371,20 +325,20 @@ pub fn mealy_remove_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     transition_id: i32,
-) -> StatusResult {
+) -> Response {
     match state.modify(automaton_id, |entry| {
         remove_mealy_transition(entry, transition_id)
     }) {
-        Some(Ok(())) => StatusResult {
-            status: StatusCode::OK,
+        Some(Ok(())) => Response {
+            status: 200,
             message: format!("Удалён переход {}", transition_id),
         },
-        Some(Err(message)) => StatusResult {
-            status: StatusCode::BAD_REQUEST,
+        Some(Err(message)) => Response {
+            status: 400,
             message,
         },
-        None => StatusResult {
-            status: StatusCode::NOT_FOUND,
+        None => Response {
+            status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
         },
     }
@@ -395,11 +349,8 @@ pub fn mealy_run_str(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     input: String,
-) -> MealyRunResult {
-    let entry = match check_automaton_mealy_run(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
+) -> Result<MealyRunResult, Response> {
+    let entry = check_automaton_mealy_run(state.inner(), automaton_id)?;
 
     run_mealy(&entry, &input)
 }
@@ -412,11 +363,8 @@ pub fn mealy_multi_run(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     inputs: Vec<String>,
-) -> MealyMultiRunResult {
-    let entry = match check_automaton_mealy_multi_run(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
+) -> Result<MealyMultiRunResult, Response> {
+    let entry = check_automaton_mealy_multi_run(state.inner(), automaton_id)?;
 
     multi_run_mealy(&entry, &inputs)
 }
@@ -428,13 +376,13 @@ pub fn mealy_multi_run(
 pub fn mealy_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-) -> GenerateInputsResult {
+) -> Result<GenerateInputsResult, Response> {
     crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
 /// Удаляет машину Мили из хранилища. Делегирует в `core::api::remove_automaton`:
 /// хранилище общее для FA и MM.
 #[tauri::command]
-pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> StatusResult {
+pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> Response {
     crate::core::api::remove_automaton(state, automaton_id)
 }
