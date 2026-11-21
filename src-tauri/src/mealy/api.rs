@@ -5,9 +5,8 @@ use tauri::State;
 use crate::core::api::{check_automaton_mealy_multi_run, check_automaton_mealy_run, generate_id};
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult,
-    MealyRunResult, OperationResult, Response, StateData, StateResult, TransitionData,
-    TransitionResult,
+    AutomatonData, AutomatonType, MealyLineTest, MealyRunResult, Response, StateData,
+    TransitionData,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
@@ -17,18 +16,15 @@ use crate::mealy::types::MealyBuilder;
 ///
 /// Вынесена отдельно от Tauri-команды, чтобы тестироваться без `tauri::State`
 /// (то же соглашение, что `data_to_fa` / `test_line` в `fa`).
-pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> OperationResult {
+pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> AutomatonData {
     let created = state.create(name.unwrap_or_else(|| "Мили".to_string()), "q0");
-    let entry = state
+    state
         .modify(created.id, |entry| {
             entry.automatonType = AutomatonType::MEALY;
             entry.states[0].isFinal = None;
             entry.clone()
         })
-        .unwrap_or(created);
-    OperationResult {
-        automaton: Some(entry),
-    }
+        .unwrap_or(created)
 }
 
 /// Добавляет в запись один переход машины Мили `from --input/output--> to`.
@@ -204,7 +200,7 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> Result<MealyRunRe
 pub(crate) fn multi_run_mealy(
     entry: &AutomatonData,
     inputs: &[String],
-) -> Result<MealyMultiRunResult, Response> {
+) -> Result<Vec<MealyLineTest>, Response> {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
         let chars: Vec<char> = line.chars().collect();
         let (steps, output) = mm.run(&chars);
@@ -214,7 +210,7 @@ pub(crate) fn multi_run_mealy(
             isComplete: steps.len() == chars.len(),
         }
     }) {
-        Ok(results) => Ok(MealyMultiRunResult { results }),
+        Ok(results) => Ok(results),
         Err(err) => Err(Response {
             status: 400,
             message: format!("Некорректный автомат: {}", err),
@@ -224,7 +220,7 @@ pub(crate) fn multi_run_mealy(
 
 /// Создаёт новую машину Мили с единственным начальным состоянием `q0`.
 #[tauri::command]
-pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> OperationResult {
+pub fn mealy_create_new(state: State<'_, AutomatonStore>, name: Option<String>) -> AutomatonData {
     create_new_mealy(&state, name)
 }
 
@@ -238,7 +234,7 @@ pub fn mealy_add_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-) -> Result<StateResult, Response> {
+) -> Result<StateData, Response> {
     crate::fa::api::fa_add_state(state, automaton_id, label, x, y, is_initial, None)
 }
 
@@ -253,7 +249,7 @@ pub fn mealy_update_state(
     x: Option<f32>,
     y: Option<f32>,
     is_initial: Option<bool>,
-) -> Result<StateResult, Response> {
+) -> Result<StateData, Response> {
     crate::fa::api::fa_update_state(state, automaton_id, state_id, label, x, y, is_initial, None)
 }
 
@@ -264,7 +260,7 @@ pub fn mealy_remove_state(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     state_id: i32,
-) -> Response {
+) -> Result<(), Response> {
     crate::fa::api::fa_remove_state(state, automaton_id, state_id)
 }
 
@@ -277,13 +273,11 @@ pub fn mealy_add_transition(
     to: i32,
     input: char,
     output: char,
-) -> Result<TransitionResult, Response> {
+) -> Result<Vec<TransitionData>, Response> {
     match state.modify(automaton_id, |entry| {
         add_mealy_transition(entry, from, to, input, output)
     }) {
-        Some(Ok(created)) => Ok(TransitionResult {
-            transition: vec![created],
-        }),
+        Some(Ok(created)) => Ok(vec![created]),
         Some(Err(message)) => Err(Response {
             status: 400,
             message,
@@ -302,13 +296,11 @@ pub fn mealy_update_transition(
     transition_id: i32,
     input: Option<char>,
     output: Option<char>,
-) -> Result<TransitionResult, Response> {
+) -> Result<Vec<TransitionData>, Response> {
     match state.modify(automaton_id, |entry| {
         update_mealy_transition(entry, transition_id, input, output)
     }) {
-        Some(Ok(updated)) => Ok(TransitionResult {
-            transition: vec![updated],
-        }),
+        Some(Ok(updated)) => Ok(vec![updated]),
         Some(Err(message)) => Err(Response {
             status: 400,
             message,
@@ -325,22 +317,19 @@ pub fn mealy_remove_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     transition_id: i32,
-) -> Response {
+) -> Result<(), Response> {
     match state.modify(automaton_id, |entry| {
         remove_mealy_transition(entry, transition_id)
     }) {
-        Some(Ok(())) => Response {
-            status: 200,
-            message: format!("Удалён переход {}", transition_id),
-        },
-        Some(Err(message)) => Response {
+        Some(Ok(())) => Ok(()),
+        Some(Err(message)) => Err(Response {
             status: 400,
             message,
-        },
-        None => Response {
+        }),
+        None => Err(Response {
             status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
-        },
+        }),
     }
 }
 
@@ -363,7 +352,7 @@ pub fn mealy_multi_run(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     inputs: Vec<String>,
-) -> Result<MealyMultiRunResult, Response> {
+) -> Result<Vec<MealyLineTest>, Response> {
     let entry = check_automaton_mealy_multi_run(state.inner(), automaton_id)?;
 
     multi_run_mealy(&entry, &inputs)
@@ -376,13 +365,16 @@ pub fn mealy_multi_run(
 pub fn mealy_generate_inputs(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
-) -> Result<GenerateInputsResult, Response> {
+) -> Result<Vec<String>, Response> {
     crate::core::api::gen_multi_run_for_output(state.inner(), automaton_id)
 }
 
 /// Удаляет машину Мили из хранилища. Делегирует в `core::api::remove_automaton`:
 /// хранилище общее для FA и MM.
 #[tauri::command]
-pub fn mealy_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> Response {
+pub fn mealy_remove_automaton(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+) -> Result<(), Response> {
     crate::core::api::remove_automaton(state, automaton_id)
 }

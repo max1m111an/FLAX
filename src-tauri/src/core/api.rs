@@ -11,8 +11,6 @@ use crate::core::types::{
     AutomatonData,
     AutomatonType,
     EPSILON,
-    GenerateInputsResult,
-    LoadResult,
     LoadedFile,
     Response,
     StateData,
@@ -34,7 +32,7 @@ pub fn generate_id(used: &HashSet<i32>) -> i32 {
 
 /// Загружает JFLAP-файл и регистрирует объект в хранилище.
 #[tauri::command]
-pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> Result<LoadResult, Response> {
+pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> Result<LoadedFile, Response> {
     match load_via_file_with(&state, &path, "Автомат", |content| {
         let (is_automaton, automaton_type, states, transitions) = match parse_jff(content)? {
             JffParsed::Automaton(automaton_type, automaton) => (
@@ -56,10 +54,7 @@ pub fn load_file(state: State<'_, AutomatonStore>, path: String) -> Result<LoadR
             },
         ))
     }) {
-        Ok(loaded) => Ok(LoadResult {
-            isAutomaton: Some(loaded.isAutomaton),
-            data: Some(loaded.data),
-        }),
+        Ok(loaded) => Ok(loaded),
         Err(message) => Err(Response {
             status: 400,
             message,
@@ -108,18 +103,15 @@ pub fn save_file(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     path: String,
-) -> Response {
-    let entry = match check_automaton_response(state.inner(), automaton_id) {
-        Ok(e) => e,
-        Err(e) => return e,
-    };
+) -> Result<(), Response> {
+    let entry = check_automaton_response(state.inner(), automaton_id)?;
 
     save_automaton(&entry, &path)
 }
 
 /// Сериализует автомат в формате его типа и записывает результат в `path`.
 /// Новый тип автомата подключается добавлением ветки в `match`.
-pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> Response {
+pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> Result<(), Response> {
     let content = match entry.automatonType {
         AutomatonType::FA => crate::fa::jff::to_jff(entry),
         AutomatonType::MEALY => crate::mealy::jff::to_jff(entry),
@@ -130,17 +122,11 @@ pub(crate) fn save_automaton(entry: &AutomatonData, path: &str) -> Response {
 
 /// Записывает готовое содержимое в файл, инкапсулируя работу с файловой
 /// системой и формирование ответа об успехе/ошибке.
-pub(crate) fn save_file_with(path: &str, content: &str) -> Response {
-    match fs::write(path, content) {
-        Ok(()) => Response {
-            status: 200,
-            message: format!("Автомат сохранён в {}", path),
-        },
-        Err(err) => Response {
-            status: 400,
-            message: format!("Не удалось сохранить файл: {}", err),
-        },
-    }
+pub(crate) fn save_file_with(path: &str, content: &str) -> Result<(), Response> {
+    fs::write(path, content).map_err(|err| Response {
+        status: 400,
+        message: format!("Не удалось сохранить файл: {}", err),
+    })
 }
 
 /// Общий драйвер пакетного прогона: строит автомат один раз (`build`) и
@@ -167,8 +153,8 @@ where
 }
 
 /// Инкапсулированная проверка существования автомата.
-/// При отсутствии возвращает переданный `err_resp`, что позволяет
-/// использовать функцию с разными типами ответов команд.
+/// При отсутствии возвращает переданную ошибку, чтобы команды могли
+/// пробрасывать её через `?`.
 ///
 /// usage: `let entry = check_automaton(store, automaton_id, err_resp)?;`
 #[warn(dead_code)]
@@ -494,7 +480,7 @@ pub(crate) fn generate_test_inputs_deterministic(
 pub(crate) fn gen_multi_run_for_output(
     store: &AutomatonStore,
     automaton_id: i32,
-) -> Result<GenerateInputsResult, Response> {
+) -> Result<Vec<String>, Response> {
     let entry = check_automaton_generate_inputs(store, automaton_id)?;
 
     let inputs = match entry.automatonType {
@@ -526,20 +512,20 @@ pub(crate) fn gen_multi_run_for_output(
         }
     };
 
-    Ok(GenerateInputsResult { inputs })
+    Ok(inputs)
 }
 
 /// Удаляет автомат по его id.
 #[tauri::command]
-pub fn remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) -> Response {
-    match state.remove(automaton_id) {
-        Some(_) => Response {
-            status: 200,
-            message: format!("Автомат с id {} удалён", automaton_id),
-        },
-        None => Response {
+pub fn remove_automaton(
+    state: State<'_, AutomatonStore>,
+    automaton_id: i32,
+) -> Result<(), Response> {
+    state
+        .remove(automaton_id)
+        .map(|_| ())
+        .ok_or_else(|| Response {
             status: 404,
             message: format!("Автомат с id {} не найден", automaton_id),
-        },
-    }
+        })
 }

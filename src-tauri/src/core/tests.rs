@@ -419,14 +419,12 @@ fn load_via_file_propagates_parser_error() {
 }
 
 #[test]
-fn save_file_with_writes_content_and_reports_success() {
+fn save_file_with_writes_content() {
     let path = std::env::temp_dir().join(format!("flax_{}_save_ok.jff", std::process::id()));
     let path_str = path.to_str().unwrap();
 
-    let result = save_file_with(path_str, "payload");
+    save_file_with(path_str, "payload").unwrap();
 
-    assert_eq!(result.status, 200);
-    assert!(result.message.contains(path_str));
     assert_eq!(std::fs::read_to_string(&path).unwrap(), "payload");
 
     std::fs::remove_file(&path).unwrap();
@@ -438,10 +436,10 @@ fn save_file_with_reports_write_error() {
         .join(format!("flax_{}_missing_dir", std::process::id()))
         .join("save.jff");
 
-    let result = save_file_with(path.to_str().unwrap(), "payload");
+    let error = save_file_with(path.to_str().unwrap(), "payload").unwrap_err();
 
-    assert_eq!(result.status, 400);
-    assert!(result.message.contains("Не удалось сохранить файл"));
+    assert_eq!(error.status, 400);
+    assert!(error.message.contains("Не удалось сохранить файл"));
     assert!(!path.exists());
 }
 
@@ -450,9 +448,8 @@ fn save_automaton_dispatches_fa_serializer() {
     let path = std::env::temp_dir().join(format!("flax_{}_save_fa.jff", std::process::id()));
     let entry = make_store().create("FA".to_string(), "q0");
 
-    let result = save_automaton(&entry, path.to_str().unwrap());
+    save_automaton(&entry, path.to_str().unwrap()).unwrap();
 
-    assert_eq!(result.status, 200);
     let written = std::fs::read_to_string(&path).unwrap();
     assert!(written.contains("<type>fa</type>"));
 
@@ -472,9 +469,8 @@ fn save_automaton_dispatches_mealy_serializer() {
         output: Some('1'),
     }];
 
-    let result = save_automaton(&entry, path.to_str().unwrap());
+    save_automaton(&entry, path.to_str().unwrap()).unwrap();
 
-    assert_eq!(result.status, 200);
     let written = std::fs::read_to_string(&path).unwrap();
     assert!(written.contains("<type>mealy</type>"));
     assert!(written.contains("<transout>1</transout>"));
@@ -519,16 +515,16 @@ fn multi_run_automaton_propagates_build_error() {
 }
 
 #[test]
-fn load_result_serializes_is_automaton_and_data() {
-    let result = crate::core::types::LoadResult {
-        isAutomaton: Some(true),
-        data: Some(AutomatonData {
+fn loaded_file_serializes_is_automaton_and_data() {
+    let result = crate::core::types::LoadedFile {
+        isAutomaton: true,
+        data: AutomatonData {
             id: 1,
             name: "Test".to_string(),
             automatonType: crate::core::types::AutomatonType::FA,
             states: Vec::new(),
             transitions: Vec::new(),
-        }),
+        },
     };
 
     let value = serde_json::to_value(&result).unwrap();
@@ -581,29 +577,27 @@ fn gen_multi_run_for_output_mealy_returns_ordered_inputs_with_negatives() {
 
     let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert!(result.inputs.contains(&String::new()));
-    assert!(result.inputs.contains(&"a".to_string()));
-    assert!(result.inputs.contains(&"b".to_string()));
+    assert!(result.contains(&String::new()));
+    assert!(result.contains(&"a".to_string()));
+    assert!(result.contains(&"b".to_string()));
     // `$` обязателен как негативный вход, хотя это и не переход машины.
-    assert!(result.inputs.contains(&"$".to_string()));
+    assert!(result.contains(&"$".to_string()));
     let outside: Vec<&String> = result
-        .inputs
         .iter()
         .filter(|s| s.chars().any(|c| !['a', 'b'].contains(&c)))
         .collect();
     assert_eq!(outside.len(), 3);
     assert!(outside.iter().any(|s| s.as_str() == "$"));
-    assert!(result.inputs.len() <= 50);
+    assert!(result.len() <= 50);
     assert!(
         result
-            .inputs
             .windows(2)
             .all(|w| w[0].chars().count() <= w[1].chars().count())
     );
-    let mut unique = result.inputs.clone();
+    let mut unique = result.clone();
     unique.sort();
     unique.dedup();
-    assert_eq!(unique.len(), result.inputs.len());
+    assert_eq!(unique.len(), result.len());
 }
 
 #[test]
@@ -614,15 +608,15 @@ fn gen_multi_run_for_output_mealy_covers_states_outputs_and_cycles() {
     let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
     // Путь до q1 и активация каждого перехода.
-    assert!(result.inputs.contains(&"b".to_string()));
-    assert!(result.inputs.contains(&"ba".to_string()));
+    assert!(result.contains(&"b".to_string()));
+    assert!(result.contains(&"ba".to_string()));
     // Выходы x, y, z покрываются кратчайшими строками.
-    assert!(result.inputs.contains(&"a".to_string()));
-    assert!(result.inputs.contains(&"b".to_string()));
-    assert!(result.inputs.contains(&"ba".to_string()));
+    assert!(result.contains(&"a".to_string()));
+    assert!(result.contains(&"b".to_string()));
+    assert!(result.contains(&"ba".to_string()));
     // Цикл q0 --a--> q0 повторяется 2 и 3 раза, длинных цепочек больше нет.
-    assert!(result.inputs.contains(&"aa".to_string()));
-    assert!(result.inputs.contains(&"aaa".to_string()));
+    assert!(result.contains(&"aa".to_string()));
+    assert!(result.contains(&"aaa".to_string()));
 }
 
 #[test]
@@ -666,9 +660,9 @@ fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
 
     let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert_eq!(result.inputs.len(), 50);
-    assert!(result.inputs.contains(&"aa".to_string()));
-    assert!(result.inputs.contains(&"aaa".to_string()));
+    assert_eq!(result.len(), 50);
+    assert!(result.contains(&"aa".to_string()));
+    assert!(result.contains(&"aaa".to_string()));
 }
 
 #[test]
@@ -680,12 +674,11 @@ fn gen_multi_run_for_output_fa_uses_existing_generator() {
 
     let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert!(result.inputs.contains(&String::new()));
-    assert!(result.inputs.contains(&"a".to_string()));
-    assert!(result.inputs.contains(&"b".to_string()));
+    assert!(result.contains(&String::new()));
+    assert!(result.contains(&"a".to_string()));
+    assert!(result.contains(&"b".to_string()));
     assert!(
         result
-            .inputs
             .iter()
             .any(|s| s.contains('$') || s.chars().any(|c| !['a', 'b'].contains(&c)))
     );

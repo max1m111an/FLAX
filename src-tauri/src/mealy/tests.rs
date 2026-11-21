@@ -187,11 +187,8 @@ fn step_returns_target_and_output() {
 #[test]
 fn create_new_returns_ok_with_single_initial_state() {
     let store = AutomatonStore::new();
-    let result = create_new_mealy(&store, None);
+    let automaton = create_new_mealy(&store, None);
 
-    let automaton = result
-        .automaton
-        .expect("созданный автомат должен присутствовать");
     assert_eq!(automaton.name, "Мили");
     assert!(matches!(
         automaton.automatonType,
@@ -208,11 +205,8 @@ fn create_new_returns_ok_with_single_initial_state() {
 #[test]
 fn create_new_uses_given_name() {
     let store = AutomatonStore::new();
-    let result = create_new_mealy(&store, Some("Машина 1".to_string()));
+    let automaton = create_new_mealy(&store, Some("Машина 1".to_string()));
 
-    let automaton = result
-        .automaton
-        .expect("созданный автомат должен присутствовать");
     assert_eq!(automaton.name, "Машина 1");
 }
 
@@ -220,12 +214,8 @@ fn create_new_uses_given_name() {
 fn create_new_assigns_fresh_ids() {
     let store = AutomatonStore::new();
 
-    let first = create_new_mealy(&store, None)
-        .automaton
-        .expect("первый автомат должен присутствовать");
-    let second = create_new_mealy(&store, None)
-        .automaton
-        .expect("второй автомат должен присутствовать");
+    let first = create_new_mealy(&store, None);
+    let second = create_new_mealy(&store, None);
 
     assert_ne!(first.id, second.id);
 }
@@ -599,22 +589,22 @@ fn multi_run_mealy_reports_full_and_partial_lines_in_order() {
 
     let result = multi_run_mealy(&entry, &inputs).unwrap();
 
-    assert_eq!(result.results.len(), 4);
+    assert_eq!(result.len(), 4);
 
-    let lines: Vec<&str> = result.results.iter().map(|r| r.line.as_str()).collect();
+    let lines: Vec<&str> = result.iter().map(|r| r.line.as_str()).collect();
     assert_eq!(lines, ["", "a", "ab", "ac"]);
 
-    assert_eq!(result.results[0].output, "");
-    assert!(result.results[0].isComplete);
+    assert_eq!(result[0].output, "");
+    assert!(result[0].isComplete);
 
-    assert_eq!(result.results[1].output, "1");
-    assert!(result.results[1].isComplete);
+    assert_eq!(result[1].output, "1");
+    assert!(result[1].isComplete);
 
-    assert_eq!(result.results[2].output, "10");
-    assert!(result.results[2].isComplete);
+    assert_eq!(result[2].output, "10");
+    assert!(result[2].isComplete);
 
-    assert_eq!(result.results[3].output, "1");
-    assert!(!result.results[3].isComplete);
+    assert_eq!(result[3].output, "1");
+    assert!(!result[3].isComplete);
 }
 
 #[test]
@@ -623,9 +613,9 @@ fn multi_run_mealy_partial_run_is_marked_incomplete() {
 
     let result = multi_run_mealy(&entry, &["z".to_string()]).unwrap();
 
-    assert_eq!(result.results.len(), 1);
-    assert_eq!(result.results[0].output, "");
-    assert!(!result.results[0].isComplete);
+    assert_eq!(result.len(), 1);
+    assert_eq!(result[0].output, "");
+    assert!(!result[0].isComplete);
 }
 
 #[test]
@@ -647,5 +637,5 @@ fn multi_run_mealy_empty_inputs_returns_no_results() {
 
     let result = multi_run_mealy(&entry, &[]).unwrap();
 
-    assert!(result.results.is_empty());
+    assert!(result.is_empty());
 }

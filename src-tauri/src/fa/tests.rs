@@ -950,11 +950,11 @@ fn run_fa_line_keeps_dead_traces_on_acceptance() {
     );
 
     let result = run_fa_line(&entry, "12").unwrap();
-    assert_eq!(result.traces.len(), 2);
-    assert!(result.traces[0].isFinal);
-    assert!(!result.traces[1].isFinal);
+    assert_eq!(result.len(), 2);
+    assert!(result[0].isFinal);
+    assert!(!result[1].isFinal);
     assert_eq!(
-        result.traces[0].steps,
+        result[0].steps,
         vec![
             RunStep {
                 from: 0,
@@ -995,14 +995,14 @@ fn run_fa_line_rejects_unreadable_trailing_symbol() {
     );
 
     let accepted = run_fa_line(&entry, "12").unwrap();
-    assert!(accepted.traces.iter().any(|t| t.isFinal));
+    assert!(accepted.iter().any(|t| t.isFinal));
 
     let rejected = run_fa_line(&entry, "123").unwrap();
-    assert_eq!(rejected.traces.len(), 2);
-    assert!(rejected.traces.iter().all(|t| !t.isFinal));
+    assert_eq!(rejected.len(), 2);
+    assert!(rejected.iter().all(|t| !t.isFinal));
     // Из трёх символов прочитаны два (eps-шаг в счёт не идёт).
     assert_eq!(
-        rejected.traces[1]
+        rejected[1]
             .steps
             .iter()
             .filter(|s| s.symbol != EPSILON)
@@ -1010,7 +1010,7 @@ fn run_fa_line_rejects_unreadable_trailing_symbol() {
         2
     );
     assert_eq!(
-        rejected.traces[1].steps,
+        rejected[1].steps,
         vec![
             RunStep {
                 from: 0,
@@ -1574,25 +1574,25 @@ fn multi_run_fa_reports_results_in_input_order() {
 
     let result = multi_run_fa(&entry, &inputs).unwrap();
 
-    assert_eq!(result.traces.len(), 4);
+    assert_eq!(result.len(), 4);
 
-    let lines: Vec<&str> = result.traces.iter().map(|t| t.line.as_str()).collect();
+    let lines: Vec<&str> = result.iter().map(|t| t.line.as_str()).collect();
     assert_eq!(lines, ["", "a", "aa", "aaa"]);
 
     assert_eq!(
-        (result.traces[0].isFinal, result.traces[0].correctSymbols),
+        (result[0].isFinal, result[0].correctSymbols),
         (false, 0)
     );
     assert_eq!(
-        (result.traces[1].isFinal, result.traces[1].correctSymbols),
+        (result[1].isFinal, result[1].correctSymbols),
         (false, 1)
     );
     assert_eq!(
-        (result.traces[2].isFinal, result.traces[2].correctSymbols),
+        (result[2].isFinal, result[2].correctSymbols),
         (true, 2)
     );
     assert_eq!(
-        (result.traces[3].isFinal, result.traces[3].correctSymbols),
+        (result[3].isFinal, result[3].correctSymbols),
         (false, 2)
     );
 }
@@ -1613,7 +1613,7 @@ fn multi_run_fa_empty_inputs_returns_no_traces() {
 
     let result = multi_run_fa(&entry, &[]).unwrap();
 
-    assert!(result.traces.is_empty());
+    assert!(result.is_empty());
 }
 
 #[test]
@@ -1968,9 +1968,9 @@ fn fa_generate_inputs_command_path_keeps_loop_strings() {
 
     let result = gen_multi_run_for_output(&store, entry.id).unwrap();
 
-    assert!(result.inputs.contains(&"я".to_string()));
-    assert!(result.inputs.contains(&"яя".to_string()));
-    assert!(result.inputs.contains(&"яяя".to_string()));
+    assert!(result.contains(&"я".to_string()));
+    assert!(result.contains(&"яя".to_string()));
+    assert!(result.contains(&"яяя".to_string()));
 }
 
 #[test]
