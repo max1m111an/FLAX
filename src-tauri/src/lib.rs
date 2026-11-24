@@ -1,11 +1,9 @@
+mod api;
 mod core;
 mod fa;
 mod mealy;
 
-use crate::core::api::{load_file, save_file};
 use crate::core::automaton::AutomatonStore;
-use crate::fa::api::*;
-use crate::mealy::api::*;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -14,32 +12,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AutomatonStore::new())
-        .invoke_handler(tauri::generate_handler![
-            load_file,
-            save_file,
-            fa_create_new,
-            fa_add_state,
-            fa_update_state,
-            fa_remove_state,
-            fa_add_transition,
-            fa_update_transition,
-            fa_remove_transition,
-            fa_run_str,
-            fa_multi_run_str,
-            fa_generate_inputs,
-            fa_remove_automaton,
-            mealy_create_new,
-            mealy_add_state,
-            mealy_update_state,
-            mealy_remove_state,
-            mealy_add_transition,
-            mealy_update_transition,
-            mealy_remove_transition,
-            mealy_remove_automaton,
-            mealy_run_str,
-            mealy_multi_run,
-            mealy_generate_inputs,
-        ])
+        .invoke_handler(crate::api::handler)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
