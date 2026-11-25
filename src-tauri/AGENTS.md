@@ -61,7 +61,10 @@ src-tauri/
 ├── capabilities/default.json
 └── src/
     ├── main.rs               # точка входа → flax_lib::run()
-    ├── lib.rs                # Builder Tauri: плагины, AutomatonStore, регистрация команд
+    ├── lib.rs                # Builder Tauri: плагины, AutomatonStore, рутинг команд
+    ├── api/                  # маршрутизация IPC-команд по доменам
+    │   ├── mod.rs            # route(), handler(): диспетчер по префиксу имени команды
+    │   └── tests.rs
     ├── core/                 # общий доменный слой
     │   ├── mod.rs
     │   ├── types.rs          # DTO, трейты автоматов, AutomatonStore, EPSILON
@@ -89,8 +92,10 @@ src-tauri/
 
 ### 5.1. `lib.rs`
 Создаёт `tauri::Builder`, подключает плагины `fs`, `dialog`, `opener`, регистрирует
-состояние `AutomatonStore` через `.manage(...)` и все команды в `generate_handler![...]`.
-**Каждая новая `#[tauri::command]` должна быть добавлена сюда.**
+состояние `AutomatonStore` через `.manage(...)` и один общий обработчик IPC-команд
+`crate::api::handler`. Списка команд в `lib.rs` больше нет: **каждая новая
+`#[tauri::command]` добавляется в `handler` своего домена** (`core/api.rs`, `fa/api.rs`,
+`mealy/api.rs`), а не сюда.
 
 ### 5.2. `core` — общий доменный слой
 Не зависит от конкретного типа автомата (кроме диспетчеров `parse_jff` и `save_automaton`).
@@ -100,7 +105,7 @@ src-tauri/
   функция `alphabet_from_transitions`.
 - **`core::api`**:
   - `MAX_ID = 10_000_000`; `generate_id(used: &HashSet<i32>) -> i32` — случайный уникальный id в `1..=MAX_ID`;
-  - команды `load_file`, `save_file`;
+  - команды `load_file`, `save_file`; `handler` регистрирует их в диспетчере `api`;
   - `load_via_file_with(store, path, default_name, parse)` — чтение файла + делегированный разбор + регистрация в store (имя = имя файла без расширения);
   - `save_automaton(entry, path)` — выбор сериализатора по `automatonType` (`fa::jff::to_jff` / `mealy::jff::to_jff`);
   - `save_file_with(path, content)` — запись файла и формирование `StatusResult`;
@@ -123,9 +128,9 @@ src-tauri/
   с записью eps-шагов `$`), `generate_test_inputs(cap, depth) -> Vec<String>`.
   Реализует трейты `Automaton` и `NondeterministicAutomaton`.
 - **`fa::api`** — Tauri-команды `fa_*` (раздел 7.2) и хелперы:
-  `data_to_fa(states, transitions) -> Result<FA, String>` (DTO → `FA`, переходы с
-  несуществующими состояниями игнорируются), `test_line(fa, input) -> (bool, usize)`,
-  `multi_run_fa(entry, inputs) -> MultiRunResult`.
+  `handler` регистрирует команды домена в диспетчере, `data_to_fa(states, transitions) -> Result<FA, String>`
+  (DTO → `FA`, переходы с несуществующими состояниями игнорируются),
+  `test_line(fa, input) -> (bool, usize)`, `multi_run_fa(entry, inputs) -> MultiRunResult`.
 - **`fa::jff`** — `to_jff(data) -> String`, `parse_automaton(root) -> Result<JffAutomaton, String>`
   (пустой/отсутствующий `<read>` = eps `$`), `is_deterministic(states, transitions) -> bool`.
 
@@ -136,13 +141,27 @@ src-tauri/
   Методы `MM`: `new`, `builder`, `states`, `input_alphabet`, `output_alphabet`,
   `initial_state`, `transitions`, `step(from, input) -> Option<(i32, char)>`,
   `run(input) -> (Vec<MealyRunStep>, String)` (останавливается на первом отсутствующем переходе).
-- **`mealy::api`** — Tauri-команды `mealy_*` и чистые (тестируемые без Tauri) хелперы:
-  `create_new_mealy`, `add_mealy_transition`, `update_mealy_transition`,
+- **`mealy::api`** — Tauri-команды `mealy_*` (раздел 7.3) и чистые (тестируемые без Tauri) хелперы:
+  `handler` регистрирует команды домена в диспетчере, `create_new_mealy`, `add_mealy_transition`, `update_mealy_transition`,
   `remove_mealy_transition` (валидация до мутации — при `Err` сущность не меняется),
   `data_to_mm`, `run_mealy`, `multi_run_mealy`.
   Команды над состояниями делегируют в `fa::api` (состояния общие), передавая `is_final = None`.
 - **`mealy::jff`** — `to_jff` (`<type>mealy</type>`, вход в `<read>`, выход в `<transout>`,
   `<final/>` не пишется), `parse_automaton`.
+
+### 5.5. `api` — маршрутизация IPC-команд
+- **`api::route`** — чистая функция выбора домена по имени команды: `fa_*` → `Fa`,
+  `mealy_*` → `Mealy`, остальные → `Core`. Префикс включает подчёркивание, поэтому
+  частичные совпадения (`faq`, `mealy`) к доменам не относятся.
+- **`api::handler`** — единственный обработчик, передаваемый в `.invoke_handler`:
+  читает имя команды через `invoke.message.command()` и передаёт вызов в
+  `core::api::handler`, `fa::api::handler` или `mealy::api::handler`.
+- Каждый домен объявляет свой `handler` с `generate_handler![...]` только из своих
+  команд; `lib.rs` список команд не содержит. Возвращённое макросом замыкание
+  явно приводится к `fn(tauri::ipc::Invoke) -> bool` — иначе Rust не выводит тип.
+- `tauri::ipc::Invoke` помечен Tauri как нестабильный; все обращения к нему
+  изолированы в `src/api/` и трёх `handler`-функциях. При обновлении Tauri
+  проверять эти места первыми.
 
 ## 6. Структуры данных
 
@@ -251,6 +270,7 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 | `mealy_remove_transition` | `automaton_id`, `transition_id` | `StatusResult` | Удаление перехода |
 | `mealy_run_str` | `automaton_id`, `input: String` | `MealyRunResult` | Прогон с выходной строкой; 200/401/402 |
 | `mealy_multi_run` | `automaton_id`, `inputs: Vec<String>` | `MealyMultiRunResult` | Пакетный прогон; частичность — через `isComplete`, статус 200/400 |
+| `mealy_generate_inputs` | `automaton_id` | `GenerateInputsResult` | Тестовые входы для Multiple Run (`generate_test_inputs_deterministic(50, 15)`), включая `$` и символы вне алфавита |
 | `mealy_remove_automaton` | `automaton_id` | `StatusResult` | Удаление автомата |
 
 ## 8. Формат JFLAP (`.jff`)
@@ -267,14 +287,15 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 - Валидация выполняется до мутации данных.
 - Чистую логику выносить в `pub(crate)`-функции без `State`, чтобы тестировать без Tauri (пример — `mealy::api`).
 - Тесты живут в `tests.rs` рядом с модулем (`#[cfg(test)] mod tests;`). Любое изменение логики сопровождается тестами; перед завершением — `cargo test`, `cargo clippy`, `cargo fmt`.
-- Добавление нового типа автомата: вариант в `AutomatonType` → модуль `src/<type>/{mod,types,api,jff,tests}.rs` → `mod` в `lib.rs` → регистрация команд → ветки в `parse_jff`/`save_automaton` → обновление фронтенда (только упомянуть!).
+- Команды регистрируются в `handler` своего домена (`core/api.rs` — `load_file`, `save_file`; `fa/api.rs` — `fa_*`; `mealy/api.rs` — `mealy_*`); `api::route` направляет вызов по префиксу. Общие команды не должны начинаться с `fa_`/`mealy_`.
+- Добавление нового типа автомата: вариант в `AutomatonType` → модуль `src/<type>/{mod,types,api,jff,tests}.rs` → `mod` в `lib.rs` → `handler` домена + ветка в `api::route` → ветки в `parse_jff`/`save_automaton` → обновление фронтенда (только упомянуть!).
 - **Известная ловушка:** `fa::api::data_to_fa` вызывает `state.isFinal.unwrap()`; состояние КА с `isFinal = None` (например, `fa_add_state` без `is_final`) приведёт к панике при прогоне.
 
 ## 10. Правила для ИИ-агентов
 
 1. Изменять только файлы в `src-tauri/`. Необходимые изменения вне этой директории — **только описывать** (путь, суть изменения), не выполняя их.
 2. Не ломать контракт с фронтендом (имена команд, аргументов, полей DTO, коды статусов) без явного указания; при изменении контракта — перечислить, что нужно поправить в `../src/api/*.ts`.
-3. Новые команды регистрировать в `lib.rs` (`generate_handler!`).
+3. Новые команды регистрировать в `handler` соответствующего модуля (`core/api.rs`, `fa/api.rs`, `mealy/api.rs`), а не в `lib.rs`; единая точка входа — `crate::api::handler`.
 4. После изменений прогонять `cargo test` и `cargo clippy`.
 5. **Обозначение eps.** Во всех местах в коде (комментарии, doc-комментарии, сообщения
    `message`, имена новых переменных, функций и тестов) вместо латинского `epsilon`
