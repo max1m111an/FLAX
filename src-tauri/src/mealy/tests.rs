@@ -42,8 +42,8 @@ fn mealy_entry() -> AutomatonData {
 /// Машина из двух состояний: `0 --a/1--> 1 --b/0--> 0`.
 fn run_entry() -> AutomatonData {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход a");
-    add_mealy_transition(&mut entry, 1, 0, 'b', '0').expect("переход b");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "1".to_string()).expect("переход a");
+    add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "0".to_string()).expect("переход b");
     entry
 }
 
@@ -53,7 +53,7 @@ fn builder_creates_valid_mm() {
         .state(0)
         .state(1)
         .set_initial(0)
-        .transition(0, 'a', 1, '0')
+        .transition(0, "a".to_string(), 1, "0".to_string())
         .build();
     assert!(mm.is_ok());
     let mm = mm.unwrap();
@@ -63,7 +63,10 @@ fn builder_creates_valid_mm() {
 
 #[test]
 fn builder_fails_without_initial() {
-    let result = MM::builder().state(0).transition(0, 'a', 1, '0').build();
+    let result = MM::builder()
+        .state(0)
+        .transition(0, "a".to_string(), 1, "0".to_string())
+        .build();
     assert!(result.is_err());
 }
 
@@ -71,7 +74,7 @@ fn builder_fails_without_initial() {
 fn builder_registers_input_output_and_states() {
     let mm = MM::builder()
         .set_initial(0)
-        .transition(0, 'a', 1, '1')
+        .transition(0, "a".to_string(), 1, "1".to_string())
         .build()
         .unwrap();
 
@@ -117,7 +120,12 @@ fn new_fails_on_unknown_transition_state() {
         states.clone(),
         inputs.clone(),
         outputs.clone(),
-        vec![MealyTransition::new(99, 'a', 0, '0')],
+        vec![MealyTransition::new(
+            99,
+            "a".to_string(),
+            0,
+            "0".to_string(),
+        )],
         0,
     );
     assert!(bad_from.is_err());
@@ -126,7 +134,12 @@ fn new_fails_on_unknown_transition_state() {
         states,
         inputs,
         outputs,
-        vec![MealyTransition::new(0, 'a', 99, '0')],
+        vec![MealyTransition::new(
+            0,
+            "a".to_string(),
+            99,
+            "0".to_string(),
+        )],
         0,
     );
     assert!(bad_to.is_err());
@@ -138,7 +151,7 @@ fn new_fails_on_input_outside_alphabet() {
         HashSet::from([0, 1]),
         HashSet::from(["a".to_string()]),
         HashSet::from(["0".to_string()]),
-        vec![MealyTransition::new(0, 'b', 1, '0')],
+        vec![MealyTransition::new(0, "b".to_string(), 1, "0".to_string())],
         0,
     );
     assert!(result.is_err());
@@ -150,7 +163,7 @@ fn new_fails_on_output_outside_alphabet() {
         HashSet::from([0, 1]),
         HashSet::from(["a".to_string()]),
         HashSet::from(["0".to_string()]),
-        vec![MealyTransition::new(0, 'a', 1, '9')],
+        vec![MealyTransition::new(0, "a".to_string(), 1, "9".to_string())],
         0,
     );
     assert!(result.is_err());
@@ -163,8 +176,8 @@ fn new_fails_on_conflicting_state_input_pair() {
         HashSet::from(["a".to_string()]),
         HashSet::from(["0".to_string(), "1".to_string()]),
         vec![
-            MealyTransition::new(0, 'a', 1, '0'),
-            MealyTransition::new(0, 'a', 0, '1'),
+            MealyTransition::new(0, "a".to_string(), 1, "0".to_string()),
+            MealyTransition::new(0, "a".to_string(), 0, "1".to_string()),
         ],
         0,
     );
@@ -175,8 +188,8 @@ fn new_fails_on_conflicting_state_input_pair() {
 fn step_returns_target_and_output() {
     let mm = MM::builder()
         .set_initial(0)
-        .transition(0, 'a', 1, '1')
-        .transition(1, 'b', 0, '0')
+        .transition(0, "a".to_string(), 1, "1".to_string())
+        .transition(1, "b".to_string(), 0, "0".to_string())
         .build()
         .unwrap();
 
@@ -237,8 +250,8 @@ fn create_new_assigns_fresh_ids() {
 fn add_transition_stores_output_and_extends_alphabet() {
     let mut entry = mealy_entry();
 
-    let created =
-        add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("переход должен создаться");
+    let created = add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "1".to_string())
+        .expect("переход должен создаться");
 
     assert_eq!(created.from, 0);
     assert_eq!(created.to, 1);
@@ -252,8 +265,10 @@ fn add_transition_stores_output_and_extends_alphabet() {
 fn add_transition_assigns_fresh_ids() {
     let mut entry = mealy_entry();
 
-    let first = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
-    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+    let first = add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string())
+        .expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "1".to_string())
+        .expect("второй переход");
 
     assert_ne!(first.id, second.id);
     assert_eq!(entry.transitions.len(), 2);
@@ -263,8 +278,8 @@ fn add_transition_assigns_fresh_ids() {
 fn add_transition_fails_on_unknown_states() {
     let mut entry = mealy_entry();
 
-    assert!(add_mealy_transition(&mut entry, 99, 1, 'a', '0').is_err());
-    assert!(add_mealy_transition(&mut entry, 0, 99, 'a', '0').is_err());
+    assert!(add_mealy_transition(&mut entry, 99, 1, "a".to_string(), "0".to_string()).is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 99, "a".to_string(), "0".to_string()).is_err());
     assert!(entry.transitions.is_empty());
     assert!(entry.get_alphabet().is_empty());
 }
@@ -272,9 +287,11 @@ fn add_transition_fails_on_unknown_states() {
 #[test]
 fn add_transition_fails_on_conflicting_input() {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string())
+        .expect("первый переход");
 
-    let err = add_mealy_transition(&mut entry, 0, 0, 'a', '1').expect_err("конфликт должен падать");
+    let err = add_mealy_transition(&mut entry, 0, 0, "a".to_string(), "1".to_string())
+        .expect_err("конфликт должен падать");
 
     assert!(err.contains('a'));
     assert_eq!(entry.transitions.len(), 1);
@@ -285,8 +302,8 @@ fn add_transition_fails_on_conflicting_input() {
 fn add_transition_rejects_epsilon() {
     let mut entry = mealy_entry();
 
-    assert!(add_mealy_transition(&mut entry, 0, 1, '$', '0').is_err());
-    assert!(add_mealy_transition(&mut entry, 0, 1, 'a', '$').is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 1, "$".to_string(), "0".to_string()).is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "$".to_string()).is_err());
     assert!(entry.transitions.is_empty());
 }
 
@@ -294,8 +311,8 @@ fn add_transition_rejects_epsilon() {
 fn add_transition_rejects_multi_char_symbols() {
     let mut entry = mealy_entry();
 
-    assert!(add_mealy_transition(&mut entry, 0, 1, "ab", "0").is_err());
-    assert!(add_mealy_transition(&mut entry, 0, 1, "a", "01").is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 1, "ab".to_string(), "0".to_string()).is_err());
+    assert!(add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "01".to_string()).is_err());
     assert!(entry.transitions.is_empty());
     assert!(entry.get_alphabet().is_empty());
 }
@@ -303,8 +320,8 @@ fn add_transition_rejects_multi_char_symbols() {
 #[test]
 fn added_transitions_build_mm_with_outputs() {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '1').expect("a");
-    add_mealy_transition(&mut entry, 1, 0, 'b', '0').expect("b");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "1".to_string()).expect("a");
+    add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "0".to_string()).expect("b");
 
     let mut builder = MM::builder().set_initial(0);
     for &s in entry.states.iter().map(|s| &s.id) {
@@ -329,7 +346,8 @@ fn added_transitions_build_mm_with_outputs() {
 #[test]
 fn update_transition_changes_symbol_and_output() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     let updated = update_mealy_transition(
         &mut entry,
@@ -351,7 +369,8 @@ fn update_transition_changes_symbol_and_output() {
 #[test]
 fn update_transition_keeps_fields_when_none() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     let updated = update_mealy_transition(&mut entry, created.id, None, None).expect("обновление");
 
@@ -363,7 +382,8 @@ fn update_transition_keeps_fields_when_none() {
 #[test]
 fn update_transition_reflects_new_symbol_in_derived_alphabet() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     update_mealy_transition(&mut entry, created.id, Some("b".to_string()), None)
         .expect("обновление");
@@ -374,7 +394,7 @@ fn update_transition_reflects_new_symbol_in_derived_alphabet() {
 #[test]
 fn update_transition_fails_on_unknown_transition() {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     let err = update_mealy_transition(&mut entry, 999, Some("b".to_string()), None)
         .expect_err("неизвестный переход должен падать");
@@ -387,8 +407,10 @@ fn update_transition_fails_on_unknown_transition() {
 #[test]
 fn update_transition_fails_on_conflicting_input() {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
-    let second = add_mealy_transition(&mut entry, 0, 0, 'b', '1').expect("второй переход");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string())
+        .expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 0, 0, "b".to_string(), "1".to_string())
+        .expect("второй переход");
 
     let err = update_mealy_transition(&mut entry, second.id, Some("a".to_string()), None)
         .expect_err("конфликт по (from, input) должен падать");
@@ -401,8 +423,10 @@ fn update_transition_fails_on_conflicting_input() {
 #[test]
 fn update_transition_allows_same_symbol_from_other_state() {
     let mut entry = mealy_entry();
-    add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
-    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+    add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string())
+        .expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "1".to_string())
+        .expect("второй переход");
 
     update_mealy_transition(&mut entry, second.id, Some("a".to_string()), None)
         .expect("другой источник не конфликтует");
@@ -413,7 +437,8 @@ fn update_transition_allows_same_symbol_from_other_state() {
 #[test]
 fn update_transition_rejects_epsilon() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     assert!(update_mealy_transition(&mut entry, created.id, Some("$".to_string()), None).is_err());
     assert!(update_mealy_transition(&mut entry, created.id, None, Some("$".to_string())).is_err());
@@ -424,8 +449,10 @@ fn update_transition_rejects_epsilon() {
 #[test]
 fn remove_transition_removes_by_id() {
     let mut entry = mealy_entry();
-    let first = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("первый переход");
-    let second = add_mealy_transition(&mut entry, 1, 0, 'b', '1').expect("второй переход");
+    let first = add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string())
+        .expect("первый переход");
+    let second = add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "1".to_string())
+        .expect("второй переход");
 
     remove_mealy_transition(&mut entry, first.id).expect("удаление");
 
@@ -437,7 +464,8 @@ fn remove_transition_removes_by_id() {
 #[test]
 fn remove_transition_fails_on_unknown_id() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     let err = remove_mealy_transition(&mut entry, created.id + 1)
         .expect_err("неизвестный переход должен падать");
@@ -449,7 +477,8 @@ fn remove_transition_fails_on_unknown_id() {
 #[test]
 fn remove_transition_updates_derived_alphabet() {
     let mut entry = mealy_entry();
-    let created = add_mealy_transition(&mut entry, 0, 1, 'a', '0').expect("переход");
+    let created =
+        add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "0".to_string()).expect("переход");
 
     remove_mealy_transition(&mut entry, created.id).expect("удаление");
 
@@ -461,8 +490,8 @@ fn remove_transition_updates_derived_alphabet() {
 fn mm_run_produces_output_and_steps() {
     let mm = MM::builder()
         .set_initial(0)
-        .transition(0, 'a', 1, '1')
-        .transition(1, 'b', 0, '0')
+        .transition(0, "a".to_string(), 1, "1".to_string())
+        .transition(1, "b".to_string(), 0, "0".to_string())
         .build()
         .unwrap();
 
@@ -492,7 +521,7 @@ fn mm_run_produces_output_and_steps() {
 fn mm_run_stops_when_transition_missing() {
     let mm = MM::builder()
         .set_initial(0)
-        .transition(0, 'a', 1, '1')
+        .transition(0, "a".to_string(), 1, "1".to_string())
         .build()
         .unwrap();
 

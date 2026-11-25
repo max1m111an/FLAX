@@ -764,20 +764,19 @@ impl FABuilder {
         self
     }
 
-    pub fn symbol<S: Into<String>>(mut self, symbol: S) -> Self {
-        self.alphabet.insert(symbol.into());
+    pub fn symbol(mut self, symbol: String) -> Self {
+        self.alphabet.insert(symbol);
         self
     }
 
-    pub fn symbols<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+    pub fn symbols(mut self, symbols: &[String]) -> Self {
         for symbol in symbols {
-            self.alphabet.insert(symbol.clone().into());
+            self.alphabet.insert(symbol.clone());
         }
         self
     }
 
-    pub fn transition<S: Into<String>>(mut self, from: i32, symbol: S, to: i32) -> Self {
-        let symbol = symbol.into();
+    pub fn transition(mut self, from: i32, symbol: String, to: i32) -> Self {
         self.states.insert(from);
         self.states.insert(to);
         self.alphabet.insert(symbol.clone());

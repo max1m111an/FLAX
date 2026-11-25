@@ -23,12 +23,12 @@ pub struct MealyTransition {
 
 #[allow(dead_code)]
 impl MealyTransition {
-    pub fn new<I: Into<String>, O: Into<String>>(from: i32, input: I, to: i32, output: O) -> Self {
+    pub fn new(from: i32, input: String, to: i32, output: String) -> Self {
         MealyTransition {
             from,
-            input: input.into(),
+            input,
             to,
-            output: output.into(),
+            output,
         }
     }
 }
@@ -199,26 +199,26 @@ impl MealyBuilder {
         self
     }
 
-    pub fn input<S: Into<String>>(mut self, symbol: S) -> Self {
-        self.input_alphabet.insert(symbol.into());
+    pub fn input(mut self, symbol: String) -> Self {
+        self.input_alphabet.insert(symbol);
         self
     }
 
-    pub fn inputs<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+    pub fn inputs(mut self, symbols: &[String]) -> Self {
         for symbol in symbols {
-            self.input_alphabet.insert(symbol.clone().into());
+            self.input_alphabet.insert(symbol.clone());
         }
         self
     }
 
-    pub fn output<S: Into<String>>(mut self, symbol: S) -> Self {
-        self.output_alphabet.insert(symbol.into());
+    pub fn output(mut self, symbol: String) -> Self {
+        self.output_alphabet.insert(symbol);
         self
     }
 
-    pub fn outputs<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+    pub fn outputs(mut self, symbols: &[String]) -> Self {
         for symbol in symbols {
-            self.output_alphabet.insert(symbol.clone().into());
+            self.output_alphabet.insert(symbol.clone());
         }
         self
     }
@@ -229,13 +229,7 @@ impl MealyBuilder {
         self
     }
 
-    pub fn transition<I: Into<String>, O: Into<String>>(
-        mut self,
-        from: i32,
-        input: I,
-        to: i32,
-        output: O,
-    ) -> Self {
+    pub fn transition(mut self, from: i32, input: String, to: i32, output: String) -> Self {
         self.states.insert(from);
         self.states.insert(to);
         let transition = MealyTransition::new(from, input, to, output);

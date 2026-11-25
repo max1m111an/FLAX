@@ -38,15 +38,15 @@ pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> 
 /// Валидация выполняется до любых изменений, поэтому при `Err` запись не
 /// меняется. Алфавит выводится из переходов (`AutomatonData::get_alphabet`),
 /// поэтому здесь он не поддерживается.
-pub(crate) fn add_mealy_transition<I: Into<String>, O: Into<String>>(
+pub(crate) fn add_mealy_transition(
     entry: &mut AutomatonData,
     from: i32,
     to: i32,
-    input: I,
-    output: O,
+    input: String,
+    output: String,
 ) -> Result<TransitionData, String> {
-    let input = one_symbol(&input.into(), "Входной символ перехода")?;
-    let output = one_symbol(&output.into(), "Выходной символ перехода")?;
+    let input = one_symbol(&input, "Входной символ перехода")?;
+    let output = one_symbol(&output, "Выходной символ перехода")?;
     if !entry.states.iter().any(|s| s.id == from) {
         return Err(format!("Состояние {} не существует", from));
     }

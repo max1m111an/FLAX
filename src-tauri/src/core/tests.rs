@@ -280,12 +280,12 @@ fn transition_output_is_optional_in_json() {
     assert_eq!(back.output, Some("1".to_string()));
 }
 
-fn trans(id: i32, from: i32, to: i32, symbol: impl Into<String>) -> TransitionData {
+fn trans(id: i32, from: i32, to: i32, symbol: String) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol: symbol.into(),
+        symbol,
         output: None,
     }
 }
@@ -294,10 +294,10 @@ fn trans(id: i32, from: i32, to: i32, symbol: impl Into<String>) -> TransitionDa
 fn get_alphabet_is_derived_from_transitions() {
     let mut entry = make_store().create("Test".to_string(), "q0");
     entry.transitions = vec![
-        trans(1, 0, 1, 'a'),
-        trans(2, 1, 0, 'b'),
-        trans(3, 1, 1, 'a'),
-        trans(4, 0, 0, '$'),
+        trans(1, 0, 1, "a".to_string()),
+        trans(2, 1, 0, "b".to_string()),
+        trans(3, 1, 1, "a".to_string()),
+        trans(4, 0, 0, "$".to_string()),
     ];
 
     assert_eq!(entry.get_alphabet(), vec!["a".to_string(), "b".to_string()]);
@@ -306,10 +306,10 @@ fn get_alphabet_is_derived_from_transitions() {
 #[test]
 fn alphabet_from_transitions_skips_epsilon_and_duplicates() {
     let transitions = vec![
-        trans(1, 0, 1, '$'),
-        trans(2, 0, 1, 'x'),
-        trans(3, 1, 0, '$'),
-        trans(4, 1, 0, 'x'),
+        trans(1, 0, 1, "$".to_string()),
+        trans(2, 0, 1, "x".to_string()),
+        trans(3, 1, 0, "$".to_string()),
+        trans(4, 1, 0, "x".to_string()),
     ];
 
     assert_eq!(
@@ -330,7 +330,7 @@ fn one_symbol_accepts_single_character_only() {
 #[test]
 fn serialization_omits_derived_alphabet() {
     let mut entry = make_store().create("Test".to_string(), "q0");
-    entry.transitions = vec![trans(1, 0, 1, 'a')];
+    entry.transitions = vec![trans(1, 0, 1, "a".to_string())];
 
     let value = serde_json::to_value(&entry).unwrap();
     assert!(value.get("alphabet").is_none());
@@ -560,19 +560,13 @@ fn mealy_state(id: i32, is_initial: bool) -> StateData {
     }
 }
 
-fn mealy_trans(
-    id: i32,
-    from: i32,
-    to: i32,
-    symbol: impl Into<String>,
-    output: impl Into<String>,
-) -> TransitionData {
+fn mealy_trans(id: i32, from: i32, to: i32, symbol: String, output: String) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol: symbol.into(),
-        output: Some(output.into()),
+        symbol,
+        output: Some(output),
     }
 }
 
@@ -584,9 +578,9 @@ fn make_mealy_entry() -> AutomatonData {
         states: vec![mealy_state(0, true), mealy_state(1, false)],
         // q0 --a/x--> q0, q0 --b/y--> q1, q1 --a/z--> q0
         transitions: vec![
-            mealy_trans(1, 0, 0, 'a', 'x'),
-            mealy_trans(2, 0, 1, 'b', 'y'),
-            mealy_trans(3, 1, 0, 'a', 'z'),
+            mealy_trans(1, 0, 0, "a".to_string(), "x".to_string()),
+            mealy_trans(2, 0, 1, "b".to_string(), "y".to_string()),
+            mealy_trans(3, 1, 0, "a".to_string(), "z".to_string()),
         ],
     }
 }
@@ -679,8 +673,8 @@ fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
             id + 10,
             0,
             id,
-            char::from(b'c' + i as u8),
-            char::from(b'0' + i as u8),
+            char::from(b'c' + i as u8).to_string(),
+            char::from(b'0' + i as u8).to_string(),
         ));
     }
     let entry = store.insert(entry);
@@ -697,7 +691,10 @@ fn gen_multi_run_for_output_mealy_keeps_cycles_when_cap_is_exceeded() {
 fn gen_multi_run_for_output_fa_uses_existing_generator() {
     let store = make_store();
     let mut entry = store.create("FA".to_string(), "q0");
-    entry.transitions = vec![trans(1, 0, 1, 'a'), trans(2, 1, 0, 'b')];
+    entry.transitions = vec![
+        trans(1, 0, 1, "a".to_string()),
+        trans(2, 1, 0, "b".to_string()),
+    ];
     let entry = store.insert(entry);
 
     let result = gen_multi_run_for_output(&store, entry.id);

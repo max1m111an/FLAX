@@ -16,10 +16,10 @@ fn builder_creates_valid_fa() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build();
     assert!(fa.is_ok());
     let fa = fa.unwrap();
@@ -34,8 +34,8 @@ fn builder_fails_without_initial() {
         .state(0)
         .state(1)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build();
     assert!(result.is_err());
 }
@@ -71,10 +71,10 @@ fn accepts_simple_string() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -94,9 +94,9 @@ fn accepts_with_epsilon_transition() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -115,11 +115,11 @@ fn accepts_with_nondeterminism() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -147,10 +147,10 @@ fn accepts_with_multiple_epsilon_closures() {
         .state(3)
         .set_initial(0)
         .set_final(3)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
         .epsilon(1, 2)
-        .transition(2, 'a', 3)
+        .transition(2, "a".to_string(), 3)
         .build()
         .unwrap();
 
@@ -165,8 +165,8 @@ fn rejects_symbol_not_in_alphabet() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -195,10 +195,10 @@ fn epsilon_closure_includes_all_reachable() {
         .state(3)
         .set_initial(0)
         .set_final(3)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
         .epsilon(1, 2)
-        .transition(2, 'a', 3)
+        .transition(2, "a".to_string(), 3)
         .build()
         .unwrap();
 
@@ -217,9 +217,9 @@ fn next_states_returns_correct_set() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .transition(0, 'a', 1)
-        .transition(0, 'a', 2)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -235,8 +235,8 @@ fn is_empty_when_no_accepting() {
         .state(0)
         .state(1)
         .set_initial(0)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -250,7 +250,7 @@ fn is_empty_when_accepting_unreachable() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
+        .symbol("a".to_string())
         .build()
         .unwrap();
 
@@ -264,8 +264,8 @@ fn is_not_empty_when_accepting_reachable() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -280,9 +280,9 @@ fn reachable_states_follows_epsilon() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -300,12 +300,12 @@ fn fa_to_data_roundtrip_via_builder() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'a', 1)
-        .transition(0, 'b', 0)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "b".to_string(), 0)
+        .transition(1, "b".to_string(), 2)
         .epsilon(0, 1)
         .build()
         .unwrap();
@@ -328,13 +328,13 @@ fn many_states_complex_fa() {
         .state(3)
         .set_initial(0)
         .set_final(3)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'b', 0)
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
-        .transition(2, 'b', 3)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "b".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
+        .transition(2, "b".to_string(), 3)
         .build()
         .unwrap();
 
@@ -375,10 +375,10 @@ fn run_returns_trace_for_simple_fa() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -410,9 +410,9 @@ fn run_tracks_epsilon_steps() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -445,11 +445,11 @@ fn run_finds_accepting_branch() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -490,8 +490,8 @@ fn run_rejects_when_no_path() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -521,10 +521,10 @@ fn run_partial_full_acceptance() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -559,8 +559,8 @@ fn run_partial_rejected_no_path() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -584,8 +584,8 @@ fn run_partial_rejected_empty_on_non_final() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -628,9 +628,9 @@ fn run_partial_stuck_mid_string() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -660,8 +660,8 @@ fn run_partial_consumed_all_not_final() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -682,9 +682,9 @@ fn run_partial_with_epsilon() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -728,8 +728,8 @@ fn run_partial_closes_after_last_symbol() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .epsilon(1, 2)
         .build()
         .unwrap();
@@ -836,11 +836,11 @@ fn run_partial_epsilon_branches_keep_dead_traces() {
         .state(3)
         .set_initial(0)
         .set_final(3)
-        .symbol('1')
-        .symbol('2')
-        .transition(0, '1', 1)
+        .symbol("1".to_string())
+        .symbol("2".to_string())
+        .transition(0, "1".to_string(), 1)
         .epsilon(1, 2)
-        .transition(2, '2', 3)
+        .transition(2, "2".to_string(), 3)
         .build()
         .unwrap();
 
@@ -895,11 +895,11 @@ fn run_partial_multiple_epsilon_branches() {
         .state(4)
         .set_initial(0)
         .set_final(3)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
         .epsilon(0, 2)
-        .transition(1, 'a', 3)
-        .transition(2, 'a', 4)
+        .transition(1, "a".to_string(), 3)
+        .transition(2, "a".to_string(), 4)
         .build()
         .unwrap();
 
@@ -939,10 +939,10 @@ fn run_partial_epsilon_cycle_terminates() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
         .epsilon(1, 0)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -977,9 +977,9 @@ fn run_fa_line_keeps_dead_traces_on_acceptance() {
             multi_run_state(3, false, true),
         ],
         vec![
-            multi_run_transition(1, 0, 1, '1'),
-            multi_run_transition(2, 1, 2, EPSILON),
-            multi_run_transition(3, 2, 3, '2'),
+            multi_run_transition(1, 0, 1, "1".to_string()),
+            multi_run_transition(2, 1, 2, EPSILON.to_string()),
+            multi_run_transition(3, 2, 3, "2".to_string()),
         ],
     );
 
@@ -1023,9 +1023,9 @@ fn run_fa_line_rejects_unreadable_trailing_symbol() {
             multi_run_state(3, false, true),
         ],
         vec![
-            multi_run_transition(1, 0, 1, '1'),
-            multi_run_transition(2, 1, 2, EPSILON),
-            multi_run_transition(3, 2, 3, '2'),
+            multi_run_transition(1, 0, 1, "1".to_string()),
+            multi_run_transition(2, 1, 2, EPSILON.to_string()),
+            multi_run_transition(3, 2, 3, "2".to_string()),
         ],
     );
 
@@ -1073,11 +1073,11 @@ fn run_partial_nondeterministic() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 0)
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1116,9 +1116,9 @@ fn run_partial_nondeterministic_parallel() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 0)
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 0)
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -1156,12 +1156,12 @@ fn run_partial_converging_branches_keep_separate_histories() {
         .state(3)
         .set_initial(0)
         .set_final(3)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(0, 'a', 2)
-        .transition(1, 'b', 3)
-        .transition(2, 'b', 3)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "a".to_string(), 2)
+        .transition(1, "b".to_string(), 3)
+        .transition(2, "b".to_string(), 3)
         .build()
         .unwrap();
 
@@ -1226,16 +1226,16 @@ fn run_partial_reports_every_branch_including_dead() {
         .state(7)
         .set_initial(0)
         .set_final(7)
-        .symbol('1')
-        .symbol('2')
-        .symbol('3')
-        .transition(0, '1', 1)
-        .transition(0, '1', 2)
-        .transition(0, '1', 3)
-        .transition(2, '2', 4)
-        .transition(2, '2', 5)
-        .transition(3, '2', 6)
-        .transition(5, '3', 7)
+        .symbol("1".to_string())
+        .symbol("2".to_string())
+        .symbol("3".to_string())
+        .transition(0, "1".to_string(), 1)
+        .transition(0, "1".to_string(), 2)
+        .transition(0, "1".to_string(), 3)
+        .transition(2, "2".to_string(), 4)
+        .transition(2, "2".to_string(), 5)
+        .transition(3, "2".to_string(), 6)
+        .transition(5, "3".to_string(), 7)
         .build()
         .unwrap();
 
@@ -1358,14 +1358,14 @@ fn run_partial_explores_all_branches() {
         .state(4)
         .set_initial(0)
         .set_final(4)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(0, 'a', 2)
-        .transition(0, 'a', 3)
-        .transition(1, 'b', 4)
-        .transition(2, 'b', 4)
-        .transition(3, 'b', 4)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "a".to_string(), 2)
+        .transition(0, "a".to_string(), 3)
+        .transition(1, "b".to_string(), 4)
+        .transition(2, "b".to_string(), 4)
+        .transition(3, "b".to_string(), 4)
         .build()
         .unwrap();
 
@@ -1426,8 +1426,8 @@ fn run_partial_symbol_not_in_alphabet() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -1452,10 +1452,10 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1493,11 +1493,11 @@ fn run_partial_rejects_all_when_no_final_state() {
         .state(1)
         .state(2)
         .set_initial(0)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(0, 'b', 2)
-        .transition(0, 'a', 0)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "b".to_string(), 2)
+        .transition(0, "a".to_string(), 0)
         .build()
         .unwrap();
 
@@ -1520,9 +1520,9 @@ fn test_line_reports_is_final_and_correct_symbols() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .transition(0, 'a', 1)
-        .transition(1, 'a', 2)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1546,9 +1546,9 @@ fn test_line_counts_only_non_epsilon_steps() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1566,12 +1566,12 @@ fn multi_run_state(id: i32, is_initial: bool, is_final: bool) -> StateData {
     }
 }
 
-fn multi_run_transition(id: i32, from: i32, to: i32, symbol: impl Into<String>) -> TransitionData {
+fn multi_run_transition(id: i32, from: i32, to: i32, symbol: String) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol: symbol.into(),
+        symbol,
         output: None,
     }
 }
@@ -1595,8 +1595,8 @@ fn multi_run_fa_reports_results_in_input_order() {
             multi_run_state(2, false, true),
         ],
         vec![
-            multi_run_transition(1, 0, 1, 'a'),
-            multi_run_transition(2, 1, 2, 'a'),
+            multi_run_transition(1, 0, 1, "a".to_string()),
+            multi_run_transition(2, 1, 2, "a".to_string()),
         ],
     );
     let inputs = ["", "a", "aa", "aaa"].map(String::from);
@@ -1658,10 +1658,10 @@ fn generate_test_inputs_empty_singles_and_sorted() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(1, 'b', 2)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "b".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1694,10 +1694,10 @@ fn generate_test_inputs_repeats_loop_two_or_three_times_before_final() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .symbol('b')
-        .transition(0, 'a', 1)
-        .transition(0, 'b', 0)
+        .symbol("a".to_string())
+        .symbol("b".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "b".to_string(), 0)
         .build()
         .unwrap();
 
@@ -1725,9 +1725,9 @@ fn generate_test_inputs_handles_epsilon_automaton() {
         .state(2)
         .set_initial(0)
         .set_final(2)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
-        .transition(1, 'a', 2)
+        .transition(1, "a".to_string(), 2)
         .build()
         .unwrap();
 
@@ -1748,10 +1748,10 @@ fn make_even_a_fa() -> FA {
         .set_initial(0)
         .set_final(0)
         .symbols(&["a".to_string(), "b".to_string()])
-        .transition(0, 'a', 1)
-        .transition(0, 'b', 0)
-        .transition(1, 'a', 0)
-        .transition(1, 'b', 1)
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "b".to_string(), 0)
+        .transition(1, "a".to_string(), 0)
+        .transition(1, "b".to_string(), 1)
         .build()
         .unwrap()
 }
@@ -1770,7 +1770,7 @@ fn is_deterministic_detects_nondeterministic_cases() {
     let with_epsilon = FA::builder()
         .state(0)
         .set_initial(0)
-        .symbol('a')
+        .symbol("a".to_string())
         .epsilon(0, 1)
         .build()
         .unwrap();
@@ -1781,9 +1781,9 @@ fn is_deterministic_detects_nondeterministic_cases() {
         .state(1)
         .state(2)
         .set_initial(0)
-        .symbol('a')
-        .transition(0, 'a', 1)
-        .transition(0, 'a', 2)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "a".to_string(), 2)
         .build()
         .unwrap();
     assert!(!branching.is_deterministic());
@@ -1822,9 +1822,9 @@ fn empty_string_rejected_when_initial_not_final() {
         .state(1)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
-        .transition(1, 'a', 0)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "a".to_string(), 0)
         .build()
         .unwrap();
 
@@ -1838,8 +1838,8 @@ fn single_state_loop() {
         .state(0)
         .set_initial(0)
         .set_final(0)
-        .symbol('a')
-        .transition(0, 'a', 0)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 0)
         .build()
         .unwrap();
 
@@ -1863,14 +1863,14 @@ fn accepts_only_specific_string() {
         .set_initial(0)
         .set_final(2)
         .symbols(&["a".to_string(), "b".to_string()])
-        .transition(0, 'a', 1)
-        .transition(0, 'b', 3)
-        .transition(1, 'a', 3)
-        .transition(1, 'b', 2)
-        .transition(2, 'a', 3)
-        .transition(2, 'b', 3)
-        .transition(3, 'a', 3)
-        .transition(3, 'b', 3)
+        .transition(0, "a".to_string(), 1)
+        .transition(0, "b".to_string(), 3)
+        .transition(1, "a".to_string(), 3)
+        .transition(1, "b".to_string(), 2)
+        .transition(2, "a".to_string(), 3)
+        .transition(2, "b".to_string(), 3)
+        .transition(3, "a".to_string(), 3)
+        .transition(3, "b".to_string(), 3)
         .build()
         .unwrap();
 
@@ -1900,9 +1900,9 @@ fn reachable_states_partial() {
         .state(2)
         .set_initial(0)
         .set_final(1)
-        .symbol('a')
-        .transition(0, 'a', 1)
-        .transition(1, 'a', 1)
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 1)
+        .transition(1, "a".to_string(), 1)
         .build()
         .unwrap();
 
@@ -1966,8 +1966,8 @@ fn generate_test_inputs_handles_unicode_loop_symbols() {
     let fa = FA::builder()
         .set_initial(0)
         .set_final(0)
-        .symbol('я')
-        .transition(0, 'я', 0)
+        .symbol("я".to_string())
+        .transition(0, "я".to_string(), 0)
         .build()
         .unwrap();
 
@@ -2016,11 +2016,11 @@ fn generate_test_inputs_keeps_cycles_when_cap_is_exceeded() {
     let mut builder = FA::builder()
         .set_initial(0)
         .set_final(0)
-        .symbol('a')
-        .transition(0, 'a', 0);
+        .symbol("a".to_string())
+        .transition(0, "a".to_string(), 0);
     for i in 1..12 {
-        let ch = char::from(b'a' + i as u8);
-        builder = builder.symbol(ch).transition(0, ch, i).set_final(i);
+        let ch = char::from(b'a' + i as u8).to_string();
+        builder = builder.symbol(ch.clone()).transition(0, ch, i).set_final(i);
     }
     let fa = builder.build().unwrap();
 
