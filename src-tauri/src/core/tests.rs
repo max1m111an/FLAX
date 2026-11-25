@@ -6,7 +6,7 @@ use crate::core::api::{
 };
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions,
+    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions, one_symbol,
 };
 
 fn make_store() -> AutomatonStore {
@@ -259,7 +259,7 @@ fn transition_output_is_optional_in_json() {
         id: 1,
         from: 0,
         to: 1,
-        symbol: 'a',
+        symbol: "a".to_string(),
         output: None,
     };
     let json = serde_json::to_string(&fa).unwrap();
@@ -271,21 +271,21 @@ fn transition_output_is_optional_in_json() {
         id: 2,
         from: 0,
         to: 1,
-        symbol: 'a',
-        output: Some('1'),
+        symbol: "a".to_string(),
+        output: Some("1".to_string()),
     };
     let json = serde_json::to_string(&mm).unwrap();
     assert!(json.contains("\"output\":\"1\""));
     let back: TransitionData = serde_json::from_str(&json).unwrap();
-    assert_eq!(back.output, Some('1'));
+    assert_eq!(back.output, Some("1".to_string()));
 }
 
-fn trans(id: i32, from: i32, to: i32, symbol: char) -> TransitionData {
+fn trans(id: i32, from: i32, to: i32, symbol: impl Into<String>) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol,
+        symbol: symbol.into(),
         output: None,
     }
 }
@@ -300,7 +300,7 @@ fn get_alphabet_is_derived_from_transitions() {
         trans(4, 0, 0, '$'),
     ];
 
-    assert_eq!(entry.get_alphabet(), vec!['a', 'b']);
+    assert_eq!(entry.get_alphabet(), vec!["a".to_string(), "b".to_string()]);
 }
 
 #[test]
@@ -312,8 +312,19 @@ fn alphabet_from_transitions_skips_epsilon_and_duplicates() {
         trans(4, 1, 0, 'x'),
     ];
 
-    assert_eq!(alphabet_from_transitions(&transitions), vec!['x']);
+    assert_eq!(
+        alphabet_from_transitions(&transitions),
+        vec!["x".to_string()]
+    );
     assert!(alphabet_from_transitions(&[]).is_empty());
+}
+
+#[test]
+fn one_symbol_accepts_single_character_only() {
+    assert_eq!(one_symbol("a", "Символ"), Ok("a".to_string()));
+    assert_eq!(one_symbol("λ", "Символ"), Ok("λ".to_string()));
+    assert!(one_symbol("", "Символ").is_err());
+    assert!(one_symbol("ab", "Символ").is_err());
 }
 
 #[test]
@@ -468,8 +479,8 @@ fn save_automaton_dispatches_mealy_serializer() {
         id: 1,
         from: 0,
         to: 0,
-        symbol: 'a',
-        output: Some('1'),
+        symbol: "a".to_string(),
+        output: Some("1".to_string()),
     }];
 
     let result = save_automaton(&entry, path.to_str().unwrap());
@@ -549,13 +560,19 @@ fn mealy_state(id: i32, is_initial: bool) -> StateData {
     }
 }
 
-fn mealy_trans(id: i32, from: i32, to: i32, symbol: char, output: char) -> TransitionData {
+fn mealy_trans(
+    id: i32,
+    from: i32,
+    to: i32,
+    symbol: impl Into<String>,
+    output: impl Into<String>,
+) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol,
-        output: Some(output),
+        symbol: symbol.into(),
+        output: Some(output.into()),
     }
 }
 

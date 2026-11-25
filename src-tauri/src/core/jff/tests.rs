@@ -51,8 +51,8 @@ fn mealy_type_is_parsed_as_automaton() {
         JffParsed::Automaton(AutomatonType::MEALY, automaton) => {
             assert_eq!(automaton.states.len(), 1);
             assert_eq!(automaton.transitions.len(), 1);
-            assert_eq!(automaton.transitions[0].symbol, 'a');
-            assert_eq!(automaton.transitions[0].output, Some('1'));
+            assert_eq!(automaton.transitions[0].symbol, "a".to_string());
+            assert_eq!(automaton.transitions[0].output, Some("1".to_string()));
         }
         other => panic!("mealy должен разбираться как автомат MEALY: {:?}", other),
     }

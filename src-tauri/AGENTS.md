@@ -101,8 +101,8 @@ src-tauri/
 Не зависит от конкретного типа автомата (кроме диспетчеров `parse_jff` и `save_automaton`).
 
 - **`core::types`** — контракт данных с фронтендом (serde DTO), трейты `Automaton` /
-  `NondeterministicAutomaton`, реестр `AutomatonStore`, константа `EPSILON = '$'`,
-  функция `alphabet_from_transitions`.
+  `NondeterministicAutomaton`, реестр `AutomatonStore`, константа `EPSILON: &str = "$"`,
+  функции `one_symbol` (проверка строки на один символ) и `alphabet_from_transitions`.
 - **`core::api`**:
   - `MAX_ID = 10_000_000`; `generate_id(used: &HashSet<i32>) -> i32` — случайный уникальный id в `1..=MAX_ID`;
   - команды `load_file`, `save_file`; `handler` регистрирует их в диспетчере `api`;
@@ -111,7 +111,7 @@ src-tauri/
   - `save_file_with(path, content)` — запись файла и формирование `StatusResult`;
   - `multi_run_automaton(data, inputs, build, run_line)` — общий драйвер пакетного прогона: строит автомат один раз, прогоняет все строки с сохранением порядка.
 - **`core::jff`** — общая логика JFLAP XML:
-  - утилиты: `escape`, `fmt_coord`, `element_text`, `parse_attr_i32`, `one_char`;
+  - утилиты: `escape`, `fmt_coord`, `element_text`, `parse_attr_i32`;
   - каркас документа: `document_header(kind)`, `document_footer()`, `write_transitions_header`;
   - состояния: `write_states`, `parse_states`;
   - переходы: `write_transition`, `write_transition_with_output`, `parse_transition_endpoints`, `transition_read`, `transition_output`, `parse_transitions(automaton, read)`;
@@ -139,7 +139,7 @@ src-tauri/
 и eps-переходов; для каждой пары `(state, input)` — не более одного перехода.
 - **`mealy::types`** — `MM`, `MealyTransition`, `MealyBuilder` (раздел 6).
   Методы `MM`: `new`, `builder`, `states`, `input_alphabet`, `output_alphabet`,
-  `initial_state`, `transitions`, `step(from, input) -> Option<(i32, char)>`,
+  `initial_state`, `transitions`, `step(from, input: &str) -> Option<(i32, String)>`,
   `run(input) -> (Vec<MealyRunStep>, String)` (останавливается на первом отсутствующем переходе).
 - **`mealy::api`** — Tauri-команды `mealy_*` (раздел 7.3) и чистые (тестируемые без Tauri) хелперы:
   `handler` регистрирует команды домена в диспетчере, `create_new_mealy`, `add_mealy_transition`, `update_mealy_transition`,
@@ -171,12 +171,12 @@ src-tauri/
 | Структура | Поля |
 |---|---|
 | `StateData` | `id: i32`, `label: String`, `x: f32`, `y: f32`, `isInitial: bool`, `isFinal: Option<bool>` (не сериализуется при `None`; у Мили всегда `None`) |
-| `TransitionData` | `id: i32`, `from: i32`, `to: i32`, `symbol: char` (`'$'` = eps), `output: Option<char>` (только у Мили) |
+| `TransitionData` | `id: i32`, `from: i32`, `to: i32`, `symbol: String` (`"$"` = eps), `output: Option<String>` (только у Мили; обе строки — ровно один символ) |
 | `AutomatonType` (enum) | `FA` (default), `MEALY` |
 | `AutomatonData` | `id: i32`, `name: String`, `automatonType: AutomatonType`, `states: Vec<StateData>`, `transitions: Vec<TransitionData>`; метод `get_alphabet()` |
 | `RunStep` | `from`, `symbol`, `to` |
 | `Trace` | `steps: Vec<RunStep>`, `isFinal: bool` |
-| `MealyRunStep` | `from`, `symbol`, `to`, `output: char` |
+| `MealyRunStep` | `from`, `symbol: String`, `to`, `output: String` |
 | `LineTest` | `line: String`, `isFinal: bool`, `correctSymbols: usize` |
 | `MealyLineTest` | `line: String`, `output: String`, `isComplete: bool` |
 | `LoadedFile` (внутр., не serde) | `isAutomaton: bool`, `data: AutomatonData` |
@@ -221,8 +221,8 @@ src-tauri/
 через `generate_id` (уникальны в пределах автомата).
 
 ### 6.4. Модели вычислений
-- `FA { states: HashSet<i32>, alphabet: HashSet<char>, transitions: HashMap<(i32, char), HashSet<i32>>, initial_state: i32, final_states: HashSet<i32> }` — поля приватные, создание через `FABuilder` (`state(s)`, `symbol(s)`, `transition`, `epsilon`, `set_initial`, `set_final`, `final_states`, `build() -> Result<FA, String>`).
-- `MM { states, input_alphabet, output_alphabet, transitions: HashMap<(i32, char), (i32, char)>, initial_state }` — поля приватные, создание через `MealyBuilder` (`state(s)`, `input(s)`, `output(s)`, `set_initial`, `transition(from, input, to, output)`, `build()`).
+- `FA { states: HashSet<i32>, alphabet: HashSet<String>, transitions: HashMap<(i32, String), HashSet<i32>>, initial_state: i32, final_states: HashSet<i32> }` — поля приватные, создание через `FABuilder` (`state(s)`, `symbol(s)`, `transition`, `epsilon`, `set_initial`, `set_final`, `final_states`, `build() -> Result<FA, String>`).
+- `MM { states, input_alphabet: HashSet<String>, output_alphabet: HashSet<String>, transitions: HashMap<(i32, String), (i32, String)>, initial_state }` — поля приватные, создание через `MealyBuilder` (`state(s)`, `input(s)`, `output(s)`, `set_initial`, `transition(from, input, to, output)`, `build()`).
 - `MealyTransition { from, input, to, output }`.
 - Трейты `Automaton` (`accepts`, `states`, `initial_state`, `final_states`, `alphabet`, `is_accepting`) и `NondeterministicAutomaton` (`next_states`, `epsilon_closure`).
 
@@ -250,7 +250,7 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 | `fa_add_state` | `automaton_id`, `label?`, `x?`, `y?`, `is_initial?`, `is_final?` | `StateResult` | Добавляет состояние (метка по умолчанию `q<id>`) |
 | `fa_update_state` | `automaton_id`, `state_id`, `label?`, `x?`, `y?`, `is_initial?`, `is_final?` | `StateResult` | Частичное обновление |
 | `fa_remove_state` | `automaton_id`, `state_id` | `StatusResult` | Удаляет состояние и все связанные переходы |
-| `fa_add_transition` | `automaton_id`, `from`, `to`, `symbols: Vec<char>` | `TransitionResult` | По переходу на каждый символ; отклоняются только точные дубли `(from, to, symbol)`; `$` допустим |
+| `fa_add_transition` | `automaton_id`, `from`, `to`, `symbols: Vec<String>` | `TransitionResult` | По переходу на каждый символ; каждая строка должна быть одним символом; отклоняются только точные дубли `(from, to, symbol)`; `$` допустим |
 | `fa_update_transition` | `automaton_id`, `transition_id`, `new_from?`, `new_to?`, `new_symbol?` | `TransitionResult` | Частичное обновление |
 | `fa_remove_transition` | `automaton_id`, `transition_id` | `StatusResult` | Удаление перехода |
 | `fa_run_str` | `automaton_id`, `input: String` | `RunResult` | Пошаговое моделирование (`run_partial`); трассы с `isFinal` первыми; 200/401/402 |
@@ -265,7 +265,7 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 | `mealy_add_state` | как `fa_add_state` | `StateResult` | Делегирует в `fa_add_state`, `is_final` игнорируется |
 | `mealy_update_state` | как `fa_update_state` | `StateResult` | Делегирует в `fa_update_state`, `is_final` игнорируется |
 | `mealy_remove_state` | `automaton_id`, `state_id` | `StatusResult` | Делегирует в `fa_remove_state` |
-| `mealy_add_transition` | `automaton_id`, `from`, `to`, `input: char`, `output: char` | `TransitionResult` | Запрещены eps и дубли `(from, input)` |
+| `mealy_add_transition` | `automaton_id`, `from`, `to`, `input: String`, `output: String` | `TransitionResult` | Строки должны быть одним символом; запрещены eps и дубли `(from, input)` |
 | `mealy_update_transition` | `automaton_id`, `transition_id`, `input?`, `output?` | `TransitionResult` | `from`/`to` не меняются; сохраняется детерминизм |
 | `mealy_remove_transition` | `automaton_id`, `transition_id` | `StatusResult` | Удаление перехода |
 | `mealy_run_str` | `automaton_id`, `input: String` | `MealyRunResult` | Прогон с выходной строкой; 200/401/402 |
@@ -281,7 +281,8 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 - Для новых типов: добавить ветку в `core::jff::parse_jff` и в `core::api::save_automaton`, создать модуль `<type>/jff`.
 
 ## 9. Соглашения и инварианты
-- `EPSILON = '$'` — никогда не входит во входной алфавит; у Мили запрещён.
+- `EPSILON: &str = "$"` — никогда не входит во входной алфавит; у Мили запрещён.
+- Символы в DTO и моделях — односимвольные `String`; строки из JFF и команд проверяются через `one_symbol`.
 - Сообщения пользователю (`message`) — на русском; комментарии — на русском в шапке функции (см. раздел 10, п. 6).
 - Команды не паникуют на пользовательском вводе: ошибки возвращаются через `status`/`message`.
 - Валидация выполняется до мутации данных.

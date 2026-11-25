@@ -32,15 +32,15 @@ fn mealy_data() -> AutomatonData {
                 id: 10,
                 from: 0,
                 to: 1,
-                symbol: 'a',
-                output: Some('1'),
+                symbol: "a".to_string(),
+                output: Some("1".to_string()),
             },
             TransitionData {
                 id: 11,
                 from: 1,
                 to: 0,
-                symbol: 'b',
-                output: Some('0'),
+                symbol: "b".to_string(),
+                output: Some("0".to_string()),
             },
         ],
     }
@@ -91,8 +91,8 @@ fn serializes_input_and_output_symbols() {
 fn escapes_special_characters() {
     let mut data = mealy_data();
     data.states[0].label = "q&<0>\"'".to_string();
-    data.transitions[0].symbol = '&';
-    data.transitions[0].output = Some('<');
+    data.transitions[0].symbol = "&".to_string();
+    data.transitions[0].output = Some("<".to_string());
 
     let xml = to_jff(&data);
     assert!(xml.contains("name=\"q&amp;&lt;0&gt;&quot;&apos;\""));
@@ -122,9 +122,12 @@ fn parses_mealy_jff_with_input_and_output_symbols() {
                 automaton
                     .transitions
                     .iter()
-                    .map(|t| (t.from, t.to, t.symbol, t.output))
+                    .map(|t| (t.from, t.to, t.symbol.clone(), t.output.clone()))
                     .collect::<Vec<_>>(),
-                vec![(0, 1, 'a', Some('1')), (1, 0, 'b', Some('0'))]
+                vec![
+                    (0, 1, "a".to_string(), Some("1".to_string())),
+                    (1, 0, "b".to_string(), Some("0".to_string())),
+                ]
             );
         }
         other => panic!("ожидался автомат MEALY, получено {:?}", other),

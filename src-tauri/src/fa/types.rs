@@ -14,8 +14,8 @@ const MAX_THREADS: usize = 1_000_000;
 #[derive(Debug, Clone)]
 pub struct FA {
     states: HashSet<i32>,
-    alphabet: HashSet<char>,
-    transitions: HashMap<(i32, char), HashSet<i32>>,
+    alphabet: HashSet<String>,
+    transitions: HashMap<(i32, String), HashSet<i32>>,
     initial_state: i32,
     final_states: HashSet<i32>,
 }
@@ -24,8 +24,8 @@ pub struct FA {
 impl FA {
     pub fn new(
         states: HashSet<i32>,
-        alphabet: HashSet<char>,
-        transitions: HashMap<(i32, char), HashSet<i32>>,
+        alphabet: HashSet<String>,
+        transitions: HashMap<(i32, String), HashSet<i32>>,
         initial_state: i32,
         final_states: HashSet<i32>,
     ) -> Result<Self, String> {
@@ -50,7 +50,7 @@ impl FA {
                     from
                 ));
             }
-            if *symbol != EPSILON && !alphabet.contains(symbol) {
+            if symbol.as_str() != EPSILON && !alphabet.contains(symbol) {
                 return Err(format!("Символ '{}' не принадлежит алфавиту", symbol));
             }
             for to in to_states {
@@ -75,7 +75,7 @@ impl FA {
         FABuilder::new()
     }
 
-    pub fn get_transitions(&self) -> &HashMap<(i32, char), HashSet<i32>> {
+    pub fn get_transitions(&self) -> &HashMap<(i32, String), HashSet<i32>> {
         &self.transitions
     }
 
@@ -90,8 +90,8 @@ impl FA {
             for symbol in self
                 .alphabet
                 .iter()
-                .copied()
-                .chain(std::iter::once(EPSILON))
+                .cloned()
+                .chain(std::iter::once(EPSILON.to_string()))
             {
                 if let Some(next_states) = self.transitions.get(&(current, symbol)) {
                     for next in next_states {
@@ -118,14 +118,14 @@ impl FA {
     /// конечного автомата (проверка/семантика), а не отдельный тип: одна и та же
     /// структура может прогоняться любым способом.
     pub fn is_deterministic(&self) -> bool {
-        !self.alphabet.contains(&EPSILON)
+        !self.alphabet.contains(EPSILON)
             && self
                 .transitions
                 .iter()
-                .all(|((_, symbol), targets)| *symbol != EPSILON && targets.len() == 1)
+                .all(|((_, symbol), targets)| symbol.as_str() != EPSILON && targets.len() == 1)
     }
 
-    pub fn run(&self, input: &[char]) -> Option<Vec<RunStep>> {
+    pub fn run(&self, input: &[String]) -> Option<Vec<RunStep>> {
         if input.iter().any(|s| !self.alphabet.contains(s)) {
             return None;
         }
@@ -137,7 +137,7 @@ impl FA {
             fa: &FA,
             state: i32,
             pos: usize,
-            input: &[char],
+            input: &[String],
             steps: &mut Vec<RunStep>,
             visited: &mut HashSet<(i32, usize)>,
         ) -> bool {
@@ -149,11 +149,11 @@ impl FA {
                 if fa.final_states.contains(&state) {
                     return true;
                 }
-                if let Some(next_states) = fa.transitions.get(&(state, EPSILON)) {
+                if let Some(next_states) = fa.transitions.get(&(state, EPSILON.to_string())) {
                     for &next in next_states {
                         steps.push(RunStep {
                             from: state,
-                            symbol: EPSILON,
+                            symbol: EPSILON.to_string(),
                             to: next,
                         });
                         if explore(fa, next, pos, input, steps, visited) {
@@ -165,11 +165,11 @@ impl FA {
                 return false;
             }
 
-            if let Some(next_states) = fa.transitions.get(&(state, EPSILON)) {
+            if let Some(next_states) = fa.transitions.get(&(state, EPSILON.to_string())) {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
-                        symbol: EPSILON,
+                        symbol: EPSILON.to_string(),
                         to: next,
                     });
                     if explore(fa, next, pos, input, steps, visited) {
@@ -179,12 +179,12 @@ impl FA {
                 }
             }
 
-            let symbol = input[pos];
-            if let Some(next_states) = fa.transitions.get(&(state, symbol)) {
+            let symbol = input[pos].clone();
+            if let Some(next_states) = fa.transitions.get(&(state, symbol.clone())) {
                 for &next in next_states {
                     steps.push(RunStep {
                         from: state,
-                        symbol: symbol,
+                        symbol: symbol.clone(),
                         to: next,
                     });
                     if explore(fa, next, pos + 1, input, steps, visited) {
@@ -220,7 +220,7 @@ impl FA {
         queue.push_back((thread.0.clone(), thread.1, HashSet::from([thread.1])));
 
         while let Some((history, state, visited)) = queue.pop_front() {
-            let Some(targets) = self.transitions.get(&(state, EPSILON)) else {
+            let Some(targets) = self.transitions.get(&(state, EPSILON.to_string())) else {
                 continue;
             };
             for &to in targets {
@@ -233,7 +233,7 @@ impl FA {
                 let mut next_history = history.clone();
                 next_history.push(RunStep {
                     from: state,
-                    symbol: EPSILON,
+                    symbol: EPSILON.to_string(),
                     to,
                 });
                 variants.push((next_history.clone(), to));
@@ -282,7 +282,7 @@ impl FA {
     ///   отклоняется.
     /// - Число потоков ограничено, чтобы сдержать экспоненциальный рост в худшем
     ///   случае.
-    pub fn run_partial(&self, input: &[char]) -> (Vec<Trace>, bool) {
+    pub fn run_partial(&self, input: &[String]) -> (Vec<Trace>, bool) {
         if self.final_states.is_empty() {
             return (Vec::new(), false);
         }
@@ -291,12 +291,12 @@ impl FA {
         // eps-ветвление до первого символа (и для пустого входа).
         let mut threads = self.expand_epsilon_all(vec![(Vec::new(), self.initial_state)]);
 
-        for &symbol in input {
+        for symbol in input {
             // Символ вне алфавита: останавливаем чтение прямо перед ним,
             // финализируя живые на данный момент ветви (частичный прогресс).
             // Ветвь не дочитала вход, поэтому она не допускающая, даже если
             // застряла в финальном состоянии.
-            if !self.alphabet.contains(&symbol) {
+            if !self.alphabet.contains(symbol) {
                 for (steps, _) in threads {
                     result.push(Trace {
                         steps,
@@ -309,7 +309,7 @@ impl FA {
             let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
             for (history, state) in threads {
                 let mut advanced = false;
-                if let Some(targets) = self.transitions.get(&(state, symbol)) {
+                if let Some(targets) = self.transitions.get(&(state, symbol.clone())) {
                     advanced = true;
                     for &to in targets {
                         if next_threads.len() >= MAX_THREADS {
@@ -318,7 +318,7 @@ impl FA {
                         let mut steps = history.clone();
                         steps.push(RunStep {
                             from: state,
-                            symbol,
+                            symbol: symbol.clone(),
                             to,
                         });
                         next_threads.push((steps, to));
@@ -367,7 +367,7 @@ impl FA {
                 continue;
             }
             closure.insert(current);
-            if let Some(next_states) = self.transitions.get(&(current, EPSILON)) {
+            if let Some(next_states) = self.transitions.get(&(current, EPSILON.to_string())) {
                 for next in next_states {
                     if !closure.contains(next) {
                         stack.push(*next);
@@ -378,14 +378,14 @@ impl FA {
         closure
     }
 
-    fn next_states_owned(&self, state: i32, symbol: char) -> HashSet<i32> {
+    fn next_states_owned(&self, state: i32, symbol: &str) -> HashSet<i32> {
         self.transitions
-            .get(&(state, symbol))
+            .get(&(state, symbol.to_string()))
             .cloned()
             .unwrap_or_default()
     }
 
-    fn next_states_with_epsilon_owned(&self, state: i32, symbol: char) -> HashSet<i32> {
+    fn next_states_with_epsilon_owned(&self, state: i32, symbol: &str) -> HashSet<i32> {
         let direct = self.next_states_owned(state, symbol);
         let mut result: HashSet<i32> = HashSet::new();
         for s in direct {
@@ -412,12 +412,12 @@ impl FA {
             if depth >= max_len {
                 continue;
             }
-            let mut moves: Vec<(char, i32)> = Vec::new();
-            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            let mut moves: Vec<(String, i32)> = Vec::new();
+            for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
                 for c in &closure {
-                    if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                    if let Some(targets) = self.transitions.get(&(*c, ch.clone())) {
                         for &t in targets {
-                            moves.push((ch, t));
+                            moves.push((ch.clone(), t));
                         }
                     }
                 }
@@ -425,7 +425,7 @@ impl FA {
             for (ch, t) in moves {
                 if !dist.contains_key(&t) {
                     let mut next_path = path.clone();
-                    next_path.push(ch);
+                    next_path.push_str(&ch);
                     let next_depth = depth + 1;
                     dist.insert(t, next_path.clone());
                     queue.push_back((t, next_path, next_depth));
@@ -437,14 +437,15 @@ impl FA {
 
     /// Символы, не входящие в алфавит (цифры, затем буква, затем `$`), для
     /// негативных тестов. Возвращает до двух различных символов.
-    fn outside_alphabet_symbols(&self) -> Vec<char> {
-        let mut out: Vec<char> = Vec::new();
-        let preferred: Vec<char> = (b'0'..=b'9')
+    fn outside_alphabet_symbols(&self) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        let preferred: Vec<String> = (b'0'..=b'9')
             .chain(b'a'..=b'z')
             .chain(b'A'..=b'Z')
-            .map(|b| b as char)
+            .map(|b| (b as char).to_string())
             .collect();
-        let mut candidates: Vec<char> = vec!['0', '4', EPSILON];
+        let mut candidates: Vec<String> =
+            vec!["0".to_string(), "4".to_string(), EPSILON.to_string()];
         candidates.extend(preferred);
         for c in candidates {
             if !self.alphabet.contains(&c) && !out.contains(&c) {
@@ -463,9 +464,9 @@ impl FA {
         let mut visited: HashSet<i32> = HashSet::new();
 
         let closure = self.epsilon_closure_owned(start);
-        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+        for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
             for c in &closure {
-                if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                if let Some(targets) = self.transitions.get(&(*c, ch.clone())) {
                     for &t in targets {
                         if t == start {
                             return Some(ch.to_string());
@@ -484,19 +485,19 @@ impl FA {
                 continue;
             }
             let cl = self.epsilon_closure_owned(state);
-            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
                 for c in &cl {
-                    if let Some(targets) = self.transitions.get(&(*c, ch)) {
+                    if let Some(targets) = self.transitions.get(&(*c, ch.clone())) {
                         for &t in targets {
                             if t == start {
                                 let mut cycle = path.clone();
-                                cycle.push(ch);
+                                cycle.push_str(ch);
                                 return Some(cycle);
                             }
                             if !visited.contains(&t) {
                                 visited.insert(t);
                                 let mut next_path = path.clone();
-                                next_path.push(ch);
+                                next_path.push_str(ch);
                                 queue.push_back((t, next_path, depth + 1));
                             }
                         }
@@ -538,11 +539,11 @@ impl FA {
             if depth >= max_len {
                 continue;
             }
-            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
-                if let Some(targets) = self.transitions.get(&(state, ch)) {
+            for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
+                if let Some(targets) = self.transitions.get(&(state, ch.clone())) {
                     for &t in targets {
                         let mut next = path.clone();
-                        next.push(ch);
+                        next.push_str(ch);
                         let closure = self.epsilon_closure_owned(t);
                         if closure.iter().any(|s| self.final_states.contains(s)) {
                             return Some(next);
@@ -567,10 +568,10 @@ impl FA {
         states.truncate(8);
         for state in states {
             let closure = self.epsilon_closure_owned(state);
-            for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
+            for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
                 let has_transition = closure
                     .iter()
-                    .any(|c| self.transitions.contains_key(&(*c, ch)));
+                    .any(|c| self.transitions.contains_key(&(*c, ch.clone())));
                 if !has_transition {
                     result.insert(format!("{}{}", dist[&state], ch));
                 }
@@ -591,8 +592,8 @@ impl FA {
         let mut priority: HashSet<String> = HashSet::new();
 
         result.insert(String::new());
-        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
-            result.insert(ch.to_string());
+        for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
+            result.insert(ch.clone());
         }
 
         let dist = self.shortest_paths(depth);
@@ -605,11 +606,11 @@ impl FA {
 
         for ((from, symbol), _targets) in &self.transitions {
             if let Some(path) = dist.get(from) {
-                if *symbol == EPSILON {
+                if symbol == EPSILON {
                     result.insert(path.clone());
                 } else {
                     let mut activated = path.clone();
-                    activated.push(*symbol);
+                    activated.push_str(symbol);
                     result.insert(activated);
                 }
             }
@@ -624,8 +625,8 @@ impl FA {
                 bases.push(p.clone());
             }
         }
-        for ch in self.alphabet.iter().copied().filter(|c| *c != EPSILON) {
-            bases.push(ch.to_string());
+        for ch in self.alphabet.iter().filter(|c| c.as_str() != EPSILON) {
+            bases.push(ch.clone());
         }
         bases.sort();
         bases.dedup();
@@ -637,8 +638,8 @@ impl FA {
         result.insert(EPSILON.to_string());
         let invalid = outside
             .iter()
-            .find(|c| **c != EPSILON)
-            .map(|c| c.to_string())
+            .find(|c| c.as_str() != EPSILON)
+            .cloned()
             .unwrap_or_else(|| EPSILON.to_string());
         if let Some(base) = bases.first() {
             result.insert(format!("{}{}", invalid, base));
@@ -681,12 +682,12 @@ impl FA {
 
 impl Automaton for FA {
     type State = i32;
-    type Symbol = char;
+    type Symbol = String;
 
-    fn accepts(&self, input: &[char]) -> bool {
+    fn accepts(&self, input: &[String]) -> bool {
         let mut current_states: HashSet<i32> = self.epsilon_closure_owned(self.initial_state);
-        for &symbol in input {
-            if !self.alphabet.contains(&symbol) {
+        for symbol in input {
+            if !self.alphabet.contains(symbol) {
                 return false;
             }
             let mut next_states: HashSet<i32> = HashSet::new();
@@ -713,7 +714,7 @@ impl Automaton for FA {
         &self.final_states
     }
 
-    fn alphabet(&self) -> &HashSet<char> {
+    fn alphabet(&self) -> &HashSet<String> {
         &self.alphabet
     }
 }
@@ -728,9 +729,9 @@ impl NondeterministicAutomaton for FA {
             .collect()
     }
 
-    fn next_states(&self, state: &i32, symbol: &char) -> HashSet<&i32> {
+    fn next_states(&self, state: &i32, symbol: &String) -> HashSet<&i32> {
         self.transitions
-            .get(&(*state, *symbol))
+            .get(&(*state, symbol.clone()))
             .map(|states| states.iter().collect())
             .unwrap_or_default()
     }
@@ -739,8 +740,8 @@ impl NondeterministicAutomaton for FA {
 #[derive(Debug, Clone, Default)]
 pub struct FABuilder {
     states: HashSet<i32>,
-    alphabet: HashSet<char>,
-    transitions: HashMap<(i32, char), HashSet<i32>>,
+    alphabet: HashSet<String>,
+    transitions: HashMap<(i32, String), HashSet<i32>>,
     initial_state: Option<i32>,
     final_states: HashSet<i32>,
 }
@@ -763,22 +764,23 @@ impl FABuilder {
         self
     }
 
-    pub fn symbol(mut self, symbol: char) -> Self {
-        self.alphabet.insert(symbol);
+    pub fn symbol<S: Into<String>>(mut self, symbol: S) -> Self {
+        self.alphabet.insert(symbol.into());
         self
     }
 
-    pub fn symbols(mut self, symbols: &[char]) -> Self {
-        for &symbol in symbols {
-            self.alphabet.insert(symbol);
+    pub fn symbols<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+        for symbol in symbols {
+            self.alphabet.insert(symbol.clone().into());
         }
         self
     }
 
-    pub fn transition(mut self, from: i32, symbol: char, to: i32) -> Self {
+    pub fn transition<S: Into<String>>(mut self, from: i32, symbol: S, to: i32) -> Self {
+        let symbol = symbol.into();
         self.states.insert(from);
         self.states.insert(to);
-        self.alphabet.insert(symbol);
+        self.alphabet.insert(symbol.clone());
         self.transitions
             .entry((from, symbol))
             .or_default()
@@ -790,7 +792,7 @@ impl FABuilder {
         self.states.insert(from);
         self.states.insert(to);
         self.transitions
-            .entry((from, EPSILON))
+            .entry((from, EPSILON.to_string()))
             .or_default()
             .insert(to);
         self

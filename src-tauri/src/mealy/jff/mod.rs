@@ -13,11 +13,11 @@ mod tests;
 use roxmltree::Node;
 
 use crate::core::jff::{
-    JffAutomaton, document_footer, document_header, find_automaton, one_char, parse_states,
+    JffAutomaton, document_footer, document_header, find_automaton, parse_states,
     parse_transitions, transition_output, write_states, write_transition_with_output,
     write_transitions_header,
 };
-use crate::core::types::{AutomatonData, StateData};
+use crate::core::types::{AutomatonData, StateData, one_symbol};
 
 pub fn to_jff(data: &AutomatonData) -> String {
     let mut s = document_header("mealy");
@@ -36,7 +36,7 @@ pub fn to_jff(data: &AutomatonData) -> String {
     write_transitions_header(&mut s);
     for t in &data.transitions {
         let input = t.symbol.to_string();
-        let output = t.output.map(|c| c.to_string()).unwrap_or_default();
+        let output = t.output.clone().unwrap_or_default();
         write_transition_with_output(&mut s, t.from, t.to, &input, &output);
     }
 
@@ -51,8 +51,8 @@ pub(crate) fn parse_automaton(root: Node) -> Result<JffAutomaton, String> {
     let states = parse_states(automaton)?;
 
     let transitions = parse_transitions(automaton, |node, read| {
-        let input = one_char(read, "Входной символ перехода")?;
-        let output = one_char(&transition_output(node), "Выходной символ перехода")?;
+        let input = one_symbol(read, "Входной символ перехода")?;
+        let output = one_symbol(&transition_output(node), "Выходной символ перехода")?;
         Ok((input, Some(output)))
     })?;
 

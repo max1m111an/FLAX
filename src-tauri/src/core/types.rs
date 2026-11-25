@@ -7,7 +7,17 @@ use serde::{Deserialize, Serialize};
 use tauri::http::StatusCode;
 
 /// Символ эпсилон-перехода. Никогда не входит во входной алфавит.
-pub const EPSILON: char = '$';
+pub const EPSILON: &str = "$";
+
+/// Проверяет, что `text` содержит ровно один символ, и возвращает его строкой.
+/// `what` описывает поле в сообщении об ошибке.
+pub fn one_symbol(text: &str, what: &str) -> Result<String, String> {
+    let mut chars = text.chars();
+    match (chars.next(), chars.next()) {
+        (Some(c), None) => Ok(c.to_string()),
+        _ => Err(format!("{} '{}' должен быть одним символом", what, text)),
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Serde DTO (контракт сериализации с фронтендом)
@@ -30,9 +40,9 @@ pub struct TransitionData {
     pub id: i32,
     pub from: i32,
     pub to: i32,
-    pub symbol: char,
+    pub symbol: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub output: Option<char>,
+    pub output: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -64,12 +74,12 @@ impl Default for AutomatonType {
 
 /// Собирает входной алфавит из переходов: уникальные не-eps `symbol` в порядке
 /// первого появления.
-pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<char> {
-    let mut seen: HashSet<char> = HashSet::new();
-    let mut alphabet: Vec<char> = Vec::new();
+pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<String> {
+    let mut seen: HashSet<String> = HashSet::new();
+    let mut alphabet: Vec<String> = Vec::new();
     for t in transitions {
-        if t.symbol != EPSILON && seen.insert(t.symbol) {
-            alphabet.push(t.symbol);
+        if t.symbol != EPSILON && seen.insert(t.symbol.clone()) {
+            alphabet.push(t.symbol.clone());
         }
     }
     alphabet
@@ -79,7 +89,7 @@ impl AutomatonData {
     /// Входной алфавит, выведенный из переходов (единый источник правды —
     /// отдельное поле не хранится; алфавит всегда отражает текущие переходы).
     #[allow(dead_code)]
-    pub fn get_alphabet(&self) -> Vec<char> {
+    pub fn get_alphabet(&self) -> Vec<String> {
         alphabet_from_transitions(&self.transitions)
     }
 }
@@ -138,7 +148,7 @@ pub struct TransitionResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunStep {
     pub from: i32,
-    pub symbol: char,
+    pub symbol: String,
     pub to: i32,
 }
 
@@ -160,9 +170,9 @@ pub struct RunResult {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MealyRunStep {
     pub from: i32,
-    pub symbol: char,
+    pub symbol: String,
     pub to: i32,
-    pub output: char,
+    pub output: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

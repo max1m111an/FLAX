@@ -14,10 +14,10 @@ use std::collections::HashSet;
 use roxmltree::Node;
 
 use crate::core::jff::{
-    JffAutomaton, document_footer, document_header, find_automaton, one_char, parse_states,
+    JffAutomaton, document_footer, document_header, find_automaton, parse_states,
     parse_transitions, write_states, write_transition, write_transitions_header,
 };
-use crate::core::types::{AutomatonData, StateData, TransitionData};
+use crate::core::types::{AutomatonData, StateData, TransitionData, one_symbol};
 use crate::fa::types::EPSILON;
 
 pub fn to_jff(data: &AutomatonData) -> String {
@@ -28,9 +28,9 @@ pub fn to_jff(data: &AutomatonData) -> String {
         let read = if t.symbol == EPSILON {
             None
         } else {
-            Some(t.symbol.to_string())
+            Some(t.symbol.as_str())
         };
-        write_transition(&mut s, t.from, t.to, read.as_deref());
+        write_transition(&mut s, t.from, t.to, read);
     }
     s.push_str(document_footer());
     s
@@ -45,9 +45,9 @@ pub(crate) fn parse_automaton(root: Node) -> Result<JffAutomaton, String> {
     // Пустой или отсутствующий <read> — эпсилон-переход.
     let transitions = parse_transitions(automaton, |_node, read| {
         let symbol = if read.is_empty() {
-            EPSILON
+            EPSILON.to_string()
         } else {
-            one_char(read, "Символ перехода")?
+            one_symbol(read, "Символ перехода")?
         };
         Ok((symbol, None))
     })?;
@@ -65,12 +65,12 @@ pub fn is_deterministic(states: &[StateData], transitions: &[TransitionData]) ->
     if states.iter().filter(|s| s.isInitial).count() != 1 {
         return false;
     }
-    let mut seen: HashSet<(i32, char)> = HashSet::new();
+    let mut seen: HashSet<(i32, String)> = HashSet::new();
     for t in transitions {
         if t.symbol == EPSILON {
             return false;
         }
-        if !seen.insert((t.from, t.symbol)) {
+        if !seen.insert((t.from, t.symbol.clone())) {
             return false;
         }
     }

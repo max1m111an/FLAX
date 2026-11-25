@@ -51,9 +51,15 @@ fn new_fails_with_invalid_accepting() {
 #[test]
 fn new_fails_with_invalid_transition_state() {
     let states = HashSet::from([0]);
-    let mut transitions: HashMap<(i32, char), HashSet<i32>> = HashMap::new();
-    transitions.insert((0, 'a'), HashSet::from([99]));
-    let result = FA::new(states, HashSet::from(['a']), transitions, 0, HashSet::new());
+    let mut transitions: HashMap<(i32, String), HashSet<i32>> = HashMap::new();
+    transitions.insert((0, "a".to_string()), HashSet::from([99]));
+    let result = FA::new(
+        states,
+        HashSet::from(["a".to_string()]),
+        transitions,
+        0,
+        HashSet::new(),
+    );
     assert!(result.is_err());
 }
 
@@ -72,10 +78,10 @@ fn accepts_simple_string() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a', 'b']));
-    assert!(!fa.accepts(&['a']));
-    assert!(!fa.accepts(&['b']));
-    assert!(!fa.accepts(&['a', 'b', 'a']));
+    assert!(fa.accepts(&["a".to_string(), "b".to_string()]));
+    assert!(!fa.accepts(&["a".to_string()]));
+    assert!(!fa.accepts(&["b".to_string()]));
+    assert!(!fa.accepts(&["a".to_string(), "b".to_string(), "a".to_string()]));
     assert!(!fa.accepts(&[]));
 }
 
@@ -94,8 +100,8 @@ fn accepts_with_epsilon_transition() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a']));
-    assert!(!fa.accepts(&['b']));
+    assert!(fa.accepts(&["a".to_string()]));
+    assert!(!fa.accepts(&["b".to_string()]));
     assert!(!fa.accepts(&[]));
 }
 
@@ -117,13 +123,18 @@ fn accepts_with_nondeterminism() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a', 'b']));
-    assert!(fa.accepts(&['a', 'a', 'b']));
-    assert!(fa.accepts(&['a', 'a', 'a', 'b']));
-    assert!(!fa.accepts(&['b']));
-    assert!(!fa.accepts(&['a']));
-    assert!(!fa.accepts(&['a', 'b', 'a']));
-    assert!(!fa.accepts(&['b', 'a']));
+    assert!(fa.accepts(&["a".to_string(), "b".to_string()]));
+    assert!(fa.accepts(&["a".to_string(), "a".to_string(), "b".to_string()]));
+    assert!(fa.accepts(&[
+        "a".to_string(),
+        "a".to_string(),
+        "a".to_string(),
+        "b".to_string()
+    ]));
+    assert!(!fa.accepts(&["b".to_string()]));
+    assert!(!fa.accepts(&["a".to_string()]));
+    assert!(!fa.accepts(&["a".to_string(), "b".to_string(), "a".to_string()]));
+    assert!(!fa.accepts(&["b".to_string(), "a".to_string()]));
 }
 
 #[test]
@@ -143,7 +154,7 @@ fn accepts_with_multiple_epsilon_closures() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a']));
+    assert!(fa.accepts(&["a".to_string()]));
     assert!(!fa.accepts(&[]));
 }
 
@@ -159,7 +170,7 @@ fn rejects_symbol_not_in_alphabet() {
         .build()
         .unwrap();
 
-    assert!(!fa.accepts(&['b']));
+    assert!(!fa.accepts(&["b".to_string()]));
 }
 
 #[test]
@@ -172,7 +183,7 @@ fn empty_string_accepted_when_initial_is_final() {
         .unwrap();
 
     assert!(fa.accepts(&[]));
-    assert!(!fa.accepts(&['a']));
+    assert!(!fa.accepts(&["a".to_string()]));
 }
 
 #[test]
@@ -212,7 +223,7 @@ fn next_states_returns_correct_set() {
         .build()
         .unwrap();
 
-    let next = fa.next_states(&0, &'a');
+    let next = fa.next_states(&0, &"a".to_string());
     assert!(next.contains(&1));
     assert!(next.contains(&2));
     assert_eq!(next.len(), 2);
@@ -301,10 +312,10 @@ fn fa_to_data_roundtrip_via_builder() {
 
     // Проверяем, что переходы сохраняются корректно
     let t = fa.get_transitions();
-    assert!(t.contains_key(&(0, 'a')));
-    assert!(t.contains_key(&(0, EPSILON))); // eps
-    assert!(t[&(0, 'a')].contains(&0));
-    assert!(t[&(0, 'a')].contains(&1));
+    assert!(t.contains_key(&(0, "a".to_string())));
+    assert!(t.contains_key(&(0, EPSILON.to_string()))); // eps
+    assert!(t[&(0, "a".to_string())].contains(&0));
+    assert!(t[&(0, "a".to_string())].contains(&1));
 }
 
 #[test]
@@ -327,12 +338,33 @@ fn many_states_complex_fa() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a', 'b', 'b']));
-    assert!(fa.accepts(&['a', 'a', 'b', 'b']));
-    assert!(fa.accepts(&['b', 'a', 'b', 'b']));
-    assert!(fa.accepts(&['a', 'b', 'a', 'b', 'b']));
-    assert!(!fa.accepts(&['a', 'b']));
-    assert!(!fa.accepts(&['a', 'b', 'b', 'a']));
+    assert!(fa.accepts(&["a".to_string(), "b".to_string(), "b".to_string()]));
+    assert!(fa.accepts(&[
+        "a".to_string(),
+        "a".to_string(),
+        "b".to_string(),
+        "b".to_string()
+    ]));
+    assert!(fa.accepts(&[
+        "b".to_string(),
+        "a".to_string(),
+        "b".to_string(),
+        "b".to_string()
+    ]));
+    assert!(fa.accepts(&[
+        "a".to_string(),
+        "b".to_string(),
+        "a".to_string(),
+        "b".to_string(),
+        "b".to_string()
+    ]));
+    assert!(!fa.accepts(&["a".to_string(), "b".to_string()]));
+    assert!(!fa.accepts(&[
+        "a".to_string(),
+        "b".to_string(),
+        "b".to_string(),
+        "a".to_string()
+    ]));
 }
 
 #[test]
@@ -350,13 +382,13 @@ fn run_returns_trace_for_simple_fa() {
         .build()
         .unwrap();
 
-    let trace = fa.run(&['a', 'b']).unwrap();
+    let trace = fa.run(&["a".to_string(), "b".to_string()]).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
         RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 1
         }
     );
@@ -364,7 +396,7 @@ fn run_returns_trace_for_simple_fa() {
         trace[1],
         RunStep {
             from: 1,
-            symbol: 'b',
+            symbol: "b".to_string(),
             to: 2
         }
     );
@@ -384,13 +416,13 @@ fn run_tracks_epsilon_steps() {
         .build()
         .unwrap();
 
-    let trace = fa.run(&['a']).unwrap();
+    let trace = fa.run(&["a".to_string()]).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
         RunStep {
             from: 0,
-            symbol: EPSILON,
+            symbol: EPSILON.to_string(),
             to: 1
         }
     );
@@ -398,7 +430,7 @@ fn run_tracks_epsilon_steps() {
         trace[1],
         RunStep {
             from: 1,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 2
         }
     );
@@ -421,13 +453,15 @@ fn run_finds_accepting_branch() {
         .build()
         .unwrap();
 
-    let trace = fa.run(&['a', 'a', 'b']).unwrap();
+    let trace = fa
+        .run(&["a".to_string(), "a".to_string(), "b".to_string()])
+        .unwrap();
     assert_eq!(trace.len(), 3);
     assert_eq!(
         trace[0],
         RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 0
         }
     );
@@ -435,7 +469,7 @@ fn run_finds_accepting_branch() {
         trace[1],
         RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 1
         }
     );
@@ -443,7 +477,7 @@ fn run_finds_accepting_branch() {
         trace[2],
         RunStep {
             from: 1,
-            symbol: 'b',
+            symbol: "b".to_string(),
             to: 2
         }
     );
@@ -461,8 +495,8 @@ fn run_rejects_when_no_path() {
         .build()
         .unwrap();
 
-    assert!(fa.run(&['a', 'a']).is_none());
-    assert!(fa.run(&['b']).is_none());
+    assert!(fa.run(&["a".to_string(), "a".to_string()]).is_none());
+    assert!(fa.run(&["b".to_string()]).is_none());
     assert!(fa.run(&[]).is_none());
 }
 
@@ -494,7 +528,7 @@ fn run_partial_full_acceptance() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert!(traces[0].isFinal);
@@ -504,12 +538,12 @@ fn run_partial_full_acceptance() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: 'a',
+                    symbol: "a".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: 'b',
+                    symbol: "b".to_string(),
                     to: 2
                 },
             ],
@@ -532,7 +566,7 @@ fn run_partial_rejected_no_path() {
 
     // 'b' нет в алфавите: чтение останавливается перед ним (прочитано 0 символов),
     // остаётся единственный (пока пустой) поток, цепочка отклоняется.
-    let (traces, accepted) = fa.run_partial(&['b']);
+    let (traces, accepted) = fa.run_partial(&["b".to_string()]);
     assert!(!accepted);
     assert_eq!(
         traces,
@@ -600,7 +634,7 @@ fn run_partial_stuck_mid_string() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string()]);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     // Ветвь прочитала 'a', но не смогла прочитать 'b': она прервана, поэтому, хотя
@@ -610,7 +644,7 @@ fn run_partial_stuck_mid_string() {
         Trace {
             steps: vec![RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 1
             }],
             isFinal: false,
@@ -632,7 +666,7 @@ fn run_partial_consumed_all_not_final() {
         .unwrap();
 
     // Вход "aa": первая 'a' ведёт в q1, для второй 'a' нет перехода из q1
-    let (traces, accepted) = fa.run_partial(&['a', 'a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "a".to_string()]);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(traces[0].steps.len(), 1);
@@ -654,7 +688,7 @@ fn run_partial_with_epsilon() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert_eq!(
@@ -670,12 +704,12 @@ fn run_partial_with_epsilon() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: '$',
+                    symbol: "$".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: 'a',
+                    symbol: "a".to_string(),
                     to: 2
                 },
             ],
@@ -700,7 +734,7 @@ fn run_partial_closes_after_last_symbol() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert_eq!(
@@ -708,7 +742,7 @@ fn run_partial_closes_after_last_symbol() {
         Trace {
             steps: vec![RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 1
             }],
             isFinal: false,
@@ -720,12 +754,12 @@ fn run_partial_closes_after_last_symbol() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: 'a',
+                    symbol: "a".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: '$',
+                    symbol: "$".to_string(),
                     to: 2
                 },
             ],
@@ -764,7 +798,7 @@ fn run_partial_transitive_epsilon_closure_recorded() {
         Trace {
             steps: vec![RunStep {
                 from: 0,
-                symbol: '$',
+                symbol: "$".to_string(),
                 to: 1
             }],
             isFinal: false,
@@ -776,12 +810,12 @@ fn run_partial_transitive_epsilon_closure_recorded() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: '$',
+                    symbol: "$".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: '$',
+                    symbol: "$".to_string(),
                     to: 2
                 },
             ],
@@ -810,7 +844,7 @@ fn run_partial_epsilon_branches_keep_dead_traces() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['1', '2']);
+    let (traces, accepted) = fa.run_partial(&["1".to_string(), "2".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert_eq!(
@@ -818,7 +852,7 @@ fn run_partial_epsilon_branches_keep_dead_traces() {
         Trace {
             steps: vec![RunStep {
                 from: 0,
-                symbol: '1',
+                symbol: "1".to_string(),
                 to: 1
             }],
             isFinal: false,
@@ -830,17 +864,17 @@ fn run_partial_epsilon_branches_keep_dead_traces() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: '1',
+                    symbol: "1".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: '$',
+                    symbol: "$".to_string(),
                     to: 2
                 },
                 RunStep {
                     from: 2,
-                    symbol: '2',
+                    symbol: "2".to_string(),
                     to: 3
                 },
             ],
@@ -869,17 +903,17 @@ fn run_partial_multiple_epsilon_branches() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 3);
     let accepted_step = RunStep {
         from: 1,
-        symbol: 'a',
+        symbol: "a".to_string(),
         to: 3,
     };
     let rejected_step = RunStep {
         from: 2,
-        symbol: 'a',
+        symbol: "a".to_string(),
         to: 4,
     };
     assert!(traces.iter().any(|t| t.steps.is_empty() && !t.isFinal));
@@ -912,19 +946,19 @@ fn run_partial_epsilon_cycle_terminates() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert!(traces.iter().all(|t| t.steps.len() <= 2));
     let expected = vec![
         RunStep {
             from: 0,
-            symbol: '$',
+            symbol: "$".to_string(),
             to: 1,
         },
         RunStep {
             from: 1,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 2,
         },
     ];
@@ -959,17 +993,17 @@ fn run_fa_line_keeps_dead_traces_on_acceptance() {
         vec![
             RunStep {
                 from: 0,
-                symbol: '1',
+                symbol: "1".to_string(),
                 to: 1
             },
             RunStep {
                 from: 1,
-                symbol: '$',
+                symbol: "$".to_string(),
                 to: 2
             },
             RunStep {
                 from: 2,
-                symbol: '2',
+                symbol: "2".to_string(),
                 to: 3
             },
         ]
@@ -1009,17 +1043,17 @@ fn run_fa_line_rejects_unreadable_trailing_symbol() {
         vec![
             RunStep {
                 from: 0,
-                symbol: '1',
+                symbol: "1".to_string(),
                 to: 1
             },
             RunStep {
                 from: 1,
-                symbol: '$',
+                symbol: "$".to_string(),
                 to: 2
             },
             RunStep {
                 from: 2,
-                symbol: '2',
+                symbol: "2".to_string(),
                 to: 3
             },
         ]
@@ -1047,7 +1081,7 @@ fn run_partial_nondeterministic() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "a".to_string(), "b".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 3);
     assert!(traces.iter().any(|t| t.isFinal && t.steps.len() == 3));
@@ -1057,17 +1091,17 @@ fn run_partial_nondeterministic() {
         vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 0
             },
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 1
             },
             RunStep {
                 from: 1,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 2
             },
         ]
@@ -1088,13 +1122,13 @@ fn run_partial_nondeterministic_parallel() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     assert!(traces.contains(&Trace {
         steps: vec![RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 0
         }],
         isFinal: false,
@@ -1102,7 +1136,7 @@ fn run_partial_nondeterministic_parallel() {
     assert!(traces.contains(&Trace {
         steps: vec![RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 1
         }],
         isFinal: true,
@@ -1131,19 +1165,19 @@ fn run_partial_converging_branches_keep_separate_histories() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 2);
     let t1 = Trace {
         steps: vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 1,
             },
             RunStep {
                 from: 1,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 3,
             },
         ],
@@ -1153,12 +1187,12 @@ fn run_partial_converging_branches_keep_separate_histories() {
         steps: vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 2,
             },
             RunStep {
                 from: 2,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 3,
             },
         ],
@@ -1205,7 +1239,7 @@ fn run_partial_reports_every_branch_including_dead() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['1', '2', '3']);
+    let (traces, accepted) = fa.run_partial(&["1".to_string(), "2".to_string(), "3".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 4);
 
@@ -1228,17 +1262,17 @@ fn run_partial_reports_every_branch_including_dead() {
         vec![
             RunStep {
                 from: 0,
-                symbol: '1',
+                symbol: "1".to_string(),
                 to: 2
             },
             RunStep {
                 from: 2,
-                symbol: '2',
+                symbol: "2".to_string(),
                 to: 5
             },
             RunStep {
                 from: 5,
-                symbol: '3',
+                symbol: "3".to_string(),
                 to: 7
             },
         ]
@@ -1273,7 +1307,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             id: 1,
             from: 0,
             to: 1,
-            symbol: '1',
+            symbol: "1".to_string(),
             output: None,
         },
         // осиротевший: 'to' 99 не существует
@@ -1281,7 +1315,7 @@ fn data_to_fa_ignores_orphan_transitions() {
             id: 2,
             from: 0,
             to: 99,
-            symbol: '1',
+            symbol: "1".to_string(),
             output: None,
         },
         // осиротевший: 'from' 99 не существует
@@ -1289,21 +1323,21 @@ fn data_to_fa_ignores_orphan_transitions() {
             id: 3,
             from: 99,
             to: 1,
-            symbol: '1',
+            symbol: "1".to_string(),
             output: None,
         },
     ];
 
     let fa = data_to_fa(&states, &transitions).unwrap();
     // Только корректный переход должен приводить в финальное состояние на "1".
-    let (traces, accepted) = fa.run_partial(&['1']);
+    let (traces, accepted) = fa.run_partial(&["1".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(
         traces[0].steps,
         vec![RunStep {
             from: 0,
-            symbol: '1',
+            symbol: "1".to_string(),
             to: 1
         }]
     );
@@ -1335,19 +1369,19 @@ fn run_partial_explores_all_branches() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string()]);
     assert!(accepted);
     assert_eq!(traces.len(), 3);
     assert!(traces.contains(&Trace {
         steps: vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 1
             },
             RunStep {
                 from: 1,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 4
             },
         ],
@@ -1357,12 +1391,12 @@ fn run_partial_explores_all_branches() {
         steps: vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 2
             },
             RunStep {
                 from: 2,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 4
             },
         ],
@@ -1372,12 +1406,12 @@ fn run_partial_explores_all_branches() {
         steps: vec![
             RunStep {
                 from: 0,
-                symbol: 'a',
+                symbol: "a".to_string(),
                 to: 3
             },
             RunStep {
                 from: 3,
-                symbol: 'b',
+                symbol: "b".to_string(),
                 to: 4
             },
         ],
@@ -1398,7 +1432,7 @@ fn run_partial_symbol_not_in_alphabet() {
         .unwrap();
 
     // 'b' нет в алфавите: чтение останавливается перед ним, у потока 0 шагов, отклонено.
-    let (traces, accepted) = fa.run_partial(&['b']);
+    let (traces, accepted) = fa.run_partial(&["b".to_string()]);
     assert!(!accepted);
     assert_eq!(
         traces,
@@ -1427,7 +1461,7 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
 
     // Вход "abx": должны быть прочитаны 'a' и 'b' (2 шага), затем остановка перед 'x'.
     // Поток дошёл до финального q2, но не дочитал вход, поэтому isFinal = false.
-    let (traces, accepted) = fa.run_partial(&['a', 'b', 'x']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string(), "x".to_string()]);
     assert!(!accepted);
     assert_eq!(traces.len(), 1);
     assert_eq!(traces[0].steps.len(), 2);
@@ -1437,12 +1471,12 @@ fn run_partial_stops_before_symbol_not_in_alphabet() {
             steps: vec![
                 RunStep {
                     from: 0,
-                    symbol: 'a',
+                    symbol: "a".to_string(),
                     to: 1
                 },
                 RunStep {
                     from: 1,
-                    symbol: 'b',
+                    symbol: "b".to_string(),
                     to: 2
                 },
             ],
@@ -1467,7 +1501,7 @@ fn run_partial_rejects_all_when_no_final_state() {
         .build()
         .unwrap();
 
-    let (traces, accepted) = fa.run_partial(&['a', 'b']);
+    let (traces, accepted) = fa.run_partial(&["a".to_string(), "b".to_string()]);
     assert!(!accepted);
     assert!(traces.is_empty());
 
@@ -1532,12 +1566,12 @@ fn multi_run_state(id: i32, is_initial: bool, is_final: bool) -> StateData {
     }
 }
 
-fn multi_run_transition(id: i32, from: i32, to: i32, symbol: char) -> TransitionData {
+fn multi_run_transition(id: i32, from: i32, to: i32, symbol: impl Into<String>) -> TransitionData {
     TransitionData {
         id,
         from,
         to,
-        symbol,
+        symbol: symbol.into(),
         output: None,
     }
 }
@@ -1648,7 +1682,7 @@ fn generate_test_inputs_empty_singles_and_sorted() {
     assert!(
         inputs
             .iter()
-            .any(|s| s.chars().any(|c| !fa.alphabet().contains(&c)))
+            .any(|s| s.chars().any(|c| !fa.alphabet().contains(&c.to_string())))
     );
 }
 
@@ -1713,7 +1747,7 @@ fn make_even_a_fa() -> FA {
         .state(1)
         .set_initial(0)
         .set_final(0)
-        .symbols(&['a', 'b'])
+        .symbols(&["a".to_string(), "b".to_string()])
         .transition(0, 'a', 1)
         .transition(0, 'b', 0)
         .transition(1, 'a', 0)
@@ -1760,25 +1794,25 @@ fn accepts_even_a() {
     let fa = make_even_a_fa();
 
     assert!(fa.accepts(&[])); // 0 'a' — чётно
-    assert!(fa.accepts(&['b'])); // 0 'a' — чётно
-    assert!(fa.accepts(&['b', 'b'])); // 0 'a' — чётно
-    assert!(!fa.accepts(&['a'])); // 1 'a' — нечётно
-    assert!(fa.accepts(&['a', 'a'])); // 2 'a' — чётно
-    assert!(!fa.accepts(&['a', 'a', 'a'])); // 3 'a' — нечётно
-    assert!(fa.accepts(&['a', 'b', 'a'])); // 2 'a' — чётно
-    assert!(!fa.accepts(&['a', 'b', 'b'])); // 1 'a' — нечётно
-    assert!(!fa.accepts(&['c']));
-    assert!(!fa.accepts(&['a', 'c']));
+    assert!(fa.accepts(&["b".to_string()])); // 0 'a' — чётно
+    assert!(fa.accepts(&["b".to_string(), "b".to_string()])); // 0 'a' — чётно
+    assert!(!fa.accepts(&["a".to_string()])); // 1 'a' — нечётно
+    assert!(fa.accepts(&["a".to_string(), "a".to_string()])); // 2 'a' — чётно
+    assert!(!fa.accepts(&["a".to_string(), "a".to_string(), "a".to_string()])); // 3 'a' — нечётно
+    assert!(fa.accepts(&["a".to_string(), "b".to_string(), "a".to_string()])); // 2 'a' — чётно
+    assert!(!fa.accepts(&["a".to_string(), "b".to_string(), "b".to_string()])); // 1 'a' — нечётно
+    assert!(!fa.accepts(&["c".to_string()]));
+    assert!(!fa.accepts(&["a".to_string(), "c".to_string()]));
 }
 
 #[test]
 fn next_states_single_target_for_deterministic_fa() {
     let fa = make_even_a_fa();
 
-    assert_eq!(fa.next_states(&0, &'a'), HashSet::from([&1]));
-    assert_eq!(fa.next_states(&0, &'b'), HashSet::from([&0]));
-    assert_eq!(fa.next_states(&1, &'a'), HashSet::from([&0]));
-    assert_eq!(fa.next_states(&1, &'b'), HashSet::from([&1]));
+    assert_eq!(fa.next_states(&0, &"a".to_string()), HashSet::from([&1]));
+    assert_eq!(fa.next_states(&0, &"b".to_string()), HashSet::from([&0]));
+    assert_eq!(fa.next_states(&1, &"a".to_string()), HashSet::from([&0]));
+    assert_eq!(fa.next_states(&1, &"b".to_string()), HashSet::from([&1]));
 }
 
 #[test]
@@ -1810,10 +1844,10 @@ fn single_state_loop() {
         .unwrap();
 
     assert!(fa.accepts(&[]));
-    assert!(fa.accepts(&['a']));
-    assert!(fa.accepts(&['a', 'a']));
-    assert!(fa.accepts(&['a', 'a', 'a']));
-    assert!(!fa.accepts(&['b']));
+    assert!(fa.accepts(&["a".to_string()]));
+    assert!(fa.accepts(&["a".to_string(), "a".to_string()]));
+    assert!(fa.accepts(&["a".to_string(), "a".to_string(), "a".to_string()]));
+    assert!(!fa.accepts(&["b".to_string()]));
 }
 
 #[test]
@@ -1828,7 +1862,7 @@ fn accepts_only_specific_string() {
         .state(3)
         .set_initial(0)
         .set_final(2)
-        .symbols(&['a', 'b'])
+        .symbols(&["a".to_string(), "b".to_string()])
         .transition(0, 'a', 1)
         .transition(0, 'b', 3)
         .transition(1, 'a', 3)
@@ -1840,12 +1874,12 @@ fn accepts_only_specific_string() {
         .build()
         .unwrap();
 
-    assert!(fa.accepts(&['a', 'b']));
+    assert!(fa.accepts(&["a".to_string(), "b".to_string()]));
     assert!(!fa.accepts(&[]));
-    assert!(!fa.accepts(&['a']));
-    assert!(!fa.accepts(&['a', 'b', 'a']));
-    assert!(!fa.accepts(&['b']));
-    assert!(!fa.accepts(&['b', 'a']));
+    assert!(!fa.accepts(&["a".to_string()]));
+    assert!(!fa.accepts(&["a".to_string(), "b".to_string(), "a".to_string()]));
+    assert!(!fa.accepts(&["b".to_string()]));
+    assert!(!fa.accepts(&["b".to_string(), "a".to_string()]));
 }
 
 #[test]
@@ -1884,23 +1918,23 @@ fn get_transitions_returns_correct_data() {
     let fa = make_even_a_fa();
     let t = fa.get_transitions();
     assert_eq!(t.len(), 4);
-    assert_eq!(t[&(0, 'a')], HashSet::from([1]));
-    assert_eq!(t[&(0, 'b')], HashSet::from([0]));
-    assert_eq!(t[&(1, 'a')], HashSet::from([0]));
-    assert_eq!(t[&(1, 'b')], HashSet::from([1]));
+    assert_eq!(t[&(0, "a".to_string())], HashSet::from([1]));
+    assert_eq!(t[&(0, "b".to_string())], HashSet::from([0]));
+    assert_eq!(t[&(1, "a".to_string())], HashSet::from([0]));
+    assert_eq!(t[&(1, "b".to_string())], HashSet::from([1]));
 }
 
 #[test]
 fn run_returns_trace_for_accepted_string() {
     let fa = make_even_a_fa();
 
-    let trace = fa.run(&['a', 'a']).unwrap();
+    let trace = fa.run(&["a".to_string(), "a".to_string()]).unwrap();
     assert_eq!(trace.len(), 2);
     assert_eq!(
         trace[0],
         RunStep {
             from: 0,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 1
         }
     );
@@ -1908,7 +1942,7 @@ fn run_returns_trace_for_accepted_string() {
         trace[1],
         RunStep {
             from: 1,
-            symbol: 'a',
+            symbol: "a".to_string(),
             to: 0
         }
     );
@@ -1918,9 +1952,12 @@ fn run_returns_trace_for_accepted_string() {
 fn run_rejects_string_without_path() {
     let fa = make_even_a_fa();
 
-    assert!(fa.run(&['a']).is_none());
-    assert!(fa.run(&['a', 'a', 'a']).is_none());
-    assert!(fa.run(&['c']).is_none());
+    assert!(fa.run(&["a".to_string()]).is_none());
+    assert!(
+        fa.run(&["a".to_string(), "a".to_string(), "a".to_string()])
+            .is_none()
+    );
+    assert!(fa.run(&["c".to_string()]).is_none());
 }
 
 #[test]
@@ -1961,7 +1998,7 @@ fn fa_generate_inputs_command_path_keeps_loop_strings() {
             id: 1,
             from: 0,
             to: 0,
-            symbol: 'я',
+            symbol: "я".to_string(),
             output: None,
         }],
     });

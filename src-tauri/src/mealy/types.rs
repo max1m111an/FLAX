@@ -13,22 +13,22 @@ use crate::core::types::MealyRunStep;
 
 /// Один переход машины Мили: в состоянии `from`, прочитав `input`, перейти в
 /// `to` и выдать `output`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct MealyTransition {
     pub from: i32,
-    pub input: char,
+    pub input: String,
     pub to: i32,
-    pub output: char,
+    pub output: String,
 }
 
 #[allow(dead_code)]
 impl MealyTransition {
-    pub fn new(from: i32, input: char, to: i32, output: char) -> Self {
+    pub fn new<I: Into<String>, O: Into<String>>(from: i32, input: I, to: i32, output: O) -> Self {
         MealyTransition {
             from,
-            input,
+            input: input.into(),
             to,
-            output,
+            output: output.into(),
         }
     }
 }
@@ -38,11 +38,11 @@ impl MealyTransition {
 #[derive(Debug, Clone)]
 pub struct MM {
     states: HashSet<i32>,
-    input_alphabet: HashSet<char>,
-    output_alphabet: HashSet<char>,
+    input_alphabet: HashSet<String>,
+    output_alphabet: HashSet<String>,
     /// `((from, input) -> (to, output))`. Ключ обеспечивает инвариант детерминизма:
     /// одна запись на пару состояние/символ.
-    transitions: HashMap<(i32, char), (i32, char)>,
+    transitions: HashMap<(i32, String), (i32, String)>,
     initial_state: i32,
 }
 
@@ -53,8 +53,8 @@ impl MM {
     /// перезаписывались через `HashMap::insert`.
     pub fn new(
         states: HashSet<i32>,
-        input_alphabet: HashSet<char>,
-        output_alphabet: HashSet<char>,
+        input_alphabet: HashSet<String>,
+        output_alphabet: HashSet<String>,
         transitions: Vec<MealyTransition>,
         initial_state: i32,
     ) -> Result<Self, String> {
@@ -65,7 +65,7 @@ impl MM {
             ));
         }
 
-        let mut map: HashMap<(i32, char), (i32, char)> = HashMap::new();
+        let mut map: HashMap<(i32, String), (i32, String)> = HashMap::new();
         for t in &transitions {
             if !states.contains(&t.from) {
                 return Err(format!(
@@ -91,7 +91,10 @@ impl MM {
                     t.output
                 ));
             }
-            if map.insert((t.from, t.input), (t.to, t.output)).is_some() {
+            if map
+                .insert((t.from, t.input.clone()), (t.to, t.output.clone()))
+                .is_some()
+            {
                 return Err(format!(
                     "Повторяющийся переход из состояния '{}' по символу '{}' — машина Мили должна быть детерминированной",
                     t.from, t.input
@@ -116,11 +119,11 @@ impl MM {
         &self.states
     }
 
-    pub fn input_alphabet(&self) -> &HashSet<char> {
+    pub fn input_alphabet(&self) -> &HashSet<String> {
         &self.input_alphabet
     }
 
-    pub fn output_alphabet(&self) -> &HashSet<char> {
+    pub fn output_alphabet(&self) -> &HashSet<String> {
         &self.output_alphabet
     }
 
@@ -128,33 +131,33 @@ impl MM {
         self.initial_state
     }
 
-    pub fn transitions(&self) -> &HashMap<(i32, char), (i32, char)> {
+    pub fn transitions(&self) -> &HashMap<(i32, String), (i32, String)> {
         &self.transitions
     }
 
     /// Целевое состояние и выходной символ для одного шага чтения; `None`, если у
     /// машины нет перехода для этой пары `(state, input)`.
-    pub fn step(&self, from: i32, input: char) -> Option<(i32, char)> {
-        self.transitions.get(&(from, input)).copied()
+    pub fn step(&self, from: i32, input: &str) -> Option<(i32, String)> {
+        self.transitions.get(&(from, input.to_string())).cloned()
     }
 
     /// Читает `input` из начального состояния, выдавая по одному выходному символу
     /// на переход. Останавливается, как только для пары `(state, input)` нет
     /// перехода (частичный прогон). Возвращает трассу и полученную выходную строку.
-    pub fn run(&self, input: &[char]) -> (Vec<MealyRunStep>, String) {
+    pub fn run(&self, input: &[String]) -> (Vec<MealyRunStep>, String) {
         let mut steps: Vec<MealyRunStep> = Vec::new();
         let mut output = String::new();
         let mut state = self.initial_state;
-        for &symbol in input {
+        for symbol in input {
             match self.step(state, symbol) {
                 Some((to, out)) => {
                     steps.push(MealyRunStep {
                         from: state,
-                        symbol,
+                        symbol: symbol.clone(),
                         to,
-                        output: out,
+                        output: out.clone(),
                     });
-                    output.push(out);
+                    output.push_str(&out);
                     state = to;
                 }
                 None => break,
@@ -172,8 +175,8 @@ impl MM {
 #[derive(Debug, Default, Clone)]
 pub struct MealyBuilder {
     states: HashSet<i32>,
-    input_alphabet: HashSet<char>,
-    output_alphabet: HashSet<char>,
+    input_alphabet: HashSet<String>,
+    output_alphabet: HashSet<String>,
     transitions: Vec<MealyTransition>,
     initial_state: Option<i32>,
 }
@@ -196,26 +199,26 @@ impl MealyBuilder {
         self
     }
 
-    pub fn input(mut self, symbol: char) -> Self {
-        self.input_alphabet.insert(symbol);
+    pub fn input<S: Into<String>>(mut self, symbol: S) -> Self {
+        self.input_alphabet.insert(symbol.into());
         self
     }
 
-    pub fn inputs(mut self, symbols: &[char]) -> Self {
-        for &symbol in symbols {
-            self.input_alphabet.insert(symbol);
+    pub fn inputs<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+        for symbol in symbols {
+            self.input_alphabet.insert(symbol.clone().into());
         }
         self
     }
 
-    pub fn output(mut self, symbol: char) -> Self {
-        self.output_alphabet.insert(symbol);
+    pub fn output<S: Into<String>>(mut self, symbol: S) -> Self {
+        self.output_alphabet.insert(symbol.into());
         self
     }
 
-    pub fn outputs(mut self, symbols: &[char]) -> Self {
-        for &symbol in symbols {
-            self.output_alphabet.insert(symbol);
+    pub fn outputs<S: Into<String> + Clone>(mut self, symbols: &[S]) -> Self {
+        for symbol in symbols {
+            self.output_alphabet.insert(symbol.clone().into());
         }
         self
     }
@@ -226,13 +229,19 @@ impl MealyBuilder {
         self
     }
 
-    pub fn transition(mut self, from: i32, input: char, to: i32, output: char) -> Self {
+    pub fn transition<I: Into<String>, O: Into<String>>(
+        mut self,
+        from: i32,
+        input: I,
+        to: i32,
+        output: O,
+    ) -> Self {
         self.states.insert(from);
         self.states.insert(to);
-        self.input_alphabet.insert(input);
-        self.output_alphabet.insert(output);
-        self.transitions
-            .push(MealyTransition::new(from, input, to, output));
+        let transition = MealyTransition::new(from, input, to, output);
+        self.input_alphabet.insert(transition.input.clone());
+        self.output_alphabet.insert(transition.output.clone());
+        self.transitions.push(transition);
         self
     }
 

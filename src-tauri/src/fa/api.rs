@@ -5,7 +5,7 @@ use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
     StateData, StateResult, StatusResult, TransitionData, TransitionResult,
-    alphabet_from_transitions,
+    alphabet_from_transitions, one_symbol,
 };
 use crate::fa::types::{EPSILON, FA, FABuilder};
 
@@ -173,8 +173,23 @@ pub fn fa_add_transition(
     automaton_id: i32,
     from: i32,
     to: i32,
-    symbols: Vec<char>,
+    symbols: Vec<String>,
 ) -> TransitionResult {
+    let symbols = match symbols
+        .iter()
+        .map(|s| one_symbol(s, "Символ перехода"))
+        .collect::<Result<Vec<_>, _>>()
+    {
+        Ok(symbols) => symbols,
+        Err(message) => {
+            return TransitionResult {
+                status: StatusCode::BAD_REQUEST,
+                message,
+                transition: vec![],
+            };
+        }
+    };
+
     let added = match state.modify(automaton_id, |entry| {
         if !entry.states.iter().any(|s| s.id == from) {
             return Err(format!("Состояние {} не существует", from));
@@ -185,20 +200,20 @@ pub fn fa_add_transition(
 
         // Сначала проверяем весь пакет символов, чтобы при конфликте не оставить
         // частично добавленные переходы (семантика «всё или ничего»).
-        let mut planned: Vec<char> = Vec::with_capacity(symbols.len());
-        for &symbol in &symbols {
-            let duplicate = planned.contains(&symbol)
+        let mut planned: Vec<String> = Vec::with_capacity(symbols.len());
+        for symbol in &symbols {
+            let duplicate = planned.contains(symbol)
                 || entry
                     .transitions
                     .iter()
-                    .any(|t| t.from == from && t.to == to && t.symbol == symbol);
+                    .any(|t| t.from == from && t.to == to && t.symbol == *symbol);
             if duplicate {
                 return Err(format!(
                     "Переход {} -> {} по '{}' уже существует",
                     from, to, symbol
                 ));
             }
-            planned.push(symbol);
+            planned.push(symbol.clone());
         }
 
         let mut added: Vec<TransitionData> = Vec::with_capacity(planned.len());
@@ -250,8 +265,22 @@ pub fn fa_update_transition(
     transition_id: i32,
     new_from: Option<i32>,
     new_to: Option<i32>,
-    new_symbol: Option<char>,
+    new_symbol: Option<String>,
 ) -> TransitionResult {
+    let new_symbol = match new_symbol
+        .map(|s| one_symbol(&s, "Символ перехода"))
+        .transpose()
+    {
+        Ok(symbol) => symbol,
+        Err(message) => {
+            return TransitionResult {
+                status: StatusCode::BAD_REQUEST,
+                message,
+                transition: vec![],
+            };
+        }
+    };
+
     let updated = match state.modify(automaton_id, |entry| {
         let idx = entry
             .transitions
@@ -347,10 +376,10 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
 /// Возвращает все трейсы, включая тупиковые; статус 200 выставляется, если
 /// принята хотя бы одна ветвь.
 pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
-    let chars: Vec<char> = input.chars().collect();
+    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
     match data_to_fa(&entry.states, &entry.transitions) {
         Ok(fa) => {
-            let (mut traces, accepted) = fa.run_partial(&chars);
+            let (mut traces, accepted) = fa.run_partial(&symbols);
             // Упорядочиваем историю так, чтобы допускающие потоки чтения (isFinal) шли
             // раньше отвергнутых.
             traces.sort_by_key(|t| !t.isFinal);
@@ -370,7 +399,7 @@ pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
                         "Цепочка '{}' принята частично (обработано {} из {} символов)",
                         input,
                         processed_len,
-                        chars.len()
+                        symbols.len()
                     ),
                 )
             } else {
@@ -459,8 +488,8 @@ pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) 
 /// финальном состоянии), и сколько символов прочитано корректно (учитываются
 /// только шаги, отличные от `$`).
 pub(crate) fn test_line(fa: &FA, input: &str) -> (bool, usize) {
-    let chars: Vec<char> = input.chars().collect();
-    let (traces, accepted) = fa.run_partial(&chars);
+    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
+    let (traces, accepted) = fa.run_partial(&symbols);
     let correct_symbols = traces
         .iter()
         .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
@@ -499,7 +528,7 @@ pub(crate) fn data_to_fa(
         if trans.symbol == EPSILON {
             builder = builder.epsilon(trans.from, trans.to);
         } else {
-            builder = builder.transition(trans.from, trans.symbol, trans.to);
+            builder = builder.transition(trans.from, trans.symbol.clone(), trans.to);
         }
     }
 

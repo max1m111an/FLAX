@@ -245,22 +245,13 @@ pub fn transition_output(node: Node) -> String {
         .unwrap_or_default()
 }
 
-/// Единственный символ `text`. `what` описывает поле в сообщении об ошибке.
-pub fn one_char(text: &str, what: &str) -> Result<char, String> {
-    let mut chars = text.chars();
-    match (chars.next(), chars.next()) {
-        (Some(c), None) => Ok(c),
-        _ => Err(format!("{} '{}' должен быть одним символом", what, text)),
-    }
-}
-
 /// Обходит `<transition>`-потомков `<automaton>` и собирает
 /// [`TransitionData`]: `<from>`/`<to>` и идентификаторы общие, а символ и
 /// необязательный выход определяет замыкание `read`, получающее узел перехода
 /// и обрезанный текст `<read>`.
 pub fn parse_transitions<F>(automaton: Node, mut read: F) -> Result<Vec<TransitionData>, String>
 where
-    F: FnMut(Node, &str) -> Result<(char, Option<char>), String>,
+    F: FnMut(Node, &str) -> Result<(String, Option<String>), String>,
 {
     let mut used: HashSet<i32> = HashSet::new();
     let mut transitions: Vec<TransitionData> = Vec::new();

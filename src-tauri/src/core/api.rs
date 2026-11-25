@@ -347,14 +347,14 @@ pub(crate) fn check_automaton_generate_inputs(
 
 /// Символы вне входного алфавита для негативных тестов. Сначала цифры, затем
 /// буквы; `eps` включается всегда, чтобы проверить отказ от `$` как входа.
-fn outside_alphabet_symbols(alphabet: &HashSet<char>) -> Vec<char> {
+fn outside_alphabet_symbols(alphabet: &HashSet<String>) -> Vec<String> {
     let mut out = Vec::new();
-    let preferred: Vec<char> = (b'0'..=b'9')
+    let preferred: Vec<String> = (b'0'..=b'9')
         .chain(b'a'..=b'z')
         .chain(b'A'..=b'Z')
-        .map(|b| b as char)
+        .map(|b| (b as char).to_string())
         .collect();
-    let mut candidates: Vec<char> = vec!['0', '4', EPSILON];
+    let mut candidates: Vec<String> = vec!["0".to_string(), "4".to_string(), EPSILON.to_string()];
     candidates.extend(preferred);
     for c in candidates {
         if !alphabet.contains(&c) && !out.contains(&c) {
@@ -371,20 +371,20 @@ fn outside_alphabet_symbols(alphabet: &HashSet<char>) -> Vec<char> {
 /// графе переходов. Поиск в ширину гарантирует минимальную длину цикла.
 fn shortest_cycle(
     start: i32,
-    transitions: &HashMap<(i32, char), i32>,
-    alphabet: &[char],
+    transitions: &HashMap<(i32, String), i32>,
+    alphabet: &[String],
     depth: usize,
 ) -> Option<String> {
     let mut queue: VecDeque<(i32, String, usize)> = VecDeque::new();
     let mut visited: HashSet<i32> = HashSet::new();
 
-    for &ch in alphabet {
-        if let Some(&to) = transitions.get(&(start, ch)) {
+    for ch in alphabet {
+        if let Some(&to) = transitions.get(&(start, ch.clone())) {
             if to == start {
-                return Some(ch.to_string());
+                return Some(ch.clone());
             }
             if visited.insert(to) {
-                queue.push_back((to, ch.to_string(), 1));
+                queue.push_back((to, ch.clone(), 1));
             }
         }
     }
@@ -393,16 +393,16 @@ fn shortest_cycle(
         if len >= depth {
             continue;
         }
-        for &ch in alphabet {
-            if let Some(&to) = transitions.get(&(state, ch)) {
+        for ch in alphabet {
+            if let Some(&to) = transitions.get(&(state, ch.clone())) {
                 if to == start {
                     let mut cycle = path;
-                    cycle.push(ch);
+                    cycle.push_str(ch);
                     return Some(cycle);
                 }
                 if visited.insert(to) {
                     let mut next = path.clone();
-                    next.push(ch);
+                    next.push_str(ch);
                     queue.push_back((to, next, len + 1));
                 }
             }
@@ -430,22 +430,22 @@ pub(crate) fn generate_test_inputs_deterministic(
         .ok_or_else(|| "Начальное состояние не задано".to_string())?
         .id;
     let alphabet = alphabet_from_transitions(&entry.transitions);
-    let alphabet_set: HashSet<char> = alphabet.iter().copied().collect();
+    let alphabet_set: HashSet<String> = alphabet.iter().cloned().collect();
     let state_ids: HashSet<i32> = entry.states.iter().map(|s| s.id).collect();
 
     // Осиротевшие переходы и `$` игнорируются: это не корректные входы машины.
-    let mut transitions: HashMap<(i32, char), i32> = HashMap::new();
-    let mut output_transitions: HashMap<char, Vec<(i32, char)>> = HashMap::new();
+    let mut transitions: HashMap<(i32, String), i32> = HashMap::new();
+    let mut output_transitions: HashMap<String, Vec<(i32, String)>> = HashMap::new();
     for t in &entry.transitions {
         if t.symbol == EPSILON || !state_ids.contains(&t.from) || !state_ids.contains(&t.to) {
             continue;
         }
-        transitions.insert((t.from, t.symbol), t.to);
-        if let Some(output) = t.output {
+        transitions.insert((t.from, t.symbol.clone()), t.to);
+        if let Some(output) = &t.output {
             output_transitions
-                .entry(output)
+                .entry(output.clone())
                 .or_default()
-                .push((t.from, t.symbol));
+                .push((t.from, t.symbol.clone()));
         }
     }
 
@@ -459,11 +459,11 @@ pub(crate) fn generate_test_inputs_deterministic(
         if path.chars().count() >= depth {
             continue;
         }
-        for &ch in &alphabet {
-            if let Some(&to) = transitions.get(&(state, ch)) {
+        for ch in &alphabet {
+            if let Some(&to) = transitions.get(&(state, ch.clone())) {
                 if !dist.contains_key(&to) {
                     let mut next = path.clone();
-                    next.push(ch);
+                    next.push_str(ch);
                     dist.insert(to, next);
                     queue.push_back(to);
                 }
@@ -479,8 +479,8 @@ pub(crate) fn generate_test_inputs_deterministic(
     // коротких вариантов и маленьком `cap`.
     let mut priority: HashSet<String> = HashSet::new();
     result.insert(String::new());
-    for &ch in &alphabet {
-        result.insert(ch.to_string());
+    for ch in &alphabet {
+        result.insert(ch.clone());
     }
     // `$` недопустим как переход машины Мили, но должен присутствовать как
     // негативный тестовый вход.
@@ -497,7 +497,7 @@ pub(crate) fn generate_test_inputs_deterministic(
     for ((from, symbol), _) in &transitions {
         if let Some(path) = dist.get(from) {
             let mut activated = path.clone();
-            activated.push(*symbol);
+            activated.push_str(symbol);
             result.insert(activated);
         }
     }
@@ -515,7 +515,7 @@ pub(crate) fn generate_test_inputs_deterministic(
             });
         if let Some((from, symbol)) = best {
             let mut path = dist.get(from).cloned().unwrap_or_default();
-            path.push(*symbol);
+            path.push_str(symbol);
             result.insert(path);
         }
     }
@@ -526,10 +526,10 @@ pub(crate) fn generate_test_inputs_deterministic(
     dead_end_states.truncate(8);
     for state in dead_end_states {
         let path = dist.get(&state).cloned().unwrap_or_default();
-        for &ch in &alphabet {
-            if !transitions.contains_key(&(state, ch)) {
+        for ch in &alphabet {
+            if !transitions.contains_key(&(state, ch.clone())) {
                 let mut stuck = path.clone();
-                stuck.push(ch);
+                stuck.push_str(ch);
                 result.insert(stuck);
             }
         }
@@ -547,8 +547,8 @@ pub(crate) fn generate_test_inputs_deterministic(
         .or_else(|| bases.first());
     let invalid = outside
         .iter()
-        .find(|c| **c != EPSILON)
-        .map(|c| c.to_string())
+        .find(|c| c.as_str() != EPSILON)
+        .cloned()
         .unwrap_or_else(|| EPSILON.to_string());
     if let Some(base) = base {
         result.insert(format!("{}{}", invalid, base));

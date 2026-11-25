@@ -7,7 +7,7 @@ use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult,
     MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
-    TransitionResult,
+    TransitionResult, one_symbol,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
@@ -38,13 +38,15 @@ pub(crate) fn create_new_mealy(state: &AutomatonStore, name: Option<String>) -> 
 /// Валидация выполняется до любых изменений, поэтому при `Err` запись не
 /// меняется. Алфавит выводится из переходов (`AutomatonData::get_alphabet`),
 /// поэтому здесь он не поддерживается.
-pub(crate) fn add_mealy_transition(
+pub(crate) fn add_mealy_transition<I: Into<String>, O: Into<String>>(
     entry: &mut AutomatonData,
     from: i32,
     to: i32,
-    input: char,
-    output: char,
+    input: I,
+    output: O,
 ) -> Result<TransitionData, String> {
+    let input = one_symbol(&input.into(), "Входной символ перехода")?;
+    let output = one_symbol(&output.into(), "Выходной символ перехода")?;
     if !entry.states.iter().any(|s| s.id == from) {
         return Err(format!("Состояние {} не существует", from));
     }
@@ -88,8 +90,8 @@ pub(crate) fn add_mealy_transition(
 pub(crate) fn update_mealy_transition(
     entry: &mut AutomatonData,
     transition_id: i32,
-    input: Option<char>,
-    output: Option<char>,
+    input: Option<String>,
+    output: Option<String>,
 ) -> Result<TransitionData, String> {
     let idx = entry
         .transitions
@@ -99,6 +101,13 @@ pub(crate) fn update_mealy_transition(
 
     let mut updated = entry.transitions[idx].clone();
 
+    let input = input
+        .map(|s| one_symbol(&s, "Входной символ перехода"))
+        .transpose()?;
+    let output = output
+        .map(|s| one_symbol(&s, "Выходной символ перехода"))
+        .transpose()?;
+
     if let Some(symbol) = input {
         updated.symbol = symbol;
     }
@@ -106,7 +115,7 @@ pub(crate) fn update_mealy_transition(
         updated.output = Some(symbol);
     }
 
-    if updated.symbol == EPSILON || updated.output == Some(EPSILON) {
+    if updated.symbol == EPSILON || updated.output.as_deref() == Some(EPSILON) {
         return Err("Машина Мили не поддерживает eps-переходы".to_string());
     }
     if entry
@@ -173,8 +182,9 @@ pub(crate) fn data_to_mm(
         }
         let output = trans
             .output
+            .clone()
             .ok_or_else(|| format!("Переход {} не имеет выходного символа", trans.id))?;
-        builder = builder.transition(trans.from, trans.symbol, trans.to, output);
+        builder = builder.transition(trans.from, trans.symbol.clone(), trans.to, output);
     }
 
     builder.build()
@@ -197,10 +207,10 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
         }
     };
 
-    let chars: Vec<char> = input.chars().collect();
-    let (steps, output) = mm.run(&chars);
+    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
+    let (steps, output) = mm.run(&symbols);
     let processed = steps.len();
-    let total = chars.len();
+    let total = symbols.len();
 
     let (status, message) = if processed == total {
         (
@@ -236,12 +246,12 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
 /// сама машина некорректна.
 pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
-        let chars: Vec<char> = line.chars().collect();
-        let (steps, output) = mm.run(&chars);
+        let symbols: Vec<String> = line.chars().map(|c| c.to_string()).collect();
+        let (steps, output) = mm.run(&symbols);
         MealyLineTest {
             line: line.to_string(),
             output,
-            isComplete: steps.len() == chars.len(),
+            isComplete: steps.len() == symbols.len(),
         }
     }) {
         Ok(results) => MealyMultiRunResult {
@@ -310,11 +320,11 @@ pub fn mealy_add_transition(
     automaton_id: i32,
     from: i32,
     to: i32,
-    input: char,
-    output: char,
+    input: String,
+    output: String,
 ) -> TransitionResult {
     match state.modify(automaton_id, |entry| {
-        add_mealy_transition(entry, from, to, input, output)
+        add_mealy_transition(entry, from, to, input.clone(), output.clone())
     }) {
         Some(Ok(created)) => TransitionResult {
             status: StatusCode::OK,
@@ -342,8 +352,8 @@ pub fn mealy_update_transition(
     state: State<'_, AutomatonStore>,
     automaton_id: i32,
     transition_id: i32,
-    input: Option<char>,
-    output: Option<char>,
+    input: Option<String>,
+    output: Option<String>,
 ) -> TransitionResult {
     match state.modify(automaton_id, |entry| {
         update_mealy_transition(entry, transition_id, input, output)
