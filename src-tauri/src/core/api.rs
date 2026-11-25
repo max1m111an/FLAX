@@ -529,3 +529,9 @@ pub fn remove_automaton(
             message: format!("Автомат с id {} не найден", automaton_id),
         })
 }
+
+/// Регистрирует общие Tauri-команды ядра: загрузку и сохранение файла.
+pub(crate) fn handler(invoke: tauri::ipc::Invoke) -> bool {
+    let router: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![load_file, save_file];
+    router(invoke)
+}

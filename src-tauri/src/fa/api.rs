@@ -437,3 +437,21 @@ pub(crate) fn data_to_fa(
 
     builder.build()
 }
+
+/// Регистрирует Tauri-команды конечных автоматов.
+pub(crate) fn handler(invoke: tauri::ipc::Invoke) -> bool {
+    let router: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![
+        fa_create_new,
+        fa_add_state,
+        fa_update_state,
+        fa_remove_state,
+        fa_add_transition,
+        fa_update_transition,
+        fa_remove_transition,
+        fa_run_str,
+        fa_multi_run_str,
+        fa_generate_inputs,
+        fa_remove_automaton,
+    ];
+    router(invoke)
+}

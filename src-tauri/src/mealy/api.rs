@@ -378,3 +378,21 @@ pub fn mealy_remove_automaton(
 ) -> Result<(), Response> {
     crate::core::api::remove_automaton(state, automaton_id)
 }
+
+/// Регистрирует Tauri-команды машины Мили.
+pub(crate) fn handler(invoke: tauri::ipc::Invoke) -> bool {
+    let router: fn(tauri::ipc::Invoke) -> bool = tauri::generate_handler![
+        mealy_create_new,
+        mealy_add_state,
+        mealy_update_state,
+        mealy_remove_state,
+        mealy_add_transition,
+        mealy_update_transition,
+        mealy_remove_transition,
+        mealy_remove_automaton,
+        mealy_run_str,
+        mealy_multi_run,
+        mealy_generate_inputs,
+    ];
+    router(invoke)
+}

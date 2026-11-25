@@ -119,9 +119,10 @@ impl FA {
     /// структура может прогоняться любым способом.
     pub fn is_deterministic(&self) -> bool {
         !self.alphabet.contains(&EPSILON)
-            && self.transitions.iter().all(|((_, symbol), targets)| {
-                *symbol != EPSILON && targets.len() == 1
-            })
+            && self
+                .transitions
+                .iter()
+                .all(|((_, symbol), targets)| *symbol != EPSILON && targets.len() == 1)
     }
 
     pub fn run(&self, input: &[char]) -> Option<Vec<RunStep>> {
