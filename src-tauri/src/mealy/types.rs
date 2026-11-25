@@ -3,13 +3,15 @@
 //!
 //! Выход принадлежит переходу (а не состоянию), поэтому у машины нет ни
 //! допускающих состояний, ни eps-переходов: она задаётся набором
-//! `(состояния, входной алфавит, выходной алфавит, переходы, начальное состояние)`
-//! и детерминирована — для каждой пары `(state, input)` есть не более одного
-//! перехода.
+//! `(состояния, входной алфавит, выходной алфавит, переходы, начальное состояние)`.
+//! Входная и выходная метки перехода читаются/выдаются целиком, как в JFLAP:
+//! переход с меткой `123` поглощает три символа за один шаг. При нескольких
+//! совпадающих метках используется самая длинная, поэтому машина остаётся
+//! детерминированной.
 
 use std::collections::{HashMap, HashSet};
 
-use crate::core::types::MealyRunStep;
+use crate::core::types::{MealyRunStep, match_label};
 
 /// Один переход машины Мили: в состоянии `from`, прочитав `input`, перейти в
 /// `to` и выдать `output`.
@@ -136,32 +138,62 @@ impl MM {
     }
 
     /// Целевое состояние и выходной символ для одного шага чтения; `None`, если у
-    /// машины нет перехода для этой пары `(state, input)`.
+    /// машины нет перехода с точно такой входной меткой.
     pub fn step(&self, from: i32, input: &str) -> Option<(i32, String)> {
         self.transitions.get(&(from, input.to_string())).cloned()
     }
 
-    /// Читает `input` из начального состояния, выдавая по одному выходному символу
-    /// на переход. Останавливается, как только для пары `(state, input)` нет
-    /// перехода (частичный прогон). Возвращает трассу и полученную выходную строку.
+    /// Ищет из `from` переход, чья входная метка целиком совпадает с фрагментом
+    /// входа начиная с `pos`. При нескольких совпадениях берётся самая длинная
+    /// метка, поэтому машина остаётся детерминированной. Возвращает метку,
+    /// целевое состояние, выход и позицию после прочитанного фрагмента.
+    pub fn step_at(
+        &self,
+        from: i32,
+        input: &[String],
+        pos: usize,
+    ) -> Option<(String, i32, String, usize)> {
+        let mut best: Option<(usize, &String, &i32, &String)> = None;
+        for ((state, label), (to, out)) in &self.transitions {
+            if *state != from {
+                continue;
+            }
+            let Some(next_pos) = match_label(input, pos, label) else {
+                continue;
+            };
+            let len = next_pos - pos;
+            if best
+                .as_ref()
+                .is_none_or(|(best_len, _, _, _)| len > *best_len)
+            {
+                best = Some((len, label, to, out));
+            }
+        }
+        best.map(|(len, label, to, out)| (label.clone(), *to, out.clone(), pos + len))
+    }
+
+    /// Читает `input` из начального состояния: каждый переход поглощает свою
+    /// входную метку целиком и выдаёт выходную строку целиком. Останавливается,
+    /// как только в текущей позиции нет подходящего перехода (частичный прогон).
+    /// Возвращает трассу и полученную выходную строку.
     pub fn run(&self, input: &[String]) -> (Vec<MealyRunStep>, String) {
         let mut steps: Vec<MealyRunStep> = Vec::new();
         let mut output = String::new();
         let mut state = self.initial_state;
-        for symbol in input {
-            match self.step(state, symbol) {
-                Some((to, out)) => {
-                    steps.push(MealyRunStep {
-                        from: state,
-                        symbol: symbol.clone(),
-                        to,
-                        output: out.clone(),
-                    });
-                    output.push_str(&out);
-                    state = to;
-                }
-                None => break,
-            }
+        let mut pos = 0;
+        while pos < input.len() {
+            let Some((label, to, out, next_pos)) = self.step_at(state, input, pos) else {
+                break;
+            };
+            steps.push(MealyRunStep {
+                from: state,
+                symbol: label,
+                to,
+                output: out.clone(),
+            });
+            output.push_str(&out);
+            state = to;
+            pos = next_pos;
         }
         (steps, output)
     }

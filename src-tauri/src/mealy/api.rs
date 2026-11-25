@@ -6,8 +6,8 @@ use crate::core::api::{check_automaton_mealy_multi_run, check_automaton_mealy_ru
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, AutomatonType, GenerateInputsResult, MealyLineTest, MealyMultiRunResult,
-    MealyRunResult, OperationResult, StateData, StateResult, StatusResult, TransitionData,
-    TransitionResult, one_symbol,
+    MealyRunResult, MealyRunStep, OperationResult, StateData, StateResult, StatusResult,
+    TransitionData, TransitionResult, check_label,
 };
 use crate::fa::types::EPSILON;
 use crate::mealy::types::MealyBuilder;
@@ -45,8 +45,8 @@ pub(crate) fn add_mealy_transition(
     input: String,
     output: String,
 ) -> Result<TransitionData, String> {
-    let input = one_symbol(&input, "Входной символ перехода")?;
-    let output = one_symbol(&output, "Выходной символ перехода")?;
+    let input = check_label(&input, "Входная метка перехода")?;
+    let output = check_label(&output, "Выходная метка перехода")?;
     if !entry.states.iter().any(|s| s.id == from) {
         return Err(format!("Состояние {} не существует", from));
     }
@@ -102,10 +102,10 @@ pub(crate) fn update_mealy_transition(
     let mut updated = entry.transitions[idx].clone();
 
     let input = input
-        .map(|s| one_symbol(&s, "Входной символ перехода"))
+        .map(|s| check_label(&s, "Входная метка перехода"))
         .transpose()?;
     let output = output
-        .map(|s| one_symbol(&s, "Выходной символ перехода"))
+        .map(|s| check_label(&s, "Выходная метка перехода"))
         .transpose()?;
 
     if let Some(symbol) = input {
@@ -190,10 +190,16 @@ pub(crate) fn data_to_mm(
     builder.build()
 }
 
+/// Считает число входных символов, поглощённых шагами трассы: метка
+/// перехода может содержать несколько символов.
+fn consumed_steps_len(steps: &[MealyRunStep]) -> usize {
+    steps.iter().map(|step| step.symbol.chars().count()).sum()
+}
+
 /// Прогоняет цепочку на машине Мили. У машины Мили нет допускающих состояний:
 /// она либо обрабатывает весь вход (статус `200` с полученным выходом), либо
-/// останавливается на первой паре `(state, input)` без перехода (`401`, если
-/// часть символов обработана, `402`, если ни одного).
+/// останавливается в позиции, где нет перехода с подходящей входной меткой
+/// (`401`, если часть символов обработана, `402`, если ни одного).
 pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
     let mm = match data_to_mm(&entry.states, &entry.transitions) {
         Ok(mm) => mm,
@@ -207,10 +213,10 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
         }
     };
 
-    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
-    let (steps, output) = mm.run(&symbols);
-    let processed = steps.len();
-    let total = symbols.len();
+    let chars: Vec<String> = input.chars().map(|c| c.to_string()).collect();
+    let (steps, output) = mm.run(&chars);
+    let processed = consumed_steps_len(&steps);
+    let total = chars.len();
 
     let (status, message) = if processed == total {
         (
@@ -246,12 +252,12 @@ pub(crate) fn run_mealy(entry: &AutomatonData, input: &str) -> MealyRunResult {
 /// сама машина некорректна.
 pub(crate) fn multi_run_mealy(entry: &AutomatonData, inputs: &[String]) -> MealyMultiRunResult {
     match crate::core::api::multi_run_automaton(entry, inputs, data_to_mm, |mm, line| {
-        let symbols: Vec<String> = line.chars().map(|c| c.to_string()).collect();
-        let (steps, output) = mm.run(&symbols);
+        let chars: Vec<String> = line.chars().map(|c| c.to_string()).collect();
+        let (steps, output) = mm.run(&chars);
         MealyLineTest {
             line: line.to_string(),
             output,
-            isComplete: steps.len() == symbols.len(),
+            isComplete: consumed_steps_len(&steps) == chars.len(),
         }
     }) {
         Ok(results) => MealyMultiRunResult {

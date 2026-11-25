@@ -23,8 +23,9 @@
 
 - **Рабочая директория агента — `src-tauri/`.** Изменять можно только файлы внутри неё.
 - Если задача затрагивает файлы **вне** `src-tauri/` (фронтенд `../src`, в частности
-  `../src/api/faAPI.ts`, `../src/api/MealyAPI.ts`, `../src/api/jffAPI.ts`; `../package.json`,
-  `../Makefile`, `../scripts/`, `../.github/` и т. д.), агент **обязан явно упомянуть**,
+  `../src/api/faCommands.ts`, `../src/api/mealyCommands.ts`, `../src/services/faService.ts`,
+  `../src/services/mealyService.ts`, `../src/types/api/*.ts`, `../src/hooks/useTesting.tsx`;
+  `../package.json`, `../Makefile`, `../scripts/`, `../.github/` и т. д.), агент **обязан явно упомянуть**,
   какие файлы и как нужно изменить, **но не изменять их**.
 - Типичный случай: изменение сигнатуры Tauri-команды или DTO ломает контракт с
   фронтендом — агент должен перечислить затронутые вызовы `invoke(...)` во фронтенде.
@@ -102,7 +103,8 @@ src-tauri/
 
 - **`core::types`** — контракт данных с фронтендом (serde DTO), трейты `Automaton` /
   `NondeterministicAutomaton`, реестр `AutomatonStore`, константа `EPSILON: &str = "$"`,
-  функции `one_symbol` (проверка строки на один символ) и `alphabet_from_transitions`.
+  функции `check_label` (проверка непустой метки), `match_label` (совпадение метки
+  целиком с фрагментом входа) и `alphabet_from_transitions`.
 - **`core::api`**:
   - `MAX_ID = 10_000_000`; `generate_id(used: &HashSet<i32>) -> i32` — случайный уникальный id в `1..=MAX_ID`;
   - команды `load_file`, `save_file`; `handler` регистрирует их в диспетчере `api`;
@@ -121,33 +123,47 @@ src-tauri/
 
 ### 5.3. `fa` — конечные автоматы (ДКА/НКА, eps-переходы)
 - **`fa::types`** — `FA`, `FABuilder` (см. раздел 6), константа `MAX_THREADS = 1_000_000`
-  (ограничение числа параллельных «потоков» при моделировании НКА).
-  Ключевые методы `FA`: `new`, `builder`, `get_transitions`, `reachable_states`, `is_empty`,
-  `is_deterministic`, `run(input) -> Option<Vec<RunStep>>` (поиск допускающего пути),
+  (ограничение числа параллельных «потоков» при моделировании НКА), тип `Thread`
+  `(история шагов, состояние, позиция во входе)` — позиция хранится в ветви, так как
+  метка может читать несколько символов.
+  Ключевые методы `FA`: `new`, `builder`, `get_transitions`, `matching_transitions`
+  (метки, совпадающие со входом в позиции `pos`, длиннее — первыми), `reachable_states`,
+  `is_empty`, `is_deterministic` (нет eps, нет дублей меток и префиксных пар),
+  `run(input) -> Option<Vec<RunStep>>` (поиск допускающего пути),
   `run_partial(input) -> (Vec<Trace>, bool)` (параллельное моделирование в стиле JFLAP
-  с записью eps-шагов `$`), `generate_test_inputs(cap, depth) -> Vec<String>`.
+  с записью eps-шагов `$`; метка читается целиком), `generate_test_inputs(cap, depth) -> Vec<String>`.
   Реализует трейты `Automaton` и `NondeterministicAutomaton`.
 - **`fa::api`** — Tauri-команды `fa_*` (раздел 7.2) и хелперы:
-  `handler` регистрирует команды домена в диспетчере, `data_to_fa(states, transitions) -> Result<FA, String>`
-  (DTO → `FA`, переходы с несуществующими состояниями игнорируются),
-  `test_line(fa, input) -> (bool, usize)`, `multi_run_fa(entry, inputs) -> MultiRunResult`.
+  `handler` регистрирует команды домена в диспетчере, `add_fa_transitions(entry, from, to, symbols)`
+  (валидация до мутации, по одному переходу на целую метку),
+  `data_to_fa(states, transitions) -> Result<FA, String>`
+  (DTO → `FA`, переходы с несуществующими состояниями игнорируются, `isFinal = None` → `false`),
+  `consumed_steps_len(steps)` (число прочитанных входных символов по шагам трассы),
+  `run_fa_line(entry, input) -> RunResult`, `test_line(fa, input) -> (bool, usize)`,
+  `multi_run_fa(entry, inputs) -> MultiRunResult`.
 - **`fa::jff`** — `to_jff(data) -> String`, `parse_automaton(root) -> Result<JffAutomaton, String>`
-  (пустой/отсутствующий `<read>` = eps `$`), `is_deterministic(states, transitions) -> bool`.
+  (непустой `<read>` — целая метка; пустой/отсутствующий = eps `$`),
+  `is_deterministic(states, transitions) -> bool`.
 
 ### 5.4. `mealy` — машины Мили
 Детерминированный преобразователь: выход привязан к переходу; нет финальных состояний
 и eps-переходов; для каждой пары `(state, input)` — не более одного перехода.
+Входная и выходная метки перехода читаются/выдаются целиком (как в JFLAP); при
+нескольких совпадающих входных метках берётся самая длинная.
 - **`mealy::types`** — `MM`, `MealyTransition`, `MealyBuilder` (раздел 6).
   Методы `MM`: `new`, `builder`, `states`, `input_alphabet`, `output_alphabet`,
-  `initial_state`, `transitions`, `step(from, input: &str) -> Option<(i32, String)>`,
-  `run(input) -> (Vec<MealyRunStep>, String)` (останавливается на первом отсутствующем переходе).
+  `initial_state`, `transitions`, `step(from, input: &str) -> Option<(i32, String)>`
+  (точное совпадение метки), `step_at(from, input, pos) -> Option<(метка, to, output, next_pos)>`
+  (самая длинная совпадающая метка), `run(input) -> (Vec<MealyRunStep>, String)`
+  (останавливается в позиции без подходящего перехода; каждая метка поглощается целиком).
 - **`mealy::api`** — Tauri-команды `mealy_*` (раздел 7.3) и чистые (тестируемые без Tauri) хелперы:
   `handler` регистрирует команды домена в диспетчере, `create_new_mealy`, `add_mealy_transition`, `update_mealy_transition`,
   `remove_mealy_transition` (валидация до мутации — при `Err` сущность не меняется),
-  `data_to_mm`, `run_mealy`, `multi_run_mealy`.
+  `data_to_mm`, `consumed_steps_len` (счётчик прочитанных входных символов),
+  `run_mealy`, `multi_run_mealy`. Метки проверяются через `check_label`.
   Команды над состояниями делегируют в `fa::api` (состояния общие), передавая `is_final = None`.
-- **`mealy::jff`** — `to_jff` (`<type>mealy</type>`, вход в `<read>`, выход в `<transout>`,
-  `<final/>` не пишется), `parse_automaton`.
+- **`mealy::jff`** — `to_jff` (`<type>mealy</type>`, целая входная метка в `<read>`,
+  целая выходная метка в `<transout>`, `<final/>` не пишется), `parse_automaton`.
 
 ### 5.5. `api` — маршрутизация IPC-команд
 - **`api::route`** — чистая функция выбора домена по имени команды: `fa_*` → `Fa`,
@@ -171,7 +187,7 @@ src-tauri/
 | Структура | Поля |
 |---|---|
 | `StateData` | `id: i32`, `label: String`, `x: f32`, `y: f32`, `isInitial: bool`, `isFinal: Option<bool>` (не сериализуется при `None`; у Мили всегда `None`) |
-| `TransitionData` | `id: i32`, `from: i32`, `to: i32`, `symbol: String` (`"$"` = eps), `output: Option<String>` (только у Мили; обе строки — ровно один символ) |
+| `TransitionData` | `id: i32`, `from: i32`, `to: i32`, `symbol: String` (`"$"` = eps), `output: Option<String>` (только у Мили; обе строки — непустые метки произвольной длины, читаемые/выдаваемые целиком) |
 | `AutomatonType` (enum) | `FA` (default), `MEALY` |
 | `AutomatonData` | `id: i32`, `name: String`, `automatonType: AutomatonType`, `states: Vec<StateData>`, `transitions: Vec<TransitionData>`; метод `get_alphabet()` |
 | `RunStep` | `from`, `symbol`, `to` |
@@ -182,7 +198,8 @@ src-tauri/
 | `LoadedFile` (внутр., не serde) | `isAutomaton: bool`, `data: AutomatonData` |
 
 Алфавит **не хранится** отдельно: он всегда выводится из переходов
-(`alphabet_from_transitions` — уникальные не-eps символы в порядке появления).
+(`alphabet_from_transitions` — уникальные не-eps метки в порядке появления; метка —
+целиком читаемая переходом строка, а не один символ).
 
 ### 6.2. Ответы команд
 Во всех ответах `status` — HTTP-код (`tauri::http::StatusCode`, сериализуется числом
@@ -230,6 +247,21 @@ src-tauri/
 `JffAutomaton { states, transitions }`, `JffGrammar {}` (заглушка),
 `enum JffParsed { Automaton(AutomatonType, JffAutomaton), Grammar(JffGrammar) }`.
 
+### 6.6. Метки переходов (целое чтение)
+Метка перехода — произвольная непустая строка, которую переход читает **целиком**
+за один шаг (семантика JFLAP). Переход `q0 --123--> q1` допускает вход `123`, но не
+`1`, `12` и `1234`. Входная цепочка из команды по-прежнему разбивается на символы
+(`Vec<String>` по одному `char`), но границы шагов задаются метками.
+
+- Валидация меток — `check_label` (непустая строка); совпадение с позиции — `match_label`.
+- FA: все подходящие метки из состояния дают отдельные ветви; при поиске пути метки
+  сортируются по убыванию длины. Позиция чтения хранится в каждом потоке (`Thread`),
+  eps-переходы разворачиваются до и после каждого фрагмента. `is_deterministic`
+  дополнительно требует отсутствия пар меток, где одна — префикс другой.
+- Mealy: берётся самая длинная совпадающая входная метка (`step_at`); выходная метка
+  выдаётся целиком. Прогресс в сообщениях и `correctSymbols`/`isComplete` считается
+  в прочитанных входных символах, а не в числе шагов.
+
 ## 7. API (Tauri-команды)
 
 Фронтенд вызывает команды через `invoke("<имя>", { ... })`. Tauri преобразует
@@ -250,10 +282,10 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 | `fa_add_state` | `automaton_id`, `label?`, `x?`, `y?`, `is_initial?`, `is_final?` | `StateResult` | Добавляет состояние (метка по умолчанию `q<id>`) |
 | `fa_update_state` | `automaton_id`, `state_id`, `label?`, `x?`, `y?`, `is_initial?`, `is_final?` | `StateResult` | Частичное обновление |
 | `fa_remove_state` | `automaton_id`, `state_id` | `StatusResult` | Удаляет состояние и все связанные переходы |
-| `fa_add_transition` | `automaton_id`, `from`, `to`, `symbols: Vec<String>` | `TransitionResult` | По переходу на каждый символ; каждая строка должна быть одним символом; отклоняются только точные дубли `(from, to, symbol)`; `$` допустим |
+| `fa_add_transition` | `automaton_id`, `from`, `to`, `symbols: Vec<String>` | `TransitionResult` | По переходу на каждый элемент `symbols` как на целую метку (`["123"]` — один переход); пустые метки, неизвестные состояния и точные дубли `(from, to, symbol)` отклоняются; `$` допустим |
 | `fa_update_transition` | `automaton_id`, `transition_id`, `new_from?`, `new_to?`, `new_symbol?` | `TransitionResult` | Частичное обновление |
 | `fa_remove_transition` | `automaton_id`, `transition_id` | `StatusResult` | Удаление перехода |
-| `fa_run_str` | `automaton_id`, `input: String` | `RunResult` | Пошаговое моделирование (`run_partial`); трассы с `isFinal` первыми; 200/401/402 |
+| `fa_run_str` | `automaton_id`, `input: String` | `RunResult` | Пошаговое моделирование (`run_partial`), метки читаются целиком; трассы с `isFinal` первыми; 200/401/402 |
 | `fa_multi_run_str` | `automaton_id`, `inputs: Vec<String>` | `MultiRunResult` | Пакетный прогон без трасс |
 | `fa_generate_inputs` | `automaton_id` | `GenerateInputsResult` | Тестовые цепочки (`generate_test_inputs(50, 15)`) |
 | `fa_remove_automaton` | `automaton_id` | `StatusResult` | Удаление автомата из store |
@@ -265,10 +297,10 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 | `mealy_add_state` | как `fa_add_state` | `StateResult` | Делегирует в `fa_add_state`, `is_final` игнорируется |
 | `mealy_update_state` | как `fa_update_state` | `StateResult` | Делегирует в `fa_update_state`, `is_final` игнорируется |
 | `mealy_remove_state` | `automaton_id`, `state_id` | `StatusResult` | Делегирует в `fa_remove_state` |
-| `mealy_add_transition` | `automaton_id`, `from`, `to`, `input: String`, `output: String` | `TransitionResult` | Строки должны быть одним символом; запрещены eps и дубли `(from, input)` |
+| `mealy_add_transition` | `automaton_id`, `from`, `to`, `input: String`, `output: String` | `TransitionResult` | `input`/`output` — непустые метки произвольной длины (читаются/выдаются целиком); запрещены `$` и дубли `(from, input)` |
 | `mealy_update_transition` | `automaton_id`, `transition_id`, `input?`, `output?` | `TransitionResult` | `from`/`to` не меняются; сохраняется детерминизм |
 | `mealy_remove_transition` | `automaton_id`, `transition_id` | `StatusResult` | Удаление перехода |
-| `mealy_run_str` | `automaton_id`, `input: String` | `MealyRunResult` | Прогон с выходной строкой; 200/401/402 |
+| `mealy_run_str` | `automaton_id`, `input: String` | `MealyRunResult` | Прогон с выходной строкой (метки читаются/выдаются целиком); 200/401/402 |
 | `mealy_multi_run` | `automaton_id`, `inputs: Vec<String>` | `MealyMultiRunResult` | Пакетный прогон; частичность — через `isComplete`, статус 200/400 |
 | `mealy_generate_inputs` | `automaton_id` | `GenerateInputsResult` | Тестовые входы для Multiple Run (`generate_test_inputs_deterministic(50, 15)`), включая `$` и символы вне алфавита |
 | `mealy_remove_automaton` | `automaton_id` | `StatusResult` | Удаление автомата |
@@ -276,13 +308,15 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 ## 8. Формат JFLAP (`.jff`)
 - Корень `<structure>`, тип в `<type>` (`fa`, `mealy`); далее `<automaton>` с `<state id name>`
   (`<x>`, `<y>`, `<initial/>`, `<final/>`) и `<transition>` (`<from>`, `<to>`, `<read>`, для Мили `<transout>`).
-- FA: пустой/отсутствующий `<read>` ⇔ eps (`$`).
-- Mealy: `<final/>` не пишется.
+- FA: непустой `<read>` — целая метка перехода; пустой/отсутствующий ⇔ eps (`$`).
+- Mealy: `<read>` и `<transout>` — целые входная/выходная метки; `<final/>` не пишется.
 - Для новых типов: добавить ветку в `core::jff::parse_jff` и в `core::api::save_automaton`, создать модуль `<type>/jff`.
 
 ## 9. Соглашения и инварианты
 - `EPSILON: &str = "$"` — никогда не входит во входной алфавит; у Мили запрещён.
-- Символы в DTO и моделях — односимвольные `String`; строки из JFF и команд проверяются через `one_symbol`.
+- Метки переходов в DTO и моделях — непустые `String` произвольной длины, читаемые
+  целиком; строки из JFF и команд проверяются через `check_label`, сопоставление
+  со входом — через `match_label`. Одна метка может поглотить несколько символов входа.
 - Сообщения пользователю (`message`) — на русском; комментарии — на русском в шапке функции (см. раздел 10, п. 6).
 - Команды не паникуют на пользовательском вводе: ошибки возвращаются через `status`/`message`.
 - Валидация выполняется до мутации данных.
@@ -290,12 +324,12 @@ snake_case-аргументы Rust в **camelCase на стороне JS** (`aut
 - Тесты живут в `tests.rs` рядом с модулем (`#[cfg(test)] mod tests;`). Любое изменение логики сопровождается тестами; перед завершением — `cargo test`, `cargo clippy`, `cargo fmt`.
 - Команды регистрируются в `handler` своего домена (`core/api.rs` — `load_file`, `save_file`; `fa/api.rs` — `fa_*`; `mealy/api.rs` — `mealy_*`); `api::route` направляет вызов по префиксу. Общие команды не должны начинаться с `fa_`/`mealy_`.
 - Добавление нового типа автомата: вариант в `AutomatonType` → модуль `src/<type>/{mod,types,api,jff,tests}.rs` → `mod` в `lib.rs` → `handler` домена + ветка в `api::route` → ветки в `parse_jff`/`save_automaton` → обновление фронтенда (только упомянуть!).
-- **Известная ловушка:** `fa::api::data_to_fa` вызывает `state.isFinal.unwrap()`; состояние КА с `isFinal = None` (например, `fa_add_state` без `is_final`) приведёт к панике при прогоне.
+- `fa::api::data_to_fa` обрабатывает `isFinal = None` как `false` (`unwrap_or(false)`): состояние КА без явного `is_final` не вызывает паники при прогоне.
 
 ## 10. Правила для ИИ-агентов
 
 1. Изменять только файлы в `src-tauri/`. Необходимые изменения вне этой директории — **только описывать** (путь, суть изменения), не выполняя их.
-2. Не ломать контракт с фронтендом (имена команд, аргументов, полей DTO, коды статусов) без явного указания; при изменении контракта — перечислить, что нужно поправить в `../src/api/*.ts`.
+2. Не ломать контракт с фронтендом (имена команд, аргументов, полей DTO, коды статусов) без явного указания; при изменении контракта — перечислить, что нужно поправить в `../src/api/*.ts`, `../src/services/*.ts` и `../src/hooks/*.tsx`.
 3. Новые команды регистрировать в `handler` соответствующего модуля (`core/api.rs`, `fa/api.rs`, `mealy/api.rs`), а не в `lib.rs`; единая точка входа — `crate::api::handler`.
 4. После изменений прогонять `cargo test` и `cargo clippy`.
 5. **Обозначение eps.** Во всех местах в коде (комментарии, doc-комментарии, сообщения

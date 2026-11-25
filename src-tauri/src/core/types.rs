@@ -9,14 +9,36 @@ use tauri::http::StatusCode;
 /// Символ эпсилон-перехода. Никогда не входит во входной алфавит.
 pub const EPSILON: &str = "$";
 
-/// Проверяет, что `text` содержит ровно один символ, и возвращает его строкой.
-/// `what` описывает поле в сообщении об ошибке.
-pub fn one_symbol(text: &str, what: &str) -> Result<String, String> {
-    let mut chars = text.chars();
-    match (chars.next(), chars.next()) {
-        (Some(c), None) => Ok(c.to_string()),
-        _ => Err(format!("{} '{}' должен быть одним символом", what, text)),
+/// Проверяет, что метка перехода непустая, и возвращает её строкой.
+///
+/// Метка может содержать любое число символов: переход читает её целиком как
+/// один фрагмент входной цепочки (как в JFLAP). `what` описывает поле в
+/// сообщении об ошибке.
+pub fn check_label(text: &str, what: &str) -> Result<String, String> {
+    if text.is_empty() {
+        return Err(format!("{} '{}' не может быть пустым", what, text));
     }
+    Ok(text.to_string())
+}
+
+/// Проверяет, что метка `label` целиком совпадает с фрагментом входа `input`,
+/// начинающимся с позиции `pos`, и возвращает позицию сразу после прочитанной
+/// метки. Пустая метка не совпадает никогда; eps-метка `$` не сдвигает позицию.
+pub fn match_label(input: &[String], pos: usize, label: &str) -> Option<usize> {
+    if label.is_empty() {
+        return None;
+    }
+    if label == EPSILON {
+        return Some(pos);
+    }
+    let mut next = pos;
+    for ch in label.chars() {
+        if input.get(next) != Some(&ch.to_string()) {
+            return None;
+        }
+        next += 1;
+    }
+    Some(next)
 }
 
 // ---------------------------------------------------------------------------
@@ -72,8 +94,9 @@ impl Default for AutomatonType {
     }
 }
 
-/// Собирает входной алфавит из переходов: уникальные не-eps `symbol` в порядке
-/// первого появления.
+/// Собирает входной алфавит из переходов: уникальные не-eps метки `symbol` в
+/// порядке первого появления. Метка — это целиком читаемая переходом строка,
+/// а не один символ.
 pub fn alphabet_from_transitions(transitions: &[TransitionData]) -> Vec<String> {
     let mut seen: HashSet<String> = HashSet::new();
     let mut alphabet: Vec<String> = Vec::new();

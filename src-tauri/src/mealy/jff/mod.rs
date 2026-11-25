@@ -1,8 +1,9 @@
 //! JFLAP XML (`.jff`) для машин Мили: экспорт (`to_jff`) и разбор
 //! `<automaton>` (`parse_automaton`).
 //!
-//! `<type>mealy</type>`, переходы пишут входной символ в `<read>`, а выходной
-//! — в `<transout>`. У машины Мили нет допускающих состояний, поэтому
+//! `<type>mealy</type>`, переходы пишут входную метку в `<read>`, а выходную
+//! — в `<transout>`; обе метки читаются/выдаются целиком, как в JFLAP.
+//! У машины Мили нет допускающих состояний, поэтому
 //! `<final/>` не сериализуется. Выбор ветки по `<type>` делает диспетчер
 //! `crate::core::jff::parse_jff`; каркас документа и состояния берутся из
 //! `crate::core::jff`.
@@ -17,7 +18,7 @@ use crate::core::jff::{
     parse_transitions, transition_output, write_states, write_transition_with_output,
     write_transitions_header,
 };
-use crate::core::types::{AutomatonData, StateData, one_symbol};
+use crate::core::types::{AutomatonData, StateData, check_label};
 
 pub fn to_jff(data: &AutomatonData) -> String {
     let mut s = document_header("mealy");
@@ -51,8 +52,8 @@ pub(crate) fn parse_automaton(root: Node) -> Result<JffAutomaton, String> {
     let states = parse_states(automaton)?;
 
     let transitions = parse_transitions(automaton, |node, read| {
-        let input = one_symbol(read, "Входной символ перехода")?;
-        let output = one_symbol(&transition_output(node), "Выходной символ перехода")?;
+        let input = check_label(read, "Входная метка перехода")?;
+        let output = check_label(&transition_output(node), "Выходная метка перехода")?;
         Ok((input, Some(output)))
     })?;
 

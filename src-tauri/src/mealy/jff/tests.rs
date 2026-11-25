@@ -88,6 +88,25 @@ fn serializes_input_and_output_symbols() {
 }
 
 #[test]
+fn serializes_whole_input_and_output_labels() {
+    let mut data = mealy_data();
+    data.transitions.clear();
+    data.transitions.push(TransitionData {
+        id: 20,
+        from: 0,
+        to: 1,
+        symbol: "123".to_string(),
+        output: Some("01".to_string()),
+    });
+
+    let xml = to_jff(&data);
+    assert!(xml.contains(
+        "\t\t\t<from>0</from>\n\t\t\t<to>1</to>\n\t\t\t<read>123</read>\n\t\t\t<transout>01</transout>"
+    ));
+    assert_eq!(xml.matches("<transition>").count(), 1);
+}
+
+#[test]
 fn escapes_special_characters() {
     let mut data = mealy_data();
     data.states[0].label = "q&<0>\"'".to_string();
@@ -145,7 +164,7 @@ fn missing_transout_is_rejected() {
     </structure>"#;
 
     let err = parse_jff(xml).unwrap_err();
-    assert!(err.contains("Выходной символ"));
+    assert!(err.contains("Выходная метка"));
 }
 
 #[test]
@@ -172,28 +191,26 @@ fn empty_read_is_rejected() {
     </structure>"#;
 
     let err = parse_jff(xml).unwrap_err();
-    assert!(err.contains("Входной символ"));
+    assert!(err.contains("Входная метка"));
 }
 
 #[test]
-fn multi_char_input_and_output_are_rejected() {
-    let multi_input = r#"<?xml version="1.0"?><structure>
+fn multi_char_input_and_output_are_parsed_as_whole_labels() {
+    let xml = r#"<?xml version="1.0"?><structure>
         <type>mealy</type>
         <automaton>
             <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
-            <transition><from>0</from><to>0</to><read>ab</read><transout>1</transout></transition>
+            <transition><from>0</from><to>0</to><read>ab</read><transout>01</transout></transition>
         </automaton>
     </structure>"#;
-    assert!(parse_jff(multi_input).is_err());
 
-    let multi_output = r#"<?xml version="1.0"?><structure>
-        <type>mealy</type>
-        <automaton>
-            <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
-            <transition><from>0</from><to>0</to><read>a</read><transout>01</transout></transition>
-        </automaton>
-    </structure>"#;
-    assert!(parse_jff(multi_output).is_err());
+    match parse_jff(xml).unwrap() {
+        JffParsed::Automaton(AutomatonType::MEALY, automaton) => {
+            assert_eq!(automaton.transitions[0].symbol, "ab".to_string());
+            assert_eq!(automaton.transitions[0].output, Some("01".to_string()));
+        }
+        other => panic!("ожидался автомат MEALY, получено {:?}", other),
+    }
 }
 
 #[test]

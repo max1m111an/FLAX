@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
 use crate::core::automaton::{Automaton, NondeterministicAutomaton};
-use crate::core::types::{RunStep, Trace};
+use crate::core::types::{RunStep, Trace, match_label};
 
 pub use crate::core::types::EPSILON;
 
@@ -9,6 +9,11 @@ pub use crate::core::types::EPSILON;
 /// Достаточно велико, чтобы обойти все ветви реальных (учебных) КА, и при этом
 /// ограничивает экспоненциальный рост в худшем случае.
 const MAX_THREADS: usize = 1_000_000;
+
+/// Один поток чтения: история шагов, текущее состояние и позиция во входе.
+/// Позиция хранится отдельно, потому что метка перехода может читать несколько
+/// символов сразу, и разные ветви могут оказаться на разных позициях.
+type Thread = (Vec<RunStep>, i32, usize);
 
 #[allow(dead_code)]
 #[derive(Debug, Clone)]
@@ -79,6 +84,39 @@ impl FA {
         &self.transitions
     }
 
+    /// Непустые метки переходов из `state`, целиком совпадающие с фрагментом
+    /// входа начиная с `pos`. eps-переходы не включаются: они разворачиваются
+    /// отдельно. При нескольких совпадениях сначала идут более длинные метки,
+    /// что делает выбор предпочтительного пути предсказуемым.
+    fn matching_transitions(
+        &self,
+        state: i32,
+        input: &[String],
+        pos: usize,
+    ) -> Vec<(&String, &HashSet<i32>)> {
+        let mut found: Vec<(&String, &HashSet<i32>)> = self
+            .transitions
+            .iter()
+            .filter_map(|((from, label), targets)| {
+                if *from == state
+                    && label.as_str() != EPSILON
+                    && match_label(input, pos, label).is_some()
+                {
+                    Some((label, targets))
+                } else {
+                    None
+                }
+            })
+            .collect();
+        found.sort_by(|(a, _), (b, _)| {
+            b.chars()
+                .count()
+                .cmp(&a.chars().count())
+                .then_with(|| a.cmp(b))
+        });
+        found
+    }
+
     pub fn reachable_states(&self) -> HashSet<i32> {
         let mut reachable: HashSet<i32> = HashSet::new();
         let mut stack: Vec<i32> = vec![self.initial_state];
@@ -113,23 +151,31 @@ impl FA {
         !reachable.iter().any(|s| self.final_states.contains(s))
     }
 
-    /// `true`, если автомат детерминирован: нет eps-переходов и не более одного
-    /// целевого состояния на пару `(state, symbol)`. Детерминизм — свойство
-    /// конечного автомата (проверка/семантика), а не отдельный тип: одна и та же
-    /// структура может прогоняться любым способом.
+    /// `true`, если автомат детерминирован: нет eps-переходов, на каждую метку
+    /// из состояния ведёт не более одного перехода и никакие две метки одного
+    /// состояния не являются префиксами друг друга (иначе один и тот же вход
+    /// совпал бы с несколькими переходами). Детерминизм — свойство конечного
+    /// автомата (проверка/семантика), а не отдельный тип: одна и та же структура
+    /// может прогоняться любым способом.
     pub fn is_deterministic(&self) -> bool {
-        !self.alphabet.contains(EPSILON)
-            && self
-                .transitions
-                .iter()
-                .all(|((_, symbol), targets)| symbol.as_str() != EPSILON && targets.len() == 1)
+        !self.alphabet.iter().any(|label| label == EPSILON)
+            && self.transitions.iter().all(|((from, label), targets)| {
+                label.as_str() != EPSILON
+                    && targets.len() == 1
+                    && !self.transitions.keys().any(|(other_from, other)| {
+                        other_from == from
+                            && other != label
+                            && (other.starts_with(label.as_str())
+                                || label.starts_with(other.as_str()))
+                    })
+            })
     }
 
+    /// Ищет допускающий путь: метка перехода читается целиком, поэтому один
+    /// шаг может поглотить несколько символов входа. eps-переходы разворачиваются
+    /// до и после каждого прочитанного фрагмента. Возвращает историю шагов
+    /// первого найденного допускающего пути или `None`.
     pub fn run(&self, input: &[String]) -> Option<Vec<RunStep>> {
-        if input.iter().any(|s| !self.alphabet.contains(s)) {
-            return None;
-        }
-
         let mut steps: Vec<RunStep> = Vec::new();
         let mut visited: HashSet<(i32, usize)> = HashSet::new();
 
@@ -145,24 +191,8 @@ impl FA {
                 return false;
             }
 
-            if pos == input.len() {
-                if fa.final_states.contains(&state) {
-                    return true;
-                }
-                if let Some(next_states) = fa.transitions.get(&(state, EPSILON.to_string())) {
-                    for &next in next_states {
-                        steps.push(RunStep {
-                            from: state,
-                            symbol: EPSILON.to_string(),
-                            to: next,
-                        });
-                        if explore(fa, next, pos, input, steps, visited) {
-                            return true;
-                        }
-                        steps.pop();
-                    }
-                }
-                return false;
+            if pos == input.len() && fa.final_states.contains(&state) {
+                return true;
             }
 
             if let Some(next_states) = fa.transitions.get(&(state, EPSILON.to_string())) {
@@ -179,15 +209,15 @@ impl FA {
                 }
             }
 
-            let symbol = input[pos].clone();
-            if let Some(next_states) = fa.transitions.get(&(state, symbol.clone())) {
-                for &next in next_states {
+            for (label, targets) in fa.matching_transitions(state, input, pos) {
+                let next_pos = pos + label.chars().count();
+                for &next in targets {
                     steps.push(RunStep {
                         from: state,
-                        symbol: symbol.clone(),
+                        symbol: label.clone(),
                         to: next,
                     });
-                    if explore(fa, next, pos + 1, input, steps, visited) {
+                    if explore(fa, next, next_pos, input, steps, visited) {
                         return true;
                     }
                     steps.pop();
@@ -210,16 +240,17 @@ impl FA {
     /// только в ту ветвь, которая реально его прошла. Защита от eps-циклов —
     /// `visited` в рамках одного разворачивания; общее число вариантов ограничено
     /// `limit`.
-    fn expand_epsilon_threads(
-        &self,
-        thread: &(Vec<RunStep>, i32),
-        limit: usize,
-    ) -> Vec<(Vec<RunStep>, i32)> {
-        let mut variants: Vec<(Vec<RunStep>, i32)> = vec![thread.clone()];
-        let mut queue: VecDeque<(Vec<RunStep>, i32, HashSet<i32>)> = VecDeque::new();
-        queue.push_back((thread.0.clone(), thread.1, HashSet::from([thread.1])));
+    fn expand_epsilon_threads(&self, thread: &Thread, limit: usize) -> Vec<Thread> {
+        let mut variants: Vec<Thread> = vec![thread.clone()];
+        let mut queue: VecDeque<(Vec<RunStep>, i32, usize, HashSet<i32>)> = VecDeque::new();
+        queue.push_back((
+            thread.0.clone(),
+            thread.1,
+            thread.2,
+            HashSet::from([thread.1]),
+        ));
 
-        while let Some((history, state, visited)) = queue.pop_front() {
+        while let Some((history, state, pos, visited)) = queue.pop_front() {
             let Some(targets) = self.transitions.get(&(state, EPSILON.to_string())) else {
                 continue;
             };
@@ -236,18 +267,18 @@ impl FA {
                     symbol: EPSILON.to_string(),
                     to,
                 });
-                variants.push((next_history.clone(), to));
+                variants.push((next_history.clone(), to, pos));
                 let mut next_visited = visited.clone();
                 next_visited.insert(to);
-                queue.push_back((next_history, to, next_visited));
+                queue.push_back((next_history, to, pos, next_visited));
             }
         }
         variants
     }
 
     /// Разворачивает все потоки по eps с общим потолком `MAX_THREADS`.
-    fn expand_epsilon_all(&self, threads: Vec<(Vec<RunStep>, i32)>) -> Vec<(Vec<RunStep>, i32)> {
-        let mut expanded: Vec<(Vec<RunStep>, i32)> = Vec::new();
+    fn expand_epsilon_all(&self, threads: Vec<Thread>) -> Vec<Thread> {
+        let mut expanded: Vec<Thread> = Vec::new();
         for thread in &threads {
             let remaining = MAX_THREADS.saturating_sub(expanded.len());
             if remaining == 0 {
@@ -263,23 +294,25 @@ impl FA {
     /// завершения в финальном состоянии. Пути, сошедшиеся в одном состоянии,
     /// остаются отдельными трассами.
     ///
-    /// eps-переход ветвится: автомат может пойти по `$`-ребру, а может остаться в
-    /// текущем состоянии. Разворачивание делается до первого символа и после
-    /// каждого прочитанного символа (включая последний). Пройденные `$`-шаги
-    /// записываются в историю только соответствующей ветви. Символ читается
-    /// только из состояния конкретной ветви; несколько eps-переходов подряд дают
-    /// несколько ветвей, eps-циклы обрываются `visited` и не дают бесконечных трасс.
+    /// Метка перехода читается целиком: переход `q0 --123--> q1` поглощает три
+    /// символа за один шаг и не читает `12` или `1234`. Несколько меток,
+    /// совпадающих со входом в одной позиции, дают несколько ветвей.
     ///
-    /// Сообщается о каждой ветви, включая прерванные: поток, который не может
-    /// прочитать текущий символ, сохраняется с частичной историей и
+    /// eps-переход ветвится: автомат может пойти по `$`-ребру, а может остаться в
+    /// текущем состоянии. Разворачивание делается до первого фрагмента и после
+    /// каждого прочитанного фрагмента (включая последний). Пройденные `$`-шаги
+    /// записываются в историю только соответствующей ветви; eps-циклы обрываются
+    /// `visited` и не дают бесконечных трасс.
+    ///
+    /// Сообщается о каждой ветви, включая прерванные: поток, для которого в текущей
+    /// позиции нет ни одной подходящей метки, сохраняется с частичной историей и
     /// `isFinal = false`. На `accepted` влияют только потоки, дочитавшие весь
     /// вход и оказавшиеся в финальном состоянии: тупиковые ветви не отменяют
     /// принятие.
     ///
     /// Семантика:
     /// - Если в автомате нет финальных состояний, любая строка отклоняется.
-    /// - Символ вне алфавита останавливает чтение прямо перед ним, строка
-    ///   отклоняется.
+    /// - Фрагмент без подходящего перехода останавливает чтение прямо перед ним.
     /// - Число потоков ограничено, чтобы сдержать экспоненциальный рост в худшем
     ///   случае.
     pub fn run_partial(&self, input: &[String]) -> (Vec<Trace>, bool) {
@@ -288,29 +321,28 @@ impl FA {
         }
 
         let mut result: Vec<Trace> = Vec::new();
-        // eps-ветвление до первого символа (и для пустого входа).
-        let mut threads = self.expand_epsilon_all(vec![(Vec::new(), self.initial_state)]);
+        // eps-ветвление до первого фрагмента (и для пустого входа).
+        let mut pending = self.expand_epsilon_all(vec![(Vec::new(), self.initial_state, 0)]);
+        let mut completed: Vec<(Vec<RunStep>, i32)> = Vec::new();
 
-        for symbol in input {
-            // Символ вне алфавита: останавливаем чтение прямо перед ним,
-            // финализируя живые на данный момент ветви (частичный прогресс).
-            // Ветвь не дочитала вход, поэтому она не допускающая, даже если
-            // застряла в финальном состоянии.
-            if !self.alphabet.contains(symbol) {
-                for (steps, _) in threads {
-                    result.push(Trace {
-                        steps,
-                        isFinal: false,
-                    });
+        loop {
+            let mut next_threads: Vec<Thread> = Vec::new();
+            let mut has_unread = false;
+
+            for (history, state, pos) in pending {
+                if pos >= input.len() {
+                    completed.push((history, state));
+                    continue;
                 }
-                return (result, false);
-            }
-
-            let mut next_threads: Vec<(Vec<RunStep>, i32)> = Vec::new();
-            for (history, state) in threads {
+                has_unread = true;
                 let mut advanced = false;
-                if let Some(targets) = self.transitions.get(&(state, symbol.clone())) {
+
+                // Ищем метки, целиком совпадающие с входом в этой позиции.
+                // Разные ветви могут читать разные по длине фрагменты, поэтому
+                // позиция хранится в самой ветви, а не в цикле.
+                for (label, targets) in self.matching_transitions(state, input, pos) {
                     advanced = true;
+                    let next_pos = pos + label.chars().count();
                     for &to in targets {
                         if next_threads.len() >= MAX_THREADS {
                             break;
@@ -318,14 +350,14 @@ impl FA {
                         let mut steps = history.clone();
                         steps.push(RunStep {
                             from: state,
-                            symbol: symbol.clone(),
+                            symbol: label.clone(),
                             to,
                         });
-                        next_threads.push((steps, to));
+                        next_threads.push((steps, to, next_pos));
                     }
                 }
 
-                // Ветвь не может прочитать текущий символ: прерывается и
+                // Ветвь не может прочитать текущий фрагмент: прерывается и
                 // сохраняется с частичной историей и isFinal = false.
                 if !advanced {
                     result.push(Trace {
@@ -335,20 +367,21 @@ impl FA {
                 }
             }
 
-            if next_threads.is_empty() {
-                return (result, false);
+            if !has_unread || next_threads.is_empty() {
+                break;
             }
 
             let capped = next_threads.len() >= MAX_THREADS;
-            // eps-ветвление после прочитанного символа (перед следующим / в конце).
-            threads = self.expand_epsilon_all(next_threads);
+            // eps-ветвление после прочитанного фрагмента (перед следующим / в конце).
+            pending = self.expand_epsilon_all(next_threads);
             if capped {
+                completed.extend(pending.into_iter().map(|(steps, state, _)| (steps, state)));
                 break;
             }
         }
 
         let mut accepted = false;
-        for (steps, state) in threads {
+        for (steps, state) in completed {
             let is_final = self.final_states.contains(&state);
             accepted |= is_final;
             result.push(Trace {
@@ -685,21 +718,36 @@ impl Automaton for FA {
     type Symbol = String;
 
     fn accepts(&self, input: &[String]) -> bool {
-        let mut current_states: HashSet<i32> = self.epsilon_closure_owned(self.initial_state);
-        for symbol in input {
-            if !self.alphabet.contains(symbol) {
+        fn explore(
+            fa: &FA,
+            state: i32,
+            pos: usize,
+            input: &[String],
+            visited: &mut HashSet<(i32, usize)>,
+        ) -> bool {
+            if !visited.insert((state, pos)) {
                 return false;
             }
-            let mut next_states: HashSet<i32> = HashSet::new();
-            for state in current_states {
-                next_states.extend(self.next_states_with_epsilon_owned(state, symbol));
+            if pos == input.len() && fa.final_states.contains(&state) {
+                return true;
             }
-            current_states = next_states;
-            if current_states.is_empty() {
-                return false;
+            if let Some(targets) = fa.transitions.get(&(state, EPSILON.to_string()))
+                && targets
+                    .iter()
+                    .any(|&to| explore(fa, to, pos, input, visited))
+            {
+                return true;
             }
+            fa.matching_transitions(state, input, pos)
+                .into_iter()
+                .flat_map(|(label, targets)| {
+                    let next_pos = pos + label.chars().count();
+                    targets.iter().map(move |&to| (to, next_pos))
+                })
+                .any(|(to, next_pos)| explore(fa, to, next_pos, input, visited))
         }
-        current_states.iter().any(|s| self.final_states.contains(s))
+
+        explore(self, self.initial_state, 0, input, &mut HashSet::new())
     }
 
     fn states(&self) -> &HashSet<i32> {

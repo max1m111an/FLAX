@@ -308,13 +308,20 @@ fn add_transition_rejects_epsilon() {
 }
 
 #[test]
-fn add_transition_rejects_multi_char_symbols() {
+fn add_transition_accepts_multi_char_labels() {
     let mut entry = mealy_entry();
 
-    assert!(add_mealy_transition(&mut entry, 0, 1, "ab".to_string(), "0".to_string()).is_err());
-    assert!(add_mealy_transition(&mut entry, 0, 1, "a".to_string(), "01".to_string()).is_err());
-    assert!(entry.transitions.is_empty());
-    assert!(entry.get_alphabet().is_empty());
+    let first = add_mealy_transition(&mut entry, 0, 1, "123".to_string(), "01".to_string())
+        .expect("вход и выход могут быть строками любой длины");
+    assert_eq!(first.symbol, "123");
+    assert_eq!(first.output, Some("01".to_string()));
+    let second =
+        add_mealy_transition(&mut entry, 1, 0, "b".to_string(), "0".to_string()).expect("b");
+    assert_eq!(second.symbol, "b");
+    assert_eq!(
+        entry.get_alphabet(),
+        vec!["123".to_string(), "b".to_string()]
+    );
 }
 
 #[test]
@@ -712,4 +719,93 @@ fn multi_run_mealy_empty_inputs_returns_200_and_no_results() {
 
     assert_eq!(result.status, StatusCode::OK);
     assert!(result.results.is_empty());
+}
+
+fn to_chars(text: &str) -> Vec<String> {
+    text.chars().map(|c| c.to_string()).collect()
+}
+
+#[test]
+fn step_at_prefers_the_longest_matching_label() {
+    let mm = MM::builder()
+        .set_initial(0)
+        .transition(0, "1".to_string(), 1, "x".to_string())
+        .transition(0, "123".to_string(), 2, "y".to_string())
+        .build()
+        .unwrap();
+
+    let input = to_chars("1234");
+    assert_eq!(
+        mm.step_at(0, &input, 0),
+        Some(("123".to_string(), 2, "y".to_string(), 3))
+    );
+    assert_eq!(mm.step_at(2, &input, 3), None);
+}
+
+#[test]
+fn whole_labels_are_read_and_emitted_in_one_step() {
+    let mm = MM::builder()
+        .set_initial(0)
+        .transition(0, "123".to_string(), 1, "ab".to_string())
+        .transition(1, "4".to_string(), 0, "z".to_string())
+        .build()
+        .unwrap();
+
+    let (steps, output) = mm.run(&to_chars("1234"));
+    assert_eq!(output, "abz");
+    assert_eq!(
+        steps,
+        vec![
+            MealyRunStep {
+                from: 0,
+                symbol: "123".to_string(),
+                to: 1,
+                output: "ab".to_string(),
+            },
+            MealyRunStep {
+                from: 1,
+                symbol: "4".to_string(),
+                to: 0,
+                output: "z".to_string(),
+            },
+        ]
+    );
+
+    let (steps, output) = mm.run(&to_chars("1235"));
+    assert_eq!(steps.len(), 1);
+    assert_eq!(output, "ab");
+}
+
+#[test]
+fn run_mealy_with_whole_labels_counts_characters() {
+    let mut entry = mealy_entry();
+    add_mealy_transition(&mut entry, 0, 1, "123".to_string(), "01".to_string()).unwrap();
+    add_mealy_transition(&mut entry, 1, 0, "4".to_string(), "z".to_string()).unwrap();
+
+    let full = run_mealy(&entry, "1234");
+    assert_eq!(full.status, StatusCode::OK);
+    assert_eq!(full.output, "01z");
+    assert_eq!(full.steps.len(), 2);
+
+    let partial = run_mealy(&entry, "1235");
+    assert_eq!(partial.status, StatusCode::UNAUTHORIZED);
+    assert!(partial.message.contains("3 из 4"));
+
+    let stuck = run_mealy(&entry, "12");
+    assert_eq!(stuck.status, StatusCode::PAYMENT_REQUIRED);
+
+    let multi = multi_run_mealy(
+        &entry,
+        &["1234".to_string(), "1235".to_string(), "12".to_string()],
+    );
+    assert_eq!(multi.status, StatusCode::OK);
+    assert_eq!(
+        multi
+            .results
+            .iter()
+            .map(|r| r.isComplete)
+            .collect::<Vec<_>>(),
+        vec![true, false, false]
+    );
+    assert_eq!(multi.results[0].output, "01z");
 }

@@ -177,6 +177,23 @@ fn epsilon_transition_written_as_empty_read() {
 }
 
 #[test]
+fn whole_transition_label_is_written_as_single_read() {
+    let mut data = even_a_data();
+    data.transitions.clear();
+    data.transitions.push(TransitionData {
+        id: 20,
+        from: 0,
+        to: 1,
+        symbol: "123".to_string(),
+        output: None,
+    });
+
+    let xml = to_jff(&data);
+    assert!(xml.contains("\t\t\t<read>123</read>"));
+    assert_eq!(xml.matches("<transition>").count(), 1);
+}
+
+#[test]
 fn escapes_special_characters() {
     let mut data = even_a_data();
     data.states[0].label = "q&<0>\"'".to_string();
@@ -353,16 +370,21 @@ fn decodes_xml_entities_in_name_and_read() {
 }
 
 #[test]
-fn rejects_transition_symbol_with_multiple_chars() {
+fn parses_multi_char_transition_label_as_whole_string() {
     let xml = r#"<?xml version="1.0"?><structure>
         <type>fa</type>
         <automaton>
             <state id="0" name="q0"><x>0.0</x><y>0.0</y><initial/></state>
-            <transition><from>0</from><to>0</to><read>ab</read></transition>
+            <transition><from>0</from><to>0</to><read>123</read></transition>
         </automaton>
     </structure>"#;
 
-    assert!(parse_jff(xml).is_err());
+    let parsed = parse_fa(xml);
+    assert_eq!(parsed.transitions[0].symbol, "123".to_string());
+    assert_eq!(
+        alphabet_from_transitions(&parsed.transitions),
+        vec!["123".to_string()]
+    );
 }
 
 #[test]

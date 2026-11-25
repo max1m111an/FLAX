@@ -2,10 +2,12 @@
 
 use std::collections::{HashMap, HashSet};
 
+use tauri::http::StatusCode;
+
 use crate::core::api::gen_multi_run_for_output;
 use crate::core::automaton::{Automaton, AutomatonStore, NondeterministicAutomaton};
 use crate::core::types::{AutomatonData, AutomatonType, RunStep, StateData, Trace, TransitionData};
-use crate::fa::api::{data_to_fa, multi_run_fa, run_fa_line, test_line};
+use crate::fa::api::{add_fa_transitions, data_to_fa, multi_run_fa, run_fa_line, test_line};
 use crate::fa::types::{EPSILON, FA};
 
 #[test]
@@ -2034,4 +2036,213 @@ fn generate_test_inputs_keeps_cycles_when_cap_is_exceeded() {
             .windows(2)
             .all(|w| w[0].chars().count() <= w[1].chars().count())
     );
+}
+
+fn to_chars(text: &str) -> Vec<String> {
+    text.chars().map(|c| c.to_string()).collect()
+}
+
+fn whole_label_entry() -> AutomatonData {
+    AutomatonData {
+        id: 1,
+        name: "Whole label".to_string(),
+        automatonType: AutomatonType::FA,
+        states: vec![
+            StateData {
+                id: 0,
+                label: "q0".to_string(),
+                x: 0.0,
+                y: 0.0,
+                isInitial: true,
+                isFinal: Some(false),
+            },
+            StateData {
+                id: 1,
+                label: "q1".to_string(),
+                x: 0.0,
+                y: 0.0,
+                isInitial: false,
+                isFinal: Some(true),
+            },
+        ],
+        transitions: vec![TransitionData {
+            id: 10,
+            from: 0,
+            to: 1,
+            symbol: "123".to_string(),
+            output: None,
+        }],
+    }
+}
+
+#[test]
+fn whole_label_transition_reads_only_the_full_string() {
+    let fa = FA::builder()
+        .set_initial(0)
+        .set_final(1)
+        .transition(0, "123".to_string(), 1)
+        .build()
+        .unwrap();
+
+    assert!(fa.accepts(&to_chars("123")));
+    assert!(!fa.accepts(&to_chars("12")));
+    assert!(!fa.accepts(&to_chars("1234")));
+    assert!(!fa.accepts(&to_chars("1")));
+    assert_eq!(
+        fa.run(&to_chars("123")),
+        Some(vec![RunStep {
+            from: 0,
+            symbol: "123".to_string(),
+            to: 1,
+        }])
+    );
+}
+
+#[test]
+fn run_partial_keeps_whole_label_in_one_step() {
+    let fa = FA::builder()
+        .set_initial(0)
+        .set_final(1)
+        .transition(0, "123".to_string(), 1)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = fa.run_partial(&to_chars("1234"));
+    assert!(!accepted);
+    assert_eq!(traces.len(), 1);
+    assert_eq!(
+        traces[0].steps,
+        vec![RunStep {
+            from: 0,
+            symbol: "123".to_string(),
+            to: 1,
+        }]
+    );
+    assert!(!traces[0].isFinal);
+}
+
+#[test]
+fn run_partial_branches_on_overlapping_labels() {
+    // q0 --1--> q1 (тупик), q0 --12--> q2 (финал): вход `12` принимается
+    // только полной меткой `12`, короткая метка даёт отдельную тупиковую ветвь.
+    let fa = FA::builder()
+        .set_initial(0)
+        .set_final(2)
+        .transition(0, "1".to_string(), 1)
+        .transition(0, "12".to_string(), 2)
+        .build()
+        .unwrap();
+
+    let (traces, accepted) = fa.run_partial(&to_chars("12"));
+    assert!(accepted);
+    assert_eq!(traces.len(), 2);
+    assert!(traces.iter().any(|t| {
+        t.isFinal
+            && t.steps
+                == vec![RunStep {
+                    from: 0,
+                    symbol: "12".to_string(),
+                    to: 2,
+                }]
+    }));
+    assert!(traces.iter().any(|t| {
+        !t.isFinal
+            && t.steps
+                == vec![RunStep {
+                    from: 0,
+                    symbol: "1".to_string(),
+                    to: 1,
+                }]
+    }));
+}
+
+#[test]
+fn whole_label_after_epsilon_is_one_step() {
+    let fa = FA::builder()
+        .set_initial(0)
+        .set_final(2)
+        .epsilon(0, 1)
+        .transition(1, "23".to_string(), 2)
+        .build()
+        .unwrap();
+
+    assert_eq!(
+        fa.run(&to_chars("23")),
+        Some(vec![
+            RunStep {
+                from: 0,
+                symbol: EPSILON.to_string(),
+                to: 1,
+            },
+            RunStep {
+                from: 1,
+                symbol: "23".to_string(),
+                to: 2,
+            },
+        ])
+    );
+}
+
+#[test]
+fn run_fa_line_counts_characters_of_whole_labels() {
+    let entry = whole_label_entry();
+
+    assert_eq!(run_fa_line(&entry, "123").status, StatusCode::OK);
+    let partial = run_fa_line(&entry, "1234");
+    assert_eq!(partial.status, StatusCode::UNAUTHORIZED);
+    assert!(partial.message.contains("3 из 4"));
+    assert_eq!(
+        run_fa_line(&entry, "12").status,
+        StatusCode::PAYMENT_REQUIRED
+    );
+
+    let fa = data_to_fa(&entry.states, &entry.transitions).unwrap();
+    assert_eq!(test_line(&fa, "123"), (true, 3));
+    assert_eq!(test_line(&fa, "1234"), (false, 3));
+    assert_eq!(test_line(&fa, "12"), (false, 0));
+}
+
+#[test]
+fn add_fa_transitions_does_not_split_labels() {
+    let mut entry = whole_label_entry();
+    entry.transitions.clear();
+
+    let added =
+        add_fa_transitions(&mut entry, 0, 1, &["123".to_string(), "45".to_string()]).unwrap();
+    assert_eq!(added.len(), 2);
+    assert_eq!(
+        entry
+            .transitions
+            .iter()
+            .map(|t| t.symbol.clone())
+            .collect::<Vec<_>>(),
+        vec!["123".to_string(), "45".to_string()]
+    );
+
+    // Точный дубликат и пустая метка не добавляются.
+    assert!(add_fa_transitions(&mut entry, 0, 1, &["123".to_string()]).is_err());
+    assert!(add_fa_transitions(&mut entry, 0, 1, &[String::new()]).is_err());
+    assert_eq!(entry.transitions.len(), 2);
+}
+
+#[test]
+fn overlapping_whole_labels_are_not_deterministic() {
+    let overlapping = FA::builder()
+        .set_initial(0)
+        .set_final(1)
+        .set_final(2)
+        .transition(0, "1".to_string(), 1)
+        .transition(0, "12".to_string(), 2)
+        .build()
+        .unwrap();
+    assert!(!overlapping.is_deterministic());
+
+    let distinct = FA::builder()
+        .set_initial(0)
+        .set_final(1)
+        .transition(0, "12".to_string(), 1)
+        .transition(0, "13".to_string(), 2)
+        .build()
+        .unwrap();
+    assert!(distinct.is_deterministic());
 }

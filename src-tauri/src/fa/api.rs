@@ -4,8 +4,8 @@ use crate::core::api::{check_automaton_multi_run, check_automaton_run, generate_
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
     AutomatonData, GenerateInputsResult, LineTest, MultiRunResult, OperationResult, RunResult,
-    StateData, StateResult, StatusResult, TransitionData, TransitionResult,
-    alphabet_from_transitions, one_symbol,
+    RunStep, StateData, StateResult, StatusResult, TransitionData, TransitionResult,
+    alphabet_from_transitions, check_label,
 };
 use crate::fa::types::{EPSILON, FA, FABuilder};
 
@@ -162,11 +162,65 @@ pub fn fa_remove_state(
     }
 }
 
-/// Добавляет переходы. Для каждого символа создаётся отдельный переход с теми же
-/// `from`/`to`. Идентификаторы генерирует сервер.
+/// Добавляет в запись переходы с целыми метками: по одному переходу на каждый
+/// элемент `symbols`. Метка `"123"` не разбивается на `1`, `2`, `3`, а читается
+/// целиком за один шаг. Идентификаторы генерирует сервер.
 ///
-/// Отклоняются только точные дубликаты `(from, to, symbol)`; eps-переходы `$`
-/// разрешены.
+/// Валидация выполняется до мутаций: пустая метка, неизвестные состояния и
+/// точные дубликаты `(from, to, symbol)` отклоняются; eps `$` разрешён.
+pub(crate) fn add_fa_transitions(
+    entry: &mut AutomatonData,
+    from: i32,
+    to: i32,
+    symbols: &[String],
+) -> Result<Vec<TransitionData>, String> {
+    let symbols = symbols
+        .iter()
+        .map(|s| check_label(s, "Метка перехода"))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    if !entry.states.iter().any(|s| s.id == from) {
+        return Err(format!("Состояние {} не существует", from));
+    }
+    if !entry.states.iter().any(|s| s.id == to) {
+        return Err(format!("Состояние {} не существует", to));
+    }
+
+    // Сначала проверяем весь пакет меток, чтобы при конфликте не оставить
+    // частично добавленные переходы (семантика «всё или ничего»).
+    let mut planned: Vec<String> = Vec::with_capacity(symbols.len());
+    for symbol in &symbols {
+        let duplicate = planned.contains(symbol)
+            || entry
+                .transitions
+                .iter()
+                .any(|t| t.from == from && t.to == to && t.symbol == *symbol);
+        if duplicate {
+            return Err(format!(
+                "Переход {} -> {} по '{}' уже существует",
+                from, to, symbol
+            ));
+        }
+        planned.push(symbol.clone());
+    }
+
+    let mut added: Vec<TransitionData> = Vec::with_capacity(planned.len());
+    for symbol in planned {
+        let used: std::collections::HashSet<i32> = entry.transitions.iter().map(|t| t.id).collect();
+        let created = TransitionData {
+            id: generate_id(&used),
+            from,
+            to,
+            symbol,
+            output: None,
+        };
+        entry.transitions.push(created.clone());
+        added.push(created);
+    }
+    Ok(added)
+}
+
+/// Добавляет переходы: каждый элемент `symbols` — целиком читаемая метка.
 #[tauri::command]
 pub fn fa_add_transition(
     state: State<'_, AutomatonStore>,
@@ -175,62 +229,8 @@ pub fn fa_add_transition(
     to: i32,
     symbols: Vec<String>,
 ) -> TransitionResult {
-    let symbols = match symbols
-        .iter()
-        .map(|s| one_symbol(s, "Символ перехода"))
-        .collect::<Result<Vec<_>, _>>()
-    {
-        Ok(symbols) => symbols,
-        Err(message) => {
-            return TransitionResult {
-                status: StatusCode::BAD_REQUEST,
-                message,
-                transition: vec![],
-            };
-        }
-    };
-
     let added = match state.modify(automaton_id, |entry| {
-        if !entry.states.iter().any(|s| s.id == from) {
-            return Err(format!("Состояние {} не существует", from));
-        }
-        if !entry.states.iter().any(|s| s.id == to) {
-            return Err(format!("Состояние {} не существует", to));
-        }
-
-        // Сначала проверяем весь пакет символов, чтобы при конфликте не оставить
-        // частично добавленные переходы (семантика «всё или ничего»).
-        let mut planned: Vec<String> = Vec::with_capacity(symbols.len());
-        for symbol in &symbols {
-            let duplicate = planned.contains(symbol)
-                || entry
-                    .transitions
-                    .iter()
-                    .any(|t| t.from == from && t.to == to && t.symbol == *symbol);
-            if duplicate {
-                return Err(format!(
-                    "Переход {} -> {} по '{}' уже существует",
-                    from, to, symbol
-                ));
-            }
-            planned.push(symbol.clone());
-        }
-
-        let mut added: Vec<TransitionData> = Vec::with_capacity(planned.len());
-        for symbol in planned {
-            let used: std::collections::HashSet<i32> =
-                entry.transitions.iter().map(|t| t.id).collect();
-            let created = TransitionData {
-                id: generate_id(&used),
-                from,
-                to,
-                symbol,
-                output: None,
-            };
-            entry.transitions.push(created.clone());
-            added.push(created);
-        }
-        Ok(added)
+        add_fa_transitions(entry, from, to, &symbols)
     }) {
         Some(Ok(added)) => added,
         Some(Err(message)) => {
@@ -268,7 +268,7 @@ pub fn fa_update_transition(
     new_symbol: Option<String>,
 ) -> TransitionResult {
     let new_symbol = match new_symbol
-        .map(|s| one_symbol(&s, "Символ перехода"))
+        .map(|s| check_label(&s, "Метка перехода"))
         .transpose()
     {
         Ok(symbol) => symbol,
@@ -371,23 +371,33 @@ pub fn fa_run_str(state: State<'_, AutomatonStore>, automaton_id: i32, input: St
     run_fa_line(&entry, &input)
 }
 
+/// Считает число входных символов, поглощённых шагами трассы: метка перехода
+/// может содержать несколько символов, а `$` ничего не поглощает.
+fn consumed_steps_len(steps: &[RunStep]) -> usize {
+    steps
+        .iter()
+        .filter(|step| step.symbol != EPSILON)
+        .map(|step| step.symbol.chars().count())
+        .sum()
+}
+
 /// Тестируемый прогон одной строки без `State`: строит КА, запускает
 /// `FA::run_partial` (где eps-переходы ветвятся) и формирует `RunResult`.
 /// Возвращает все трейсы, включая тупиковые; статус 200 выставляется, если
 /// принята хотя бы одна ветвь.
 pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
-    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
+    let chars: Vec<String> = input.chars().map(|c| c.to_string()).collect();
     match data_to_fa(&entry.states, &entry.transitions) {
         Ok(fa) => {
-            let (mut traces, accepted) = fa.run_partial(&symbols);
+            let (mut traces, accepted) = fa.run_partial(&chars);
             // Упорядочиваем историю так, чтобы допускающие потоки чтения (isFinal) шли
             // раньше отвергнутых.
             traces.sort_by_key(|t| !t.isFinal);
             // Шаги `$` (eps-ветвление) входят в историю; для длины обработанной части
-            // считаем только реально прочитанные символьные переходы.
+            // считаем символы, прочитанные непустыми метками переходов.
             let processed_len = traces
                 .iter()
-                .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
+                .map(|t| consumed_steps_len(&t.steps))
                 .max()
                 .unwrap_or(0);
             let (status, message) = if accepted {
@@ -399,7 +409,7 @@ pub(crate) fn run_fa_line(entry: &AutomatonData, input: &str) -> RunResult {
                         "Цепочка '{}' принята частично (обработано {} из {} символов)",
                         input,
                         processed_len,
-                        symbols.len()
+                        chars.len()
                     ),
                 )
             } else {
@@ -485,14 +495,14 @@ pub fn fa_remove_automaton(state: State<'_, AutomatonStore>, automaton_id: i32) 
 
 /// Прогоняет одну строку на автомате. Возвращает, принята ли строка целиком
 /// (`true`, если хотя бы один поток после прочтения всей строки оказался в
-/// финальном состоянии), и сколько символов прочитано корректно (учитываются
-/// только шаги, отличные от `$`).
+/// финальном состоянии), и сколько символов прочитано корректно. Метка шага
+/// может содержать несколько символов; `$` ничего не поглощает.
 pub(crate) fn test_line(fa: &FA, input: &str) -> (bool, usize) {
-    let symbols: Vec<String> = input.chars().map(|c| c.to_string()).collect();
-    let (traces, accepted) = fa.run_partial(&symbols);
+    let chars: Vec<String> = input.chars().map(|c| c.to_string()).collect();
+    let (traces, accepted) = fa.run_partial(&chars);
     let correct_symbols = traces
         .iter()
-        .map(|t| t.steps.iter().filter(|s| s.symbol != EPSILON).count())
+        .map(|t| consumed_steps_len(&t.steps))
         .max()
         .unwrap_or(0);
     (accepted, correct_symbols)
@@ -509,7 +519,7 @@ pub(crate) fn data_to_fa(
         if state.isInitial {
             builder = builder.set_initial(state.id);
         }
-        if state.isFinal.unwrap() {
+        if state.isFinal.unwrap_or(false) {
             builder = builder.set_final(state.id);
         }
     }

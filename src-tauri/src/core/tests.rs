@@ -6,7 +6,8 @@ use crate::core::api::{
 };
 use crate::core::automaton::AutomatonStore;
 use crate::core::types::{
-    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions, one_symbol,
+    AutomatonData, AutomatonType, StateData, TransitionData, alphabet_from_transitions,
+    check_label, match_label,
 };
 
 fn make_store() -> AutomatonStore {
@@ -320,11 +321,34 @@ fn alphabet_from_transitions_skips_epsilon_and_duplicates() {
 }
 
 #[test]
-fn one_symbol_accepts_single_character_only() {
-    assert_eq!(one_symbol("a", "Символ"), Ok("a".to_string()));
-    assert_eq!(one_symbol("λ", "Символ"), Ok("λ".to_string()));
-    assert!(one_symbol("", "Символ").is_err());
-    assert!(one_symbol("ab", "Символ").is_err());
+fn check_label_accepts_whole_string_and_rejects_empty() {
+    assert_eq!(check_label("a", "Метка"), Ok("a".to_string()));
+    assert_eq!(check_label("λ", "Метка"), Ok("λ".to_string()));
+    assert_eq!(check_label("123", "Метка"), Ok("123".to_string()));
+    assert!(check_label("", "Метка").is_err());
+}
+
+#[test]
+fn alphabet_from_transitions_keeps_whole_labels() {
+    let transitions = vec![
+        trans(1, 0, 1, "123".to_string()),
+        trans(2, 1, 0, "1".to_string()),
+    ];
+    assert_eq!(
+        alphabet_from_transitions(&transitions),
+        vec!["123".to_string(), "1".to_string()]
+    );
+}
+
+#[test]
+fn match_label_consumes_whole_prefix_and_epsilon() {
+    let input: Vec<String> = "1234".chars().map(|c| c.to_string()).collect();
+    assert_eq!(match_label(&input, 0, "123"), Some(3));
+    assert_eq!(match_label(&input, 3, "4"), Some(4));
+    assert_eq!(match_label(&input, 0, "12"), Some(2));
+    assert_eq!(match_label(&input, 0, "124"), None);
+    assert_eq!(match_label(&input, 2, "$"), Some(2));
+    assert_eq!(match_label(&input, 0, ""), None);
 }
 
 #[test]
