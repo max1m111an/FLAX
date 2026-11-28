@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api/common.ts";
 import { FAAutomatonModel, StateFAModel, TransitionFAModel } from "@/types/Automaton.ts";
-import { lineTestFA, RunStepFA, Trace } from "@/types/Testing.ts";
+import { LineTestFA, RunStepFA, Trace } from "@/types/Testing.ts";
 
 export type CreateFAResponse = ApiResponse<{ automaton: FAAutomatonModel }>;
 
@@ -84,7 +84,7 @@ export type MultiRunStrFARequest = {
     inputs: string[];
 }
 
-export type MultiRunStrFAResponse = ApiResponse<{ traces: lineTestFA[] }>;
+export type MultiRunStrFAResponse = ApiResponse<{ traces: LineTestFA[] }>;
 
 export type GenerateInputsRequest = {
     automatonId: number;

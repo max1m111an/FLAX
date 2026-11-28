@@ -45,7 +45,7 @@ export type FAAutomatonModel = BaseAutomatonModel<StateFAModel, TransitionFAMode
 export type MealyAutomatonModel = BaseAutomatonModel<StateMealyModel, TransitionMealyModel>;
 export type AutomatonModel = FAAutomatonModel | MealyAutomatonModel;
 
-export interface model {
+export interface Model {
     title: string;
     type: AutomatonType;
     icon: ComponentType<SVGProps<SVGSVGElement>>;

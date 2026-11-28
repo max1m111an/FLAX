@@ -1,4 +1,5 @@
 import { call } from "@/api/call.ts";
+import { EPS } from "@/configs/CommonConst.ts";
 import { markDirty } from "@/services/dirtyState.ts";
 import { IAutomatonService } from "@/services/IAutomatonService.ts";
 import { StatePayload } from "@/types/Payloads.ts";
@@ -85,7 +86,7 @@ export const faService: IAutomatonService<
             .filter((s) => s !== "");
 
         if (symbols.length === 0) {
-            symbols = [ "$" ];
+            symbols = [ EPS ];
         }
 
         const response = await call("fa_add_transition", {

@@ -5,7 +5,7 @@ import ArrowRight from "@/assets/svg/ArrowRight.svg?react";
 import ArrowRightToLine from "@/assets/svg/ArrowRightToLine.svg?react";
 import { RunStep, RunStepMealy, Trace } from "@/types/Testing.ts";
 import { AutomatonType } from "@/types/Payloads.ts";
-import { EPS } from "@/configs/CanvasConst.ts";
+import { EPS } from "@/configs/CommonConst.ts";
 
 interface TraceCardProps {
     traceSteps: Trace;

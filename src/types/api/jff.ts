@@ -1,17 +1,17 @@
 import { ApiResponse } from "@/types/api/common.ts";
 import { AutomatonModel } from "@/types/Automaton.ts";
 
-export type loadJFFRequest = {
+export type LoadJFFRequest = {
     path: string;
 }
-export type loadJFFResponse = ApiResponse<{
+export type LoadJFFResponse = ApiResponse<{
     data: AutomatonModel,
     isAutomaton: boolean,
 }>;
 
-export type saveJFFRequest = {
+export type SaveJFFRequest = {
     automatonId: number;
     path: string;
 }
 
-export type saveJFFResponse = ApiResponse
+export type SaveJFFResponse = ApiResponse
