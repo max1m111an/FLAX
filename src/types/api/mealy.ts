@@ -1,6 +1,6 @@
 import { ApiResponse } from "@/types/api/common.ts";
 import { MealyAutomatonModel, StateMealyModel, TransitionMealyModel } from "@/types/Automaton.ts";
-import { lineTestMealy, RunStepMealy, Trace } from "@/types/Testing.ts";
+import { LineTestMealy, RunStepMealy, Trace } from "@/types/Testing.ts";
 
 export type CreateMealyResponse = ApiResponse<{ automaton: MealyAutomatonModel }>;
 export type CreateMealyRequest = {
@@ -87,5 +87,5 @@ export type MultiRunStrMealyRequest = {
 }
 
 export type MultiRunStrMealyResponse = ApiResponse<{
-    results: lineTestMealy[];
+    results: LineTestMealy[];
 }>;

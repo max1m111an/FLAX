@@ -5,7 +5,7 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { basename } from "@tauri-apps/api/path";
 import { useRecentFiles } from "@/context/RecentFilesContext.tsx";
 import { ConfirmCloseModal } from "@/components/ConfirmCloseModal/ConfirmCloseModal.tsx";
-import { model } from "@/types/Automaton.ts";
+import { Model } from "@/types/Automaton.ts";
 import { AppTab } from "@/types/Tabs.ts";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { buildTab } from "@/utils/tabFactory.ts";
@@ -16,7 +16,7 @@ import { isDirty, markDirty } from "@/services/dirtyState.ts";
 
 interface TabsContextProps {
     tabs: AppTab[];
-    addTab: (model: model, type?: string) => Promise<AppTab | void>;
+    addTab: (model: Model, type?: string) => Promise<AppTab | void>;
     addUtilTab: (type: string, icon: ComponentType<SVGProps<SVGSVGElement>>) => Promise<AppTab | void>;
     removeTab: (tab: AppTab) => void;
     updateTab: (updatedTab: AppTab) => void;
@@ -33,7 +33,7 @@ export const TabsProvider = ({ children }: { children: ReactNode }) => {
     const location = useLocation();
     const { addFile } = useRecentFiles();
 
-    const addTab = async (model: model): Promise<AppTab | void> => {
+    const addTab = async (model: Model): Promise<AppTab | void> => {
         try {
             const service = modelServiceRegistry.getService(model.type);
 

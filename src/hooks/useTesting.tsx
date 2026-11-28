@@ -4,7 +4,7 @@ import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
 import { TraceHighlight } from "@/types/Tabs.ts";
 import { RunStep, Trace } from "@/types/Testing.ts";
 import { TransitionModel } from "@/types/Automaton.ts";
-import { EPS } from "@/configs/CanvasConst.ts";
+import { EPS } from "@/configs/CommonConst.ts";
 
 /**
  * Находит все переходы на графе, соответствующие конкретному шагу трассы.

@@ -3,10 +3,10 @@ import Processor from "@/assets/svg/Processor.svg?react";
 import Mealy from "@/assets/svg/Mealy.svg?react";
 import Cat from "@/assets/svg/Cat.svg?react";
 import ArrowUp from "@/assets/svg/ArrowUp.svg?react";
-import { model } from "@/types/Automaton.ts";
+import { Model } from "@/types/Automaton.ts";
 
 
-export const models: model[] = [
+export const models: Model[] = [
     {
         type: "FA",
         title: "Конечный автомат",

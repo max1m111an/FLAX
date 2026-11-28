@@ -14,14 +14,14 @@ import Reset from "@/assets/svg/Reset.svg?react";
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile, readTextFile } from "@tauri-apps/plugin-fs";
 import { modelServiceRegistry } from "@/services/ModelServiceRegistry.ts";
-import { lineTest } from "@/types/Testing.ts";
+import { LineTest } from "@/types/Testing.ts";
 import { TABLE_CONFIGS } from "@/widgets/Model/ModelTesting/multiTestingConfig.tsx";
 
 export default function MultiTesting() {
     const currentTab = useCurrentTab();
     const { updateTab } = useTabs();
     const [ isPlay, setIsPlay ] = useState(false);
-    const [ traces, setTraces ] = useState<lineTest[]>([]);
+    const [ traces, setTraces ] = useState<LineTest[]>([]);
     const [ isLoading, setIsLoading ] = useState<boolean>(false);
 
     if (currentTab?.type === "SETTINGS" || !currentTab) return null;

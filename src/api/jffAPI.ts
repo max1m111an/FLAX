@@ -1,20 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
-import { loadJFFRequest, loadJFFResponse, saveJFFRequest, saveJFFResponse } from "@/types/api/jff.ts";
+import { LoadJFFRequest, LoadJFFResponse, SaveJFFRequest, SaveJFFResponse } from "@/types/api/jff.ts";
 
 
 export const jffAPI = {
-    async loadJFF (params: loadJFFRequest): Promise<loadJFFResponse> {
+    async loadJFF (params: LoadJFFRequest): Promise<LoadJFFResponse> {
         try {
-            const response = await invoke<loadJFFResponse>("load_file", params);
+            const response = await invoke<LoadJFFResponse>("load_file", params);
             return response;
         } catch (error) {
             console.error("Ошибка при вызове fa_load:", error);
             throw error;
         }
     },
-    async saveJFF  (params: saveJFFRequest): Promise<saveJFFResponse> {
+    async saveJFF  (params: SaveJFFRequest): Promise<SaveJFFResponse> {
         try {
-            const response = await invoke<saveJFFResponse>("save_file", params);
+            const response = await invoke<SaveJFFResponse>("save_file", params);
             return response;
         } catch (error) {
             console.error("Ошибка при вызове fa_save:", error);

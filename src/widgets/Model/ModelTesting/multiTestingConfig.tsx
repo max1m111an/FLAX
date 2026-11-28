@@ -1,16 +1,16 @@
 import React from "react";
 import clsx from "clsx";
 import styles from "./ModelTestWidget.module.scss";
-import { lineTest, lineTestFA, lineTestMealy } from "@/types/Testing.ts";
+import { LineTest, LineTestFA, LineTestMealy } from "@/types/Testing.ts";
 
-const isFA = (trace: lineTest): trace is lineTestFA => "isFinal" in trace;
-const isMealy = (trace: lineTest): trace is lineTestMealy => "output" in trace;
+const isFA = (trace: LineTest): trace is LineTestFA => "isFinal" in trace;
+const isMealy = (trace: LineTest): trace is LineTestMealy => "output" in trace;
 
 export interface TableConfig {
     header: string;
-    getRowClass: (trace: lineTest) => string;
-    renderInputCell: (trace: lineTest) => React.ReactNode;
-    renderResultCell: (trace: lineTest) => React.ReactNode;
+    getRowClass: (trace: LineTest) => string;
+    renderInputCell: (trace: LineTest) => React.ReactNode;
+    renderResultCell: (trace: LineTest) => React.ReactNode;
 }
 
 export const TABLE_CONFIGS: Record<string, TableConfig> = {
